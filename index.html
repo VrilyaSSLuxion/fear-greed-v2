@@ -5488,5 +5488,170 @@ livePrice();
 // Neue Daten holen: am PC jede Minute (Programm-Intervall), online alle 2 Minuten, Einzeldatei alle 10 Minuten neu berechnen
 setInterval(() => { if (Date.now() - lastLoad > (window.FG_STANDALONE ? 600000 : SRV ? Math.max(1, SRV.intervals?.data || 1) * 60000 - 5000 : 115000)) load(false); }, 15000);
 </script>
+<!-- ===== Testkopie V2: Ticker-Aussehen zum Durchschalten (Original / B1 / B2 / B3) und Zahlen ausgeschrieben oder in Mio. ===== -->
+<style id="tkv">
+  /* gemeinsam für B1–B3 */
+  html.tkv-on .ticker .arr.tick b{font-size:var(--tk-arr,clamp(44px,3.4vw,68px))!important}
+  html.tkv-on #arrTick::after{display:none!important}
+  html.tkv-on #liqCur{display:none!important}
+  html.tkv-on .tkvcur{height:28px!important;padding:0 26px 0 10px!important;font-size:13px!important;margin-left:12px;vertical-align:3px}
+  html:not(.tkv-on) .tkvcur{display:none}
+  html.tkv-on .ticker{grid-template-columns:auto minmax(0,1fr) auto!important}
+  html.tkv-on .liqtitle{justify-content:space-between!important;padding:6px 16px 9px!important;min-width:0;overflow:hidden;align-items:stretch!important}
+  html.tkv-on .tk4{flex:1;justify-content:space-between!important;margin-top:6px;line-height:1.15!important;min-width:0;width:100%}
+  html.tkv-on .tk4>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html.tkv-on .liq{justify-content:space-between!important;padding:9px 16px 6px!important;gap:0!important;width:auto!important}
+  html.tkv-on .liq .sd,html.tkv-on .liq .sd span,html.tkv-on .liq .sd small{white-space:nowrap!important}
+  html.tkv-on .liq .sd{gap:5px!important}
+  html.tkv-on .segbar{height:14px!important}
+  /* B1: Preise 39 px, Liquidationen bis 15 px */
+  html.tkv-b1 #tPrice,html.tkv-b1 #tEur{font-size:39px!important}
+  html.tkv-b1 .liq .sd{font-size:17px!important} html.tkv-b1 .liq .sd small{font-size:11.5px!important}
+  html.tkv-b1 .pcts{font-size:22px!important}
+  html.tkv-b1{--tkv-liq:15px}
+  /* B2: kompakt – Preise 37 px, Liquidationen bis 13 px */
+  html.tkv-b2 #tPrice,html.tkv-b2 #tEur{font-size:37px!important}
+  html.tkv-b2 .liq .sd{font-size:16px!important} html.tkv-b2 .liq .sd small{font-size:10.5px!important}
+  html.tkv-b2 .liq .vs{width:28px!important;height:28px!important;font-size:11px!important}
+  html.tkv-b2 .pcts{font-size:21px!important}
+  html.tkv-b2{--tkv-liq:13px}
+  /* B3: Preise kleiner (34 px), Liquidationen größer (bis 16 px) */
+  html.tkv-b3 #tPrice,html.tkv-b3 #tEur{font-size:34px!important}
+  html.tkv-b3 .liqtitle>span:first-child{font-size:22px!important}
+  html.tkv-b3 .liq .sd{font-size:17px!important} html.tkv-b3 .liq .sd small{font-size:11.5px!important}
+  html.tkv-b3 .pcts{font-size:21px!important}
+  html.tkv-b3{--tkv-liq:16px}
+  /* Tasten am Ticker (neben ⇅ und ▾) */
+  .tcol.tkvb{right:114px;width:auto;min-width:64px;padding:0 9px!important;font-size:12px;font-weight:800;color:#f6c453}
+  .tcol.tknb{right:186px;width:auto;min-width:64px;padding:0 9px!important;font-size:12px;font-weight:800}
+</style>
+<script>
+/* Ticker-Varianten der Testkopie. Wahl merkt sich der Browser (tkv_stil, tkv_zahlen). */
+(function () {
+  var STILE = ['orig', 'b1', 'b2', 'b3'], NAMEN = { orig: 'Original', b1: 'B1', b2: 'B2', b3: 'B3' };
+  var get = function (k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+  var set = function (k, v) { try { localStorage.setItem(k, v); } catch (e) { } };
+  var stil = get('tkv_stil', 'b1'), zahlen = get('tkv_zahlen', 'voll');
+  // per Link wählbar: ?tickerstil=orig|b1|b2|b3 und ?tickerzahlen=voll|kurz
+  var Q = new URLSearchParams(location.search);
+  if (STILE.indexOf(Q.get('tickerstil')) >= 0) stil = Q.get('tickerstil');
+  if (/^(voll|kurz)$/.test(Q.get('tickerzahlen'))) zahlen = Q.get('tickerzahlen');
+  if (STILE.indexOf(stil) < 0) stil = 'b1';
+  var $ = function (id) { return document.getElementById(id); };
+  var busy = false;
+
+  function classes() {
+    // am <html>-Element, weil die Seite die Klassen am <body> selbst neu setzt
+    var b = document.documentElement; STILE.forEach(function (s) { b.classList.toggle('tkv-' + s, s === stil); });
+    b.classList.toggle('tkv-on', stil !== 'orig'); b.classList.toggle('tkn-kurz', zahlen === 'kurz');
+  }
+  function buttons() {
+    var tp = $('tPos'); if (!tp) return;
+    if (!$('tkvBtn')) {
+      tp.insertAdjacentHTML('afterend', '<button class="tcol tkvb" id="tkvBtn" title="Ticker-Aussehen durchschalten: Original → B1 → B2 → B3"></button>' +
+        '<button class="tcol tknb" id="tknBtn" title="Longs/Shorts: Zahl ausgeschrieben oder in Mio."></button>');
+      $('tkvBtn').onclick = function () { stil = STILE[(STILE.indexOf(stil) + 1) % STILE.length]; set('tkv_stil', stil); neu(); };
+      $('tknBtn').onclick = function () { zahlen = zahlen === 'voll' ? 'kurz' : 'voll'; set('tkv_zahlen', zahlen); neu(); };
+    }
+    // nur bei Änderung setzen – sonst stößt jede Beschriftung den Beobachter neu an (Endlosschleife)
+    var t1 = '🎨 ' + NAMEN[stil], t2 = zahlen === 'voll' ? '1.234' : 'Mio.';
+    if ($('tkvBtn').textContent !== t1) $('tkvBtn').textContent = t1;
+    if ($('tknBtn').textContent !== t2) $('tknBtn').textContent = t2;
+  }
+  // alles zurück auf den Stand der Seite und neu zeichnen lassen
+  function neu() {
+    var bt = document.querySelector('.ticker .price > .b'); if (bt) { bt.style.removeProperty('font-size'); bt.style.top = ''; }
+    ['tDir'].forEach(function (id) { var e = $(id); if (e) e.style.top = ''; });
+    ['tPrice', 'tEur'].forEach(function (id) { var e = $(id); if (e) Array.prototype.forEach.call(e.parentElement.children, function (c) { c.style.transform = ''; }); });
+    var t4 = $('heatTick4'); if (t4) t4.style.fontSize = '';
+    classes(); buttons();
+    try { if (typeof renderTicker === 'function') renderTicker(); if (typeof applyTicker === 'function') applyTicker(); } catch (e) { }
+    fix();
+  }
+  // Text-Änderungen: "-$" / "-€", "vs.", Zahlen in Mio.
+  function texte() {
+    if (stil === 'orig') return;
+    document.querySelectorAll('#heatTick4 > div').forEach(function (d) {
+      if (/\d [$€£¥₺]/.test(d.innerHTML)) d.innerHTML = d.innerHTML.replace(/(\d) ([$€£¥₺])/g, '$1-$2');
+    });
+    ['tPrice', 'tEur'].forEach(function (id) { var e = $(id); if (e && / [$€£¥₺]$/.test(e.textContent)) e.textContent = e.textContent.replace(/ ([$€£¥₺])$/, '-$1'); });
+    var vs = document.querySelector('.liq .vs'); if (vs && vs.textContent !== 'vs.') vs.textContent = 'vs.';
+    if (zahlen === 'kurz') ['liqL', 'liqS'].forEach(function (id) {
+      var e = $(id); if (!e || /Mio\.$/.test(e.textContent)) return;
+      var n = +e.textContent.replace(/\D/g, ''); if (!n) return;
+      e.textContent = (n / 1e6).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' Mio.';
+    });
+  }
+  // €/$-Auswahlfeld statt der zwei Knöpfe (steuert die vorhandenen Knöpfe)
+  function waehrung() {
+    var c = $('liqCur'); if (!c) return;
+    var s = document.querySelector('.tkvcur');
+    if (!s) { c.insertAdjacentHTML('afterend', '<select class="csel tsel tkvcur" title="Währung der Liquidations-Zeilen"></select>'); s = document.querySelector('.tkvcur');
+      s.onchange = function () { var b = c.querySelector('button[data-v="' + s.value + '"]'); if (b) b.click(); }; }
+    var html = Array.prototype.map.call(c.querySelectorAll('button'), function (b) { return '<option value="' + b.dataset.v + '"' + (b.classList.contains('on') ? ' selected' : '') + '>' + b.textContent + ' ' + b.dataset.v.toUpperCase() + '</option>'; }).join('');
+    if (s.dataset.h !== html) { s.innerHTML = html; s.dataset.h = html; }
+  }
+  // Ausrichtung: TICK-Pfeil wie 24h, ₿ und $/€-Werte bündig mit "TICK" oben und der 24h-Prozentzeile unten
+  function ausrichten() {
+    if (stil === 'orig') return;
+    var at = $('arrTick'), dp = $('tDayPct'), lbl = at && at.querySelector('small'), tD = $('tDir'), dD = $('tDayDir');
+    if (!at || !dp || !lbl) return;
+    if (!at.querySelector('.tkvpct')) { var cl = dp.cloneNode(true); cl.removeAttribute('id'); cl.classList.add('tkvpct'); cl.style.visibility = 'hidden'; at.appendChild(cl); }
+    if (tD && dD) { var cur = parseFloat(tD.style.top) || 0, dy = dD.getBoundingClientRect().top - tD.getBoundingClientRect().top;
+      if (Math.abs(dy) > 0.5) { tD.style.position = 'relative'; tD.style.top = (cur + dy) + 'px'; } }
+    var top = lbl.getBoundingClientRect().top + 3, bot = dp.getBoundingClientRect().bottom - 3;
+    var b = document.querySelector('.ticker .price > .b');
+    if (b) {
+      var cs = getComputedStyle(b), cv = document.createElement('canvas').getContext('2d'), fs = parseFloat(cs.fontSize);
+      cv.font = cs.fontWeight + ' ' + fs + 'px ' + cs.fontFamily; var m = cv.measureText('₿');
+      var ink = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent, nfs = fs * (bot - top) / ink;
+      if (Math.abs(nfs - fs) > 0.5) b.style.setProperty('font-size', nfs + 'px', 'important');
+      else { var r = b.getBoundingClientRect(), fa = m.fontBoundingBoxAscent, fd = m.fontBoundingBoxDescent;
+        var inkTop = r.top + (r.height - (fa + fd)) / 2 + fa - m.actualBoundingBoxAscent, c0 = parseFloat(b.style.top) || 0, d0 = top - inkTop;
+        if (Math.abs(d0) > 0.5) { b.style.position = 'relative'; b.style.top = (c0 + d0) + 'px'; } }
+    }
+    // $-Zeile nach oben, €-Zeile nach unten (weniger Leerraum über und unter den Preisen)
+    // (die Zeilen selbst sind display:contents – deshalb Flagge und Preis darin verschieben)
+    var pu = $('tPrice'), pe = $('tEur');
+    var schiebe = function (el, d) { Array.prototype.forEach.call(el.parentElement.children, function (c) {
+      var t = parseFloat((c.style.transform.match(/-?[\d.]+/) || [0])[0]); c.style.transform = 'translateY(' + (t + d) + 'px)'; }); };
+    if (pu && pe) {
+      var du = (top - 4) - pu.getBoundingClientRect().top, de = (bot + 4) - pe.getBoundingClientRect().bottom;
+      if (Math.abs(du) > 0.5) schiebe(pu, du);
+      if (Math.abs(de) > 0.5) schiebe(pe, de);
+    }
+  }
+  // Liquidations-Schrift so groß wie möglich, aber nie abgeschnitten
+  function passend() {
+    if (stil === 'orig') return;
+    var t4 = $('heatTick4'); if (!t4 || !t4.children.length) return;
+    var ziel = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tkv-liq')) || 14, fs = ziel;
+    t4.style.fontSize = fs + 'px';
+    var zu = function () { return Array.prototype.some.call(t4.children, function (d) { return d.scrollWidth > d.clientWidth + 1; }); };
+    while (zu() && fs > 10) { fs -= 0.25; t4.style.fontSize = fs + 'px'; }
+  }
+  function fix() {
+    if (busy || !document.querySelector('.ticker')) return;
+    busy = true;
+    try { buttons(); waehrung(); texte(); passend(); ausrichten(); } catch (e) { }
+    busy = false;
+  }
+  // sofort nach jeder Änderung nachziehen (kein Flackern); Schutzbremse: mehr als 60 Läufe pro Sekunde -> 2 s Pause
+  var laeufe = 0, seit = 0, pause = false;
+  function bald() {
+    if (pause) return;
+    var t = Date.now(); if (t - seit > 1000) { seit = t; laeufe = 0; }
+    if (++laeufe > 60) { pause = true; setTimeout(function () { pause = false; fix(); }, 2000); return; }
+    fix();
+  }
+  function start() {
+    classes(); fix();
+    var tk = document.querySelector('.ticker');
+    if (tk) new MutationObserver(bald).observe(tk, { childList: true, subtree: true, characterData: true });
+    addEventListener('resize', fix); setInterval(fix, 1500);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
 </body>
 </html>
