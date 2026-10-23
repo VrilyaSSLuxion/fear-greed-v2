@@ -6,7 +6,17 @@ const CATS = [
   { id: 'tradingview', title: 'TradingView', sub: 'Pine-Script-Indikatoren und Strategien',
     empty: 'Die TradingView-Skripte werden hier nach und nach eingetragen – mit Vorschau und Link zur Veröffentlichung auf TradingView.' },
   { id: 'desktop', title: 'Desktop-Tools', sub: 'Programme für Windows', empty: 'Noch keine Programme.' },
+  { id: 'geschuetzt', title: 'Geschützter Bereich', sub: 'nur mit Passwort · für später gemerkt', empty: '' },
 ];
+// Platzhalter: Inhalte werden später verschlüsselt abgelegt (Passwort legt nur der Besitzer fest)
+const LOCKED = `<div class="locked">
+  <div class="lock-ico">🔒</div>
+  <div class="lock-txt"><b>Für später gemerkt</b>
+    <p>Hier kann später ein Bereich entstehen, den man nur mit Passwort öffnen kann – zum Beispiel für versteckte Skripte,
+      Kopien anderer Autoren oder private Downloads. Der Inhalt wird dann verschlüsselt gespeichert; ohne Passwort kann ihn niemand lesen.</p>
+    <div class="lock-form"><input type="password" placeholder="Passwort" disabled aria-label="Passwort (noch nicht eingerichtet)">
+      <button disabled>Öffnen</button><span>Noch leer – noch kein Passwort festgelegt.</span></div>
+  </div></div>`;
 const STATUS = {
   download: ['Download', 'ok'], invite: ['Nur auf Einladung', 'inv'], market: ['MQL5 Market', 'mkt'],
   free: ['Kostenlos', 'ok'], soon: ['Bald verfügbar', 'soon'], private: ['Privat', 'soon'],
@@ -64,6 +74,7 @@ function renderCats() {
     let body;
     // TradingView hat eine eigene Ansicht (Gruppen / Einzelliste / Versteckt) aus tradingview.json
     if (c.id === 'tradingview' && window.TVV?.ready()) body = `<div id="tvbox">${TVV.html(QUERY)}</div>`;
+    else if (c.id === 'geschuetzt') body = LOCKED;
     else if (!all.length) body = `<div class="empty">${esc(c.empty)}</div>`;
     else if (!hits.length) body = `<p class="nohit">Keine Treffer in ${esc(c.title)}.</p>`;
     else body = `<div class="grid">${hits.map(card).join('')}</div>`;
