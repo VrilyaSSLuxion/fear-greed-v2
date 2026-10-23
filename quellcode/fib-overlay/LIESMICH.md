@@ -1,4 +1,4 @@
-# Fib Overlay (SK-System) – Quellcode Version 3
+# Fib Overlay (SK-System) – Quellcode Version 6
 
 Alles in einer Datei: `fib_overlay.py` (Python 3, PyQt5, nur für Windows).
 

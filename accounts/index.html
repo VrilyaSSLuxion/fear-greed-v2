@@ -46,7 +46,7 @@
   h1 span{color:var(--gold2)}
   .lead{color:var(--muted);margin-top:6px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-  .acc{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--line2);border-radius:14px;background:var(--panel);text-decoration:none;transition:border-color .15s,transform .15s}
+  .acc{display:flex;align-items:center;gap:14px;padding:16px;border:2px solid var(--frame,#fff);border-radius:14px;background:var(--panel);text-decoration:none;transition:border-color .15s,transform .15s}
   .acc:hover{border-color:var(--gold2);transform:translateY(-2px)}
   .ico{flex:0 0 52px;height:52px;border-radius:13px;display:flex;align-items:center;justify-content:center}
   .acc b{display:block;font-size:16px;font-weight:800}
@@ -56,10 +56,12 @@
   footer{color:var(--dim);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
   @media (max-width:520px){ .apptabs{flex-wrap:wrap;width:auto} h1{font-size:24px} .grid{grid-template-columns:1fr} }
 </style>
+<link rel="stylesheet" href="../nav.css">
+<script>try{const f=JSON.parse(localStorage.getItem('tt_optik')||'{}').frame;if(f)document.documentElement.style.setProperty('--frame',f)}catch(e){}</script>
 </head>
 <body>
 <div class="page">
-  <nav class="apptabs"><a href="../">Fear &amp; Greed</a><a href="../heatmap/">Liquidation Heatmap</a><a href="../tools/">Trading Tools</a><span class="on">Accounts</span><a class="v2chip" href="https://vrilyassluxion.github.io/fear-greed/" title="Das ist die Testkopie. Hier geht es zur Live-Seite." style="background:#3a1020;color:#ffb3c1">TESTKOPIE · Live-Seite ↗</a></nav>
+  <nav class="apptabs"><a href="../">Fear &amp; Greed</a><a href="../heatmap/">Liquidation Heatmap</a><a href="../tools/">Trading Tools</a><span class="on">Accounts</span><a href="../youtube/">YouTube-Trading</a><a class="v2chip" href="https://vrilyassluxion.github.io/fear-greed/" title="Das ist die Testkopie. Hier geht es zur Live-Seite." style="background:#3a1020;color:#ffb3c1">TESTKOPIE · Live-Seite ↗</a></nav>
   <div>
     <h1>Meine <span>Accounts</span></h1>
     <p class="lead">Hier findest du mich auf TradingView und YouTube.</p>

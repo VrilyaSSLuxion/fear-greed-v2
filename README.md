@@ -8,6 +8,7 @@ Testkopie der Seite https://vrilyassluxion.github.io/fear-greed/ mit dem neuen B
 - Browser-Einstellungen der Kopie sind getrennt von der Live-Seite (Präfix `v2~`); beim ersten Öffnen werden die
   Live-Einstellungen einmal übernommen.
 - `accounts/` zeigt die Profile (TradingView, YouTube); die Liste steht oben in `accounts/index.html`.
+- `youtube/` zeigt empfohlene YouTube-Trading-Kanäle; die Liste steht oben in `youtube/index.html`.
+- `nav.css` gibt den Reitern oben auf allen Seiten den Rahmen.
 - `quellcode/` enthält den Quellcode der Desktop-Tools (z. B. Fib Overlay), damit andere daran weiterarbeiten können.
 - `tools/tools.json` enthält alle Einträge (MetaTrader, TradingView, Desktop-Tools). Downloads liegen unter *Releases*.
-- `tools/quellcode/tv/` enthält den Quellcode der TradingView-Skripte (Open Source, Lizenzhinweise der Original-Autoren stehen im Code); `tools/code.html?id=…` zeigt ihn an.

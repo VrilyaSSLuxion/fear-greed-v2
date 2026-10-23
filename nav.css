@@ -1,0 +1,11 @@
+/* Reiter oben (alle Seiten der Testkopie): jeder Reiter mit deutlichem Rahmen, die ganze Leiste ebenfalls umrahmt.
+   Die Rahmenfarbe ist dieselbe wie bei Trading Tools (Einstellung „Rahmenfarbe“, sonst Weiß). */
+.apptabs{border:2px solid var(--frame,#fff)!important;gap:6px!important;padding:5px!important;border-radius:13px!important;
+  max-width:100%;flex-wrap:wrap}
+.apptabs>*{border:2px solid var(--frame,#fff);border-radius:9px!important;padding:5px 14px!important;line-height:1.35}
+.apptabs>.on{border-color:#f6c453!important}
+.apptabs>a:hover{border-color:#f6c453!important}
+@media (max-width:760px){
+  .apptabs{width:auto!important}
+  .apptabs>*{padding:5px 10px!important;font-size:13px!important}
+}

@@ -154,9 +154,10 @@ function detail(it) {
           </dl></div>
           ${dl || links ? `<div class="box"><h2>${dl ? 'Download' : 'Links'}</h2><div class="actions">${dl}${links}</div></div>` : ''}
           ${(it.hints || []).length ? `<div class="box"><h2>Gut zu wissen</h2>${it.hints.map(h => `<div class="hint">${esc(h)}</div>`).join('')}</div>` : ''}
-          ${(it.versions || []).length ? `<div class="box"><h2>Versionen</h2><div class="versions">${it.versions.map(x => `<div class="ver">
-              <h3>Version ${esc(x.v)}<span>${fmtDate(x.date)}</span></h3>
-              ${(x.notes || []).length ? `<ul>${x.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div>`).join('')}</div></div>` : ''}
+          ${(it.versions || []).length ? `<div class="box"><h2>Versionsverlauf</h2><div class="versions">${it.versions.map((x, i) => `<div class="ver">
+              <h3>Version ${esc(x.v)}${i ? '' : '<em>neueste</em>'}<span>${fmtDate(x.date)}</span></h3>
+              ${(x.notes || []).length ? `<ul>${x.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+              ${(x.downloads || []).length ? `<div class="vdl">${x.downloads.map(d => `<a href="${esc(d.url)}" rel="noopener">⬇ ${esc(d.label)} <small>${esc(d.size || '')}</small></a>`).join('')}</div>` : ''}</div>`).join('')}</div></div>` : ''}
         </aside>
       </div>
     </div>`;
