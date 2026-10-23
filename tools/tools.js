@@ -59,10 +59,21 @@ function overview() {
         <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
           <input id="q" type="search" placeholder="Suchen, z. B. Fibonacci" value="${esc(QUERY)}" aria-label="Tools durchsuchen"></label>
       </div>
-      <div class="catnav">${CATS.map(c => `<button data-go="${c.id}">${c.title} <b>${count(c.id)}</b></button>`).join('')}</div>
+      <div class="navrow">
+        <div class="catnav">${CATS.map(c => `<button data-go="${c.id}">${c.title} <b>${count(c.id)}</b></button>`).join('')}</div>
+        <div class="viewopts" title="Aussehen der Bereiche (merkt sich dein Browser)">
+          <label><input type="checkbox" id="ulsw" ${PREF.ul ? 'checked' : ''}> Unterstriche</label>
+          <label>Rahmenfarbe <input type="color" id="framecol" value="${esc(PREF.frame)}"></label>
+          <button id="framereset" title="Rahmenfarbe zurück auf Weiß">↺</button>
+        </div>
+      </div>
       <div id="cats"></div>
     </div>`;
   $('#q').addEventListener('input', e => { QUERY = e.target.value.trim().toLowerCase(); renderCats(); });
+  $('#ulsw').onchange = e => { PREF.ul = e.target.checked; savePref(); applyPref(); };
+  $('#framecol').oninput = e => { PREF.frame = e.target.value; savePref(); applyPref(); };
+  $('#framereset').onclick = () => { PREF.frame = '#ffffff'; $('#framecol').value = PREF.frame; savePref(); applyPref(); };
+  applyPref();
   // Knopf oben: Bereich aufklappen und hinspringen
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
     OPEN_CATS.add(b.dataset.go); saveOpen(); renderCats();
@@ -76,6 +87,10 @@ const OPEN_CATS = new Set((() => { try { return JSON.parse(localStorage.getItem(
 const saveOpen = () => { try { localStorage.setItem('tt_bereiche', JSON.stringify([...OPEN_CATS])); } catch (e) { } };
 // Link mit ?bereich=tradingview (mehrere mit Komma) öffnet diese Bereiche
 for (const b of (new URLSearchParams(location.search).get('bereich') || '').split(',')) if (b) OPEN_CATS.add(b);
+// Aussehen der Bereichs-Kästen: Unterstrich unter der Überschrift (an/aus) und Rahmenfarbe
+const PREF = Object.assign({ ul: true, frame: '#ffffff' }, (() => { try { return JSON.parse(localStorage.getItem('tt_optik') || '{}'); } catch (e) { return {}; } })());
+const savePref = () => { try { localStorage.setItem('tt_optik', JSON.stringify(PREF)); } catch (e) { } };
+const applyPref = () => { document.body.classList.toggle('tt-ul', !!PREF.ul); document.body.style.setProperty('--frame', PREF.frame); };
 
 function renderCats() {
   const count = id => id === 'tradingview' && window.TVV?.ready() ? TVV.count() : ITEMS.filter(i => i.category === id).length;
@@ -83,7 +98,8 @@ function renderCats() {
     // bei einer Suche sind alle Bereiche offen, sonst nur die angeklickten
     const isOpen = OPEN_CATS.has(c.id) || !!QUERY;
     const head = `<button class="cat-head" data-cat="${c.id}" aria-expanded="${isOpen}">
-      <span class="chev">${isOpen ? '▾' : '▸'}</span><h2>${c.title}</h2><span class="sub">${esc(c.sub)}</span><b class="cnt">${count(c.id)}</b></button>`;
+      <span class="chev">${isOpen ? '▾' : '▸'}</span><span class="ttl"><h2>${c.title}</h2><span class="sub">– (${esc(c.sub)}) –</span></span>
+      <span class="clk">${isOpen ? 'Klicken zum Zuklappen' : 'Klicken zum Aufklappen'}</span><b class="cnt">${count(c.id)}</b></button>`;
     if (!isOpen) return `<section class="cat" id="cat-${c.id}">${head}</section>`;
     const all = ITEMS.filter(i => i.category === c.id).sort(byName);
     const hits = all.filter(matches);
