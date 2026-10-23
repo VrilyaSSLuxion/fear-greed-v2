@@ -1,0 +1,74 @@
+{
+  "info": "Einträge der Seite Trading Tools. category: metatrader | tradingview | desktop. status: download | invite | market | free | soon | private. Neueste Version zuerst.",
+  "items": [
+    {
+      "id": "fib-overlay",
+      "category": "desktop",
+      "name": "Fib Overlay (SK-System)",
+      "platform": "Windows",
+      "requires": "Windows 10 / 11",
+      "status": "download",
+      "short": "Fibonacci-Overlay, das über jedem Chart liegt – Pocket Option, TradingView, MT4/MT5 – mit den 4 Setups des SK-Systems und Zeichenwerkzeugen wie bei TradingView.",
+      "created": "2026-10-21",
+      "updated": "2026-10-23",
+      "tags": ["fibonacci", "fib", "sk", "pocket option", "overlay", "setup", "orderblock"],
+      "description": [
+        "Ein durchsichtiges Fenster, das über dem Chart liegt – egal ob Pocket Option, TradingView, MetaTrader oder ein anderes Programm. Du ziehst die Fib vom Hoch zum Tief, und die vier Setups des SK-Systems stehen sofort am Chart: Entry, Stop-Loss, Break-Even und TP1 bis TP3.",
+        "Dazu kommen Zeichenwerkzeuge, die sich wie bei TradingView bedienen lassen – Trendlinie, Strahl, horizontale Linie, Rechteck mit Text wie „ORDERBLOCK“ – mit Rechtsklick-Menü, Eigenschaften-Fenster und eigenen Vorlagen.",
+        "Wenn du an zwei Punkten der Fib die Preise eingibst, rechnet das Overlay für jedes Level den Preis aus und zeigt ihn an Linien und Preisschildern an."
+      ],
+      "features": [
+        "Sofort-Fib per Ziehen, mehrere Fibs gleichzeitig, Preise über zwei Punkte eingeben",
+        "4 Handels-Setups des SK-Systems: Entry, SL, BE, TP1–TP3 – mit globalen oder eigenen R-Werten",
+        "Fib im TradingView-Stil: 24 Level-Plätze, Fläche je Level an/aus mit eigener Farbe",
+        "Zeichenwerkzeuge: Trendlinie, Strahl, horizontaler Strahl, horizontale Linie, Rechteck mit 8 Griffen und Mittellinie",
+        "Text auf allen Zeichnungen: Farbe, Größe, Fett, Kursiv, Oben/Mitte/Unten, Links/Zentriert/Rechts",
+        "Rechtsklick-Menü wie TradingView: Vorlage, Visuelle Reihenfolge, Objektbaum, Klonen (Strg+Ziehen), Kopieren/Einfügen, Fixieren, Verbergen",
+        "Magnet: Punkte rasten am Hoch oder Tief der Kerze ein",
+        "Test-Funktionen: Alarm, wenn der Kurs ein Level, ein Rechteck oder eine Linie erreicht; Automatikmodus schaltet die Setups 1 → 4 weiter",
+        "50 Designs in Schwarz, Violett und Gold, optional Matrix-Regen",
+        "Einstellungen, Presets und 5 Speicherplätze, frei belegbare Hotkeys"
+      ],
+      "images": [
+        { "src": "img/fib-overlay/zeichnungen.png", "caption": "Fib mit Setup 1, Rechteck „ORDERBLOCK“, Linien mit Text und Preisschild" },
+        { "src": "img/fib-overlay/dashboard.png", "caption": "Das Dashboard (Design „Obsidian Violett“)" },
+        { "src": "img/fib-overlay/menue.png", "caption": "Rechtsklick-Menü mit Vorlagen und Visueller Reihenfolge" },
+        { "src": "img/fib-overlay/eigenschaften.png", "caption": "Eigenschaften: Stil, Text und Koordinaten" },
+        { "src": "img/fib-overlay/levels.png", "caption": "Fib-Level wie bei TradingView – Fläche je Level einstellbar" },
+        { "src": "img/fib-overlay/designs.png", "caption": "Einige der 50 Designs" }
+      ],
+      "downloads": [
+        { "label": "Fib Overlay V3 (Windows, ZIP)", "url": "https://github.com/VrilyaSSLuxion/fear-greed-v2/releases/download/fib-overlay-v3/FibOverlay_V3.zip", "size": "37 MB" }
+      ],
+      "links": [],
+      "hints": [
+        "ZIP entpacken und FibOverlay.exe starten – keine Installation nötig. Die Einstellungen liegen unter %APPDATA%\\FibOverlay.",
+        "Das Programm ist nicht signiert. Zeigt Windows „Der Computer wurde durch Windows geschützt“, auf „Weitere Informationen“ und dann „Trotzdem ausführen“ klicken.",
+        "Das Overlay liegt als Bild über dem Chart. Wird der Chart verschoben oder gezoomt (z. B. Autoscroll bei Pocket Option), bleibt die Fib am Bildschirm stehen und muss neu gesetzt werden.",
+        "Alarm, Automatikmodus und Magnet lesen die Kerzen vom Bildschirm ab und sind Test-Funktionen."
+      ],
+      "versions": [
+        { "v": "3", "date": "2026-10-23", "notes": [
+          "Rechtsklick-Menü wie TradingView: Alarm, Vorlage, Visuelle Reihenfolge, Objektbaum, Klonen, Kopieren/Einfügen, Fixieren, Verbergen, Entfernen",
+          "Eigenschaften-Fenster mit den Reitern Stil, Text und Koordinaten",
+          "Text auf allen Zeichnungen, Rechteck „Verlängern“, Mauszeiger an den Griffen wie bei TradingView",
+          "Fib: Linie 0 gelb, Linie 1 rot, Fläche je Level mit eigener Farbe",
+          "Alarm für Rechtecke und Linien, Automatikmodus (Setups nur vorwärts 1 → 4)",
+          "50 Designs; Designwechsel ohne dass sich das Einstellungsfenster schließt"
+        ] },
+        { "v": "2", "date": "2026-10-23", "notes": [
+          "Rechteck wie bei TradingView mit 8 Griffen und Mittellinie",
+          "Objektliste, Fixieren und Verbergen je Objekt, Vorlagen je Werkzeug",
+          "TradingView-Level-Liste mit 24 Plätzen, 5 Speicherplätze für Einstellungen",
+          "Länge des horizontalen Strahls in Pixel oder Kerzen, 29 Designs"
+        ] },
+        { "v": "1", "date": "2026-10-23", "notes": [
+          "Eigenständiges Programm (EXE) mit Dashboard und den Setups 1–4",
+          "Einstellungen und Presets, Hotkeys",
+          "Zeichenwerkzeuge, Magnet, Fib im TradingView-Stil, mehrere Fibs",
+          "Level-Verlängerung mit Alarm, Designs und Matrix-Regen"
+        ] }
+      ]
+    }
+  ]
+}
