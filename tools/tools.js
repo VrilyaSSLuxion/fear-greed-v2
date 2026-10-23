@@ -40,7 +40,7 @@ function matches(it) {
 
 function overview() {
   document.title = 'Trading Tools · VrilyaSS';
-  const count = id => ITEMS.filter(i => i.category === id).length;
+  const count = id => id === 'tradingview' && window.TVV?.ready() ? TVV.count() : ITEMS.filter(i => i.category === id).length;
   $('#app').innerHTML = `
     <div class="page">
       <div class="hero">
@@ -62,11 +62,14 @@ function renderCats() {
     const all = ITEMS.filter(i => i.category === c.id).sort(byName);
     const hits = all.filter(matches);
     let body;
-    if (!all.length) body = `<div class="empty">${esc(c.empty)}</div>`;
+    // TradingView hat eine eigene Ansicht (Gruppen / Einzelliste / Versteckt) aus tradingview.json
+    if (c.id === 'tradingview' && window.TVV?.ready()) body = `<div id="tvbox">${TVV.html(QUERY)}</div>`;
+    else if (!all.length) body = `<div class="empty">${esc(c.empty)}</div>`;
     else if (!hits.length) body = `<p class="nohit">Keine Treffer in ${esc(c.title)}.</p>`;
     else body = `<div class="grid">${hits.map(card).join('')}</div>`;
     return `<section class="cat" id="cat-${c.id}"><div class="cat-head"><h2>${c.title}</h2><span>${esc(c.sub)}</span></div>${body}</section>`;
   }).join('')}</div>`;
+  if (window.TVV?.ready()) TVV.bind(() => QUERY);
 }
 
 function detail(it) {
@@ -132,5 +135,8 @@ function route() {
 $('#lightbox').onclick = () => $('#lightbox').classList.add('hidden');
 addEventListener('keydown', e => { if (e.key === 'Escape') $('#lightbox').classList.add('hidden'); });
 addEventListener('hashchange', route);
-fetch('tools.json', { cache: 'no-store' }).then(r => r.json()).then(j => { ITEMS = j.items || []; route(); })
+Promise.all([
+  fetch('tools.json', { cache: 'no-store' }).then(r => r.json()),
+  fetch('tradingview.json', { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+]).then(([j, tv]) => { ITEMS = j.items || []; if (tv && window.TVV) TVV.init(tv); route(); })
   .catch(() => { $('#app').innerHTML = '<p class="nohit">Die Liste konnte nicht geladen werden. Bitte Seite neu laden.</p>'; });

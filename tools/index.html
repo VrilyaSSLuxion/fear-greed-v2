@@ -126,6 +126,72 @@
   .side{display:flex;flex-direction:column;gap:14px}
   .main-col{display:flex;flex-direction:column;gap:14px}
 
+  /* TradingView: Gruppen / Einzelliste / Versteckt */
+  .tv{display:flex;flex-direction:column;gap:14px}
+  .tvbar{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap}
+  .seg{display:flex;gap:4px;padding:4px;border:1px solid var(--line2);border-radius:12px;background:#140a18}
+  .seg button,.sorts button,.sizes button{font:inherit;border:0;cursor:pointer}
+  .seg button{padding:6px 14px;border-radius:9px;font-weight:800;font-size:13px;color:#cbb8d8;background:none;white-space:nowrap}
+  .seg button:hover{background:#2a1a33;color:#fff}
+  .seg button.on{background:var(--gold2);color:#160b1b}
+  .seg small{font-weight:700;opacity:.75;margin-left:5px}
+  .tvopts{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin-left:auto}
+  .sorts,.sizes{display:flex;gap:6px;align-items:center}
+  .sorts button,.sizes button{padding:6px 11px;border-radius:9px;border:1px solid var(--line2);background:var(--panel);font-weight:700;font-size:12.5px;color:#cbb8d8;white-space:nowrap}
+  .sorts button:hover,.sizes button:hover{border-color:var(--gold2)}
+  .sorts button.on,.sizes button.on{border-color:var(--gold2);color:var(--gold2)}
+  .sizes span{color:var(--muted);font-size:12.5px;font-weight:700;margin-right:2px}
+  .hintsw{display:flex;align-items:center;gap:7px;color:#cbb8d8;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .hintsw input{accent-color:var(--pink);width:15px;height:15px}
+  .groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+  .gcard{border:1px solid var(--line2);border-radius:14px;background:var(--panel);overflow:hidden;display:flex;flex-direction:column}
+  .gcard.open{grid-column:1/-1;border-color:var(--gold2)}
+  .gtop{display:flex;gap:12px;padding:12px;flex:1}
+  .ginfo{min-width:0}
+  .gcard h3{font-size:15.5px;font-weight:800;line-height:1.25}
+  .gmeta{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .gnew{font-size:12.5px;margin-top:6px;color:#d9cfe2;overflow-wrap:anywhere}
+  .gnew b{color:var(--gold2);font-weight:700}
+  .basis{display:block;color:#e39ad9;font-size:12px;font-weight:600;margin-top:3px}
+  .gfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line)}
+  .gfoot button{border:0;background:none;color:var(--muted);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0}
+  .gfoot button:hover,.gfoot button.is-open{color:var(--gold2)}
+  .vers{padding:0 12px 10px}
+  .tvthumb{flex:0 0 var(--tw);width:var(--tw);height:calc(var(--tw) * .5625);border-radius:8px;border:1px solid var(--line);background:#131722;padding:0;overflow:hidden;cursor:zoom-in}
+  .tvthumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .tvthumb.g{flex-basis:calc(var(--tw) * 1.1);width:calc(var(--tw) * 1.1);height:calc(var(--tw) * .62)}
+  .tvlist{display:flex;flex-direction:column;gap:6px}
+  .tvhead,.tvrow{display:grid;grid-template-columns:var(--tw) minmax(0,1fr) 96px 150px 124px;gap:12px;align-items:center}
+  .tv.noimg .tvhead,.tv.noimg .tvrow{grid-template-columns:minmax(0,1fr) 96px 150px 124px}
+  .tvhead{padding:2px 14px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  .tvhead button{border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left;cursor:pointer;padding:0}
+  .tvhead button:hover,.tvhead button.on{color:var(--gold2)}
+  .tvrow{padding:8px 14px;border:1px solid var(--line2);border-radius:11px;background:var(--panel)}
+  .tvlist.inner .tvrow{background:var(--panel2)}
+  .tvrow.hid{border-style:dashed}
+  .tvrow .nm{min-width:0}
+  .tvrow .n{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tvrow .d{color:#d9cfe2;font-variant-numeric:tabular-nums;font-size:13px}
+  .badge.st{border-color:rgba(63,214,195,.5);color:var(--teal)}
+  .tvbtn{justify-self:end;padding:5px 12px;border-radius:9px;background:linear-gradient(135deg,#8a3fb8,#b34fae);color:#fff;font-weight:800;font-size:12.5px;text-decoration:none;white-space:nowrap}
+  .tvbtn:hover{filter:brightness(1.12)}
+  .tvbtn.off{background:var(--panel2);border:1px solid var(--line2);color:var(--muted)}
+  .tvmore{align-self:center;padding:8px 16px;border-radius:10px;border:1px solid var(--line2);background:var(--panel);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+  .tvmore:hover{border-color:var(--gold2)}
+  .note{border-left:3px solid var(--gold);padding:10px 12px;background:rgba(246,184,96,.07);border-radius:0 10px 10px 0;color:#e9dcc6;font-size:13px}
+  .tvstand{color:var(--dim);font-size:12px}
+  .tvstand a{color:var(--muted)}
+  @media (max-width:700px){
+    .tvopts{margin-left:0}
+    .groups{grid-template-columns:1fr}
+    .tvhead{display:none}
+    .tvrow,.tv.noimg .tvrow{grid-template-columns:var(--tw) minmax(0,1fr) auto;grid-template-areas:"img nm nm" "img ty btn" "img d btn";row-gap:4px}
+    .tv.noimg .tvrow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm nm" "ty btn" "d btn"}
+    .tvrow .tvthumb{grid-area:img} .tvrow .nm{grid-area:nm} .tvrow .ty{grid-area:ty} .tvrow .d{grid-area:d} .tvrow .tvbtn{grid-area:btn;align-self:center}
+    .tvrow .n{white-space:normal}
+    .tv.size-gross .gtop{flex-direction:column} .tv.size-gross .tvthumb.g{width:100%;height:auto;aspect-ratio:16/9;flex-basis:auto}
+  }
+
   .lightbox{position:fixed;inset:0;background:rgba(5,2,8,.92);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;cursor:zoom-out}
   .lightbox img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 10px 50px rgba(0,0,0,.6)}
   .hidden{display:none!important}
@@ -147,6 +213,7 @@
   <footer>Alle Tools ohne Gewähr – kein Anlagerat. Trading ist mit Risiken verbunden. © VrilyaSS</footer>
 </div>
 <div class="lightbox hidden" id="lightbox"><img alt=""></div>
+<script src="tradingview.js"></script>
 <script src="tools.js"></script>
 </body>
 </html>
