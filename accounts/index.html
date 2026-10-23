@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<script>/* fear-greed-v2 (Testkopie): eigene Browser-Einstellungen, getrennt von der Live-Seite */
+(() => { try {
+  const ls = window.localStorage, S = Storage.prototype, P = 'v2~', INIT = P + '__init';
+  const get = S.getItem, set = S.setItem, del = S.removeItem, key = S.key, clr = S.clear;
+  const len = Object.getOwnPropertyDescriptor(S, 'length').get;
+  const raw = () => { const a = []; for (let i = 0, n = len.call(ls); i < n; i++) a.push(key.call(ls, i)); return a; };
+  if (get.call(ls, INIT) == null) {
+    for (const k of raw()) if (k && !k.startsWith(P)) try { set.call(ls, P + k, get.call(ls, k)); } catch (e) { }
+    set.call(ls, INIT, String(Date.now()));
+  }
+  const own = () => raw().filter(k => k && k.startsWith(P) && k !== INIT).map(k => k.slice(P.length));
+  const mine = s => s === ls;
+  S.getItem = function (k) { return get.call(this, mine(this) ? P + k : k); };
+  S.setItem = function (k, v) { return set.call(this, mine(this) ? P + k : k, v); };
+  S.removeItem = function (k) { return del.call(this, mine(this) ? P + k : k); };
+  S.key = function (i) { return mine(this) ? (own()[i] ?? null) : key.call(this, i); };
+  S.clear = function () { if (!mine(this)) return clr.call(this); for (const k of own()) del.call(ls, P + k); };
+  Object.defineProperty(S, 'length', { configurable: true, enumerable: true, get() { return mine(this) ? own().length : len.call(this); } });
+} catch (e) { } })();
+</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accounts · VrilyaSS</title>
+<meta name="description" content="Die Profile von VrilyaSS – TradingView und YouTube.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='12' r='6' fill='none' stroke='%23f6c453' stroke-width='4'/%3E%3Cpath d='M5 29c2-7 7-9 11-9s9 2 11 9' fill='none' stroke='%23d65ac9' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0610; --panel:#160b1b; --panel2:#1c0f24; --line:#2a1b33; --line2:#3a2747;
+    --text:#f4eef8; --muted:#a397ae; --dim:#6f6479; --pink:#d65ac9; --gold2:#f6c453;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:14px;line-height:1.5;
+    padding:18px 16px 80px;-webkit-font-smoothing:antialiased;min-height:100vh;
+    background-image:radial-gradient(ellipse 80% 50% at 30% 0%,rgba(120,40,110,.18),transparent 70%)}
+  a{color:inherit}
+  .page{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+  .apptabs{display:flex;gap:4px;padding:4px;border:1px solid var(--line2);border-radius:12px;background:#140a18;width:max-content;max-width:100%;overflow-x:auto}
+  .apptabs>*{padding:7px 16px;border-radius:9px;font-weight:800;font-size:14px;color:#cbb8d8;text-decoration:none;letter-spacing:.02em;white-space:nowrap}
+  .apptabs>.on{background:var(--gold2);color:#160b1b}
+  .apptabs>a:hover{background:#2a1a33;color:#fff}
+  h1{font-size:30px;font-weight:800;line-height:1.15}
+  h1 span{color:var(--gold2)}
+  .lead{color:var(--muted);margin-top:6px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+  .acc{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--line2);border-radius:14px;background:var(--panel);text-decoration:none;transition:border-color .15s,transform .15s}
+  .acc:hover{border-color:var(--gold2);transform:translateY(-2px)}
+  .ico{flex:0 0 52px;height:52px;border-radius:13px;display:flex;align-items:center;justify-content:center}
+  .acc b{display:block;font-size:16px;font-weight:800}
+  .acc small{display:block;color:var(--muted);font-size:13px}
+  .acc .go{margin-left:auto;color:var(--dim);font-size:18px}
+  .acc:hover .go{color:var(--gold2)}
+  footer{color:var(--dim);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
+  @media (max-width:520px){ .apptabs{flex-wrap:wrap;width:auto} h1{font-size:24px} .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="apptabs"><a href="../">Fear &amp; Greed</a><a href="../heatmap/">Liquidation Heatmap</a><a href="../tools/">Trading Tools</a><span class="on">Accounts</span><a class="v2chip" href="https://vrilyassluxion.github.io/fear-greed/" title="Das ist die Testkopie. Hier geht es zur Live-Seite." style="background:#3a1020;color:#ffb3c1">TESTKOPIE · Live-Seite ↗</a></nav>
+  <div>
+    <h1>Meine <span>Accounts</span></h1>
+    <p class="lead">Hier findest du mich auf TradingView und YouTube.</p>
+  </div>
+  <div class="grid" id="list"></div>
+  <footer>Kein Anlagerat – Trading ist mit Risiken verbunden. © VrilyaSS</footer>
+</div>
+<script>
+// Neue Accounts einfach hier ergänzen (type: tradingview | youtube | reddit | x | telegram | other)
+const ACCOUNTS = [
+  { type: 'tradingview', name: 'VrilyaSS', where: 'TradingView – Profil, Ideen und Skripte', url: 'https://de.tradingview.com/u/VrilyaSS/' },
+  { type: 'youtube', name: 'VrilyaSS', where: 'YouTube-Kanal', url: 'https://www.youtube.com/@VrilyaSS' },
+  { type: 'youtube', name: 'neuberlintourist', where: 'YouTube-Kanal', url: 'https://www.youtube.com/@neuberlintourist' },
+];
+const ICONS = {
+  tradingview: ['#1e2a4a', '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5b9cff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 6-8"/><path d="M15 6h3v3"/></svg>'],
+  youtube: ['#3a0f14', '<svg width="30" height="30" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="#ff3b3b"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg>'],
+  reddit: ['#3a1a0a', '<svg width="28" height="28" viewBox="0 0 24 24" fill="#ff6a2b"><circle cx="12" cy="13" r="7"/><circle cx="9.5" cy="12.5" r="1.2" fill="#160b1b"/><circle cx="14.5" cy="12.5" r="1.2" fill="#160b1b"/></svg>'],
+  other: ['#2a1a33', '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f6c453" stroke-width="2.4" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'],
+};
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+document.getElementById('list').innerHTML = ACCOUNTS.map(a => {
+  const [bg, svg] = ICONS[a.type] || ICONS.other;
+  return `<a class="acc" href="${esc(a.url)}" target="_blank" rel="noopener"><span class="ico" style="background:${bg}">${svg}</span>
+    <span><b>${esc(a.name)}</b><small>${esc(a.where)}</small></span><span class="go">↗</span></a>`;
+}).join('');
+</script>
+</body>
+</html>
