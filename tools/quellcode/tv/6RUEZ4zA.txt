@@ -1,0 +1,24 @@
+//@version=5
+indicator(title="-VrilyaSS-Tyler Jenks-Concensio System-2-", shorttitle="-VrilyaSS-Tyler Jenks-Concensio System-2-", overlay=true)
+
+// Define SMAs
+sma3 = ta.sma(close, 3)
+sma10 = ta.sma(close, 10)
+sma30 = ta.sma(close, 30)
+
+// Plot SMAs
+plot(sma3, title="-SMA3-", color=color.yellow, linewidth=2)
+plot(sma10, title="-SMA10-", color=color.green, linewidth=3)
+plot(sma30, title="-SMA30-", color=color.red, linewidth=4)
+
+// Buy and Sell signals based on specified conditions
+buy_signal = ta.crossover(sma3, sma10) and sma3 < sma30
+sell_signal = ta.crossunder(sma3, sma10) and sma3 > sma30
+
+// Plot buy and sell signals
+plotshape(series=buy_signal ? sma3 : na, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy", size=size.tiny)
+plotshape(series=sell_signal ? sma3 : na, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell", size=size.tiny)
+
+// Alerts
+alertcondition(buy_signal, title="Buy Signal", message="Buy Signal -VrilyaSS-Tyler Jenks-Concensio System-")
+alertcondition(sell_signal, title="Sell Signal", message="Sell Signal -VrilyaSS-Tyler Jenks-Concensio System-")

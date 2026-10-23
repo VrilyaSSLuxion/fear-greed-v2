@@ -1,0 +1,51 @@
+//@version=5
+indicator(title="-VrilyaSS-Dean Tyler Jenks-Consensio System-(3+10+30-SMA)-4X-BS-", shorttitle="-VrilyaSS-Dean Tyler Jenks-Consensio System-(3+10+30-SMA)-4X-BS-", overlay=true)
+
+// Inputs to define SMA periods
+sma3_period = input.int(3, title="-Price-Moving Average-(Price)-SMA-Period-3-")
+sma10_period = input.int(10, title="-Short-Term Moving Average-(STMA)-SMA-Period-10-")
+sma30_period = input.int(30, title="-Long-Term Moving Average-(LTMA)-SMA-Period-30-")
+
+// Define SMAs
+sma3 = ta.sma(close, sma3_period)
+sma10 = ta.sma(close, sma10_period)
+sma30 = ta.sma(close, sma30_period)
+
+// Plot SMAs
+plot(sma3, title="-Price-Moving Average-(Price)-SMA-3-", color=color.yellow, linewidth=2)
+plot(sma10, title="-Short-Term Moving Average-(STMA)-SMA-10-", color=color.green, linewidth=3)
+plot(sma30, title="-Long-Term Moving Average-(LTMA)-SMA-30-", color=color.red, linewidth=4)
+
+// Inputs to enable or disable individual signals
+activate_buy_signal1 = input(true, title="-Activate-Buy Signal-1- = ta.crossover(sma3, sma10) and sma3 > sma30")
+activate_sell_signal1 = input(true, title="-Activate-Sell Signal-1- = ta.crossunder(sma3, sma10) and sma3 < sma30")
+activate_buy_signal2 = input(true, title="-Activate-Buy Signal-2- = ta.crossover(sma3, sma10) and sma3 < sma30")
+activate_sell_signal2 = input(true, title="-Activate-Sell Signal-2- = ta.crossunder(sma3, sma10) and sma3 > sma30")
+activate_buy_signal3 = input(true, title="-Activate-Buy Signal-3- = ta.crossover(sma3, sma30)")
+activate_sell_signal3 = input(true, title="-Activate-Sell Signal-3- = ta.crossunder(sma3, sma30)")
+activate_buy_signal4 = input(true, title="-Activate-Buy Signal-4- = ta.crossover(sma3, sma10)")
+activate_sell_signal4 = input(true, title="-Activate-Sell Signal-4- = ta.crossunder(sma3, sma10)")
+
+// Buy and Sell signals based on specified conditions
+buy_signal1 = activate_buy_signal1 and ta.crossover(sma3, sma10) and sma3 > sma30
+sell_signal1 = activate_sell_signal1 and ta.crossunder(sma3, sma10) and sma3 < sma30
+
+buy_signal2 = activate_buy_signal2 and ta.crossover(sma3, sma10) and sma3 < sma30
+sell_signal2 = activate_sell_signal2 and ta.crossunder(sma3, sma10) and sma3 > sma30
+
+buy_signal3 = activate_buy_signal3 and ta.crossover(sma3, sma30)
+sell_signal3 = activate_sell_signal3 and ta.crossunder(sma3, sma30)
+
+buy_signal4 = activate_buy_signal4 and ta.crossover(sma3, sma10)
+sell_signal4 = activate_sell_signal4 and ta.crossunder(sma3, sma10)
+
+buy_signal = buy_signal1 or buy_signal2 or buy_signal3 or buy_signal4
+sell_signal = sell_signal1 or sell_signal2 or sell_signal3 or sell_signal4
+
+// Plot buy and sell signals
+plotshape(series=buy_signal ? sma3 : na, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy", size=size.tiny)
+plotshape(series=sell_signal ? sma3 : na, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell", size=size.tiny)
+
+// Alerts
+alertcondition(buy_signal, title="Buy Signal", message="Buy Signal -VrilyaSS-Tyler Jenks-Concensio System-")
+alertcondition(sell_signal, title="Sell Signal", message="Sell Signal -VrilyaSS-Tyler Jenks-Concensio System-")

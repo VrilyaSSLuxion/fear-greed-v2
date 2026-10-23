@@ -1,0 +1,53 @@
+//@version=5
+indicator("-Quick Trade Indicator-(QTI)-(AO+RSI+MACD)-", shorttitle="-Quick Trade Indicator-(QTI)-(AO+RSI+MACD)-", overlay=true)
+
+// Inputparameter für Awesome Oscillator
+ao_short_period = input.int(5, title="-AO-Short-Period-5-")
+ao_long_period = input.int(34, title="-AO-Long-Period-34-")
+
+// Inputparameter für RSI
+rsi_source = input.source(close, title="-RSI-Source-close-")
+rsi_period = input.int(14, title="-RSI-Period-14-")
+rsi_overbought = input.int(70, title="-RSI-Overbought-Level-70-")
+rsi_oversold = input.int(30, title="-RSI-Oversold-Level-30-")
+
+// Inputparameter für MACD
+macd_short_period = input.int(12, title="-MACD-Short-Period-12-")
+macd_long_period = input.int(26, title="-MACD-Long-Period-26-")
+macd_signal_period = input.int(9, title="-MACD-Signal-Period-9-")
+
+// Berechnung des Awesome Oscillators
+ao = ta.sma(high, ao_short_period) - ta.sma(low, ao_long_period)
+
+// Berechnung des RSI
+rsi = ta.rsi(rsi_source, rsi_period)
+
+// Berechnung des MACD
+[macd_line, signal_line, _] = ta.macd(close, macd_short_period, macd_long_period, macd_signal_period)
+
+// Erkennung von Kaufsignalen (Buy)
+buy_signal = ta.crossover(ao, 0) and rsi < rsi_oversold and ta.crossover(macd_line, signal_line)
+
+// Erkennung von Verkaufssignalen (Sell)
+sell_signal = ta.crossunder(ao, 0) and rsi > rsi_overbought and ta.crossunder(macd_line, signal_line)
+
+// Plots für Buy und Sell Signale
+plotshape(series=buy_signal, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// Stileinstellungen für bessere Übersichtlichkeit
+rsi_style = input.bool(false, title="-RSI-", inline="style")
+rsi_ob_style = input.bool(false, title="-RSI-Overbought-", inline="style")
+rsi_os_style = input.bool(false, title="-RSI-Oversold-", inline="style")
+macd_style = input.bool(false, title="-MACD-Line-", inline="style")
+signal_style = input.bool(false, title="-MACD-Signal-Line-", inline="style")
+ao_style = input.bool(false, title="-Awesome-Oscillator-", inline="style")
+buy_sell_style = input.bool(true, title="-Buy/Sell Signals-", inline="style")
+
+// Ausblendung der Stile je nach Einstellung
+plot(rsi, title="-RSI-", color=color.yellow, linewidth=2, display=rsi_style ? display.all : display.none)
+hline(rsi_overbought, title="-RSI-Overbought-", color=color.red, linewidth=3, linestyle=hline.style_solid, display=rsi_ob_style ? display.all : display.none)
+hline(rsi_oversold, title="-RSI-Oversold-", color=color.green, linewidth=3, linestyle=hline.style_solid, display=rsi_os_style ? display.all : display.none)
+plot(macd_line, title="--MACD-Line-", color=color.aqua, linewidth=2, display=macd_style ? display.all : display.none)
+plot(signal_line, title="-MACD-Signal-Line-", color=color.red, linewidth=3, display=signal_style ? display.all : display.none)
+plot(ao, title="-Awesome-Oscillator-", color=color.white, linewidth=2, display=ao_style ? display.all : display.none)

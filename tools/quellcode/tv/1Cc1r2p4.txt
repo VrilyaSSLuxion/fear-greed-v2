@@ -1,0 +1,86 @@
+//@version=5
+indicator("-VrilyaSS-Z-Score Probability Indicator-")
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///                                                            Tooltips                                                                                 ///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+t1 = "Determines the Length of Z-Score Assessment. Defaults to a 75 lookback period" 
+t2 = "Determines the length of the SMA if the user selects Show SMA. Default is 75, but for a more responsive SMA you can reduce it to 14. Optional."
+t3 = "Shows the probability zones in colour." 
+t4 = "Will Display a summarized Z-Table." 
+t5 = "Display's the SMA."  
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///                                                            User Inputs                                                                              ///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+len = input.int(75, "Lookback Length", tooltip=t1)
+plot_type = input.string("Area", "Plot Type", ["Area", "Candles"])
+txtcolor = input.string("White", "Text Colour", ["White", "Black", "Blue"])
+smalen = input.int(75, "SMA Length", tooltip=t2) 
+probfill = input.bool(true, "Distribution Probability Fills", tooltip=t3) 
+showztable = input.bool(true, "Show Z-Table", tooltip=t4) 
+showsma = input.bool(true, "Show SMA", tooltip=t5) 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///                                                            Z-Score Calculations                                                                  ///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+z = (close - ta.sma(close, len)) / ta.stdev(close, len) 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///                                                           Colours and Ranges                                                                       ///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Colour Definitions
+color nonefill = na
+color greenfill = color.new(color.green, 75) 
+color yellowfill = color.new(color.yellow, 75) 
+color redfill = color.new(color.red, 75) 
+
+// Logical Assessments for Ranges
+bool zero_to_one_six_one_eight = z >= 0 and z < 1.618
+bool neg_zero_to_neg_one_six_one_eight = z < 0 and z > -1.618
+
+bool one_six_one_eight_to_two = z >= 1.618 and z < 2
+bool neg_one_six_one_eight_to_neg_two = z <= -1.618 and z > -2
+
+bool two_to_two_two_three_six = z >= 2 and z < 2.236
+bool neg_two_to_neg_two_two_three_six = z <= -2 and z > -2.236
+
+bool two_two_three_six_to_two_six_one_eight = z >= 2.236 and z < 2.618
+bool neg_two_two_three_six_to_neg_two_six_one_eight = z <= -2.236 and z > -2.618
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///                                                         Plots and Fills                                                                            ///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+neutral = 0
+zone_one_six_one_eight = 1.618
+zone_two = 2
+zone_two_two_three_six = 2.236
+zone_two_six_one_eight = 2.618
+neg_zone_one_six_one_eight = -1.618
+neg_zone_two = -2
+neg_zone_two_two_three_six = -2.236
+neg_zone_two_six_one_eight = -2.618
+
+// Plots
+a = plot(neutral, color=nonefill)
+b = plot(zone_one_six_one_eight, color=nonefill)
+c = plot(zone_two, color=greenfill)
+d = plot(zone_two_two_three_six, color=yellowfill)
+e = plot(zone_two_six_one_eight, color=redfill)
+
+f = plot(neg_zone_one_six_one_eight, color=nonefill)
+g = plot(neg_zone_two, color=greenfill)
+h = plot(neg_zone_two_two_three_six, color=yellowfill)
+i = plot(neg_zone_two_six_one_eight, color=redfill)
+
+// Fills
+fill(a, b, color=nonefill)
+fill(b, c, color=probfill ? greenfill : na)
+fill(c, d, color=probfill ? yellowfill : na)
+fill(d, e, color=probfill ? redfill : na)
+
+fill(a, f, color=nonefill)
+fill(f, g, color=probfill ? greenfill : na)
+fill(g, h, color=probfill ? yellowfill : na)
+fill(h, i, color=probfill ? redfill : na)

@@ -1,0 +1,38 @@
+//@version=5
+indicator("-Quick Trade Indicator-(Bollinger Bands+Stochastic)-", shorttitle="-Quick Trade Indicator-(Bollinger Bands+Stochastic)-", overlay=true)
+
+// Inputparameter
+bb_length = input.int(20, title="Bollinger Bands Period")
+bb_std_dev = input.float(2.0, title="Bollinger Bands Standard Deviation")
+stoch_k = input.int(14, title="Stochastic %K Period")
+stoch_d = input.int(3, title="Stochastic %D Period")
+stoch_smooth = input.int(3, title="Stochastic Smoothing Period")
+
+// Berechnung der Bollinger Bänder
+basis = ta.sma(close, bb_length)
+dev = bb_std_dev * ta.stdev(close, bb_length)
+upper = basis + dev
+lower = basis - dev
+
+// Berechnung des Stochastic Oscillators
+k = ta.sma(ta.stoch(close, high, low, stoch_k), stoch_smooth)
+d = ta.sma(k, stoch_d)
+
+// Signale
+buy_signal = ta.crossover(k, d) and k < 20 and close < lower
+sell_signal = ta.crossunder(k, d) and k > 80 and close > upper
+
+// Plots
+plot(basis, color=color.white, title="BB Basis", linewidth=2)
+plot(upper, color=color.red, title="BB Upper", linewidth=3)
+plot(lower, color=color.green, title="BB Lower", linewidth=3)
+
+// Buy and Sell Markierungen
+plotshape(series=buy_signal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// Stochastic Oscillator als Plot unter dem Hauptchart
+hline(80, "Overbought", color=color.red, linewidth=3, linestyle=hline.style_solid, display=display.none)
+hline(20, "Oversold", color=color.green, linewidth=3, linestyle=hline.style_solid, display=display.none)
+plot(k, "Stochastic %K", color=color.aqua, linewidth=2, display=display.none)
+plot(d, "Stochastic %D", color=color.red, linewidth=3, display=display.none)

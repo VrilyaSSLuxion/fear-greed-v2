@@ -10,3 +10,4 @@ Testkopie der Seite https://vrilyassluxion.github.io/fear-greed/ mit dem neuen B
 - `accounts/` zeigt die Profile (TradingView, YouTube); die Liste steht oben in `accounts/index.html`.
 - `quellcode/` enthält den Quellcode der Desktop-Tools (z. B. Fib Overlay), damit andere daran weiterarbeiten können.
 - `tools/tools.json` enthält alle Einträge (MetaTrader, TradingView, Desktop-Tools). Downloads liegen unter *Releases*.
+- `tools/quellcode/tv/` enthält den Quellcode der TradingView-Skripte (Open Source, Lizenzhinweise der Original-Autoren stehen im Code); `tools/code.html?id=…` zeigt ihn an.

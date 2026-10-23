@@ -1,0 +1,32 @@
+//@version=5
+strategy("Breakout Trading Strategy", overlay=true)
+
+// Eingaben
+lookback = input.int(20, title="Lookback Period", minval=1)
+atrMultiplier = input.float(1.5, title="ATR Multiplier for Stop Loss", minval=1.0)
+
+// Berechnungen
+highLevel = ta.highest(high, lookback)
+lowLevel = ta.lowest(low, lookback)
+atr = ta.atr(lookback)
+
+// Kauf- und Verkaufssignale
+buySignal = close > highLevel
+sellSignal = close < lowLevel
+
+// Zeichnen der Unterstützungs- und Widerstandslinien
+plot(highLevel, color=color.green, linewidth=2, title="High Level")
+plot(lowLevel, color=color.red, linewidth=2, title="Low Level")
+
+// Kauf- und Verkaufsbedingungen
+if (buySignal)
+    strategy.entry("Buy", strategy.long)
+    strategy.exit("Sell", "Buy", stop=close - atrMultiplier * atr)
+    
+if (sellSignal)
+    strategy.entry("Sell", strategy.short)
+    strategy.exit("Cover", "Sell", stop=close + atrMultiplier * atr)
+
+// Darstellung der Signale
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, title="Buy Signal", text="BUY")
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, title="Sell Signal", text="SELL")

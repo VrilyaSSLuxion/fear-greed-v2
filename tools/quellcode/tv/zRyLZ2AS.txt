@@ -1,0 +1,25 @@
+//@version=5
+indicator("-Quick Trade Indicator-(QTI)-Fractal-1-", shorttitle="-Quick Trade Indicator-(QTI)-Fractal-1-", overlay=true)
+
+// Fractal-Definition
+isFractalHigh() =>
+    high[2] > high[3] and high[2] > high[4] and high[2] > high[1] and high[2] > high[0]
+
+isFractalLow() =>
+    low[2] < low[3] and low[2] < low[4] and low[2] < low[1] and low[2] < low[0]
+
+// Berechnung der Fraktale
+fractalHigh = ta.valuewhen(isFractalHigh(), high[2], 0)
+fractalLow = ta.valuewhen(isFractalLow(), low[2], 0)
+
+// Plot der Fraktale
+plotshape(series=isFractalHigh(), location=location.abovebar, color=color.red, style=shape.triangleup, title="-Fractal-High-", size=size.small)
+plotshape(series=isFractalLow(), location=location.belowbar, color=color.green, style=shape.triangledown, title="-Fractal-Low-", size=size.small)
+
+// Bedingungen für Long- und Short-Signale
+buy_condition = ta.crossover(close, fractalLow)
+sell_condition = ta.crossunder(close, fractalHigh)
+
+// Plot Buy and Sell signals
+plotshape(series=buy_condition, title="-Buy-Signal-", location=location.belowbar, color=color.green, text="BUY", style=shape.labelup, textcolor=color.black, size=size.tiny)
+plotshape(series=sell_condition, title="-Sell-Signal-", location=location.abovebar, color=color.red, text="SELL", style=shape.labeldown, textcolor=color.black, size=size.tiny)

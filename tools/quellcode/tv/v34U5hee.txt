@@ -1,0 +1,31 @@
+//@version=5
+indicator("-Quick Trade Indicator-(QTI)-(Donchian Channel+EMA-9-)-", shorttitle="-Quick Trade Indicator-(QTI)-(Donchian Channel+EMA-9-)-", overlay=true)
+
+// Inputparameter für Donchian Channel
+dc_period = input.int(20, title="-Donchian Channel-Period-20-")
+
+// Inputparameter für EMA
+ema_period = input.int(9, title="-EMA-Period-9-")
+ema_source = input.source(close, title="-EMA-Source-close-")
+
+// Berechnung des Donchian Channels
+dc_upper = ta.highest(high, dc_period)
+dc_lower = ta.lowest(low, dc_period)
+dc_mid = (dc_upper + dc_lower) / 2
+
+// Berechnung der EMA
+ema = ta.ema(ema_source, ema_period)
+
+// Signale
+buy_signal = ta.crossover(close, dc_mid) and close > ema
+sell_signal = ta.crossunder(close, dc_mid) and close < ema
+
+// Plots
+plot(dc_upper, color=color.red, title="-Donchian-Upper-", linewidth=3)
+plot(dc_mid, color=color.white, title="-Donchian-Mid-", linewidth=2)
+plot(dc_lower, color=color.green, title="-Donchian-Lower-", linewidth=3)
+plot(ema, color=color.red, title="-EMA-", linewidth=2)
+
+// Buy and Sell Markierungen
+plotshape(series=buy_signal, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

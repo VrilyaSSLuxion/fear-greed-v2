@@ -1,0 +1,64 @@
+//@version=5
+indicator("Buy Low Sell High with 50-SMA-Filter+Patterns-", overlay=true)
+
+// Parameter für die Anzahl der Kerzen, auf denen die extremen Werte basieren
+length = input.int(14, title="Lookback Period", minval=1)
+smaLength = input.int(50, title="SMA Length", minval=1)  // Länge des gleitenden Durchschnitts
+
+// Berechnung der niedrigsten und höchsten Kurse der letzten `length` Kerzen
+lowestLow = ta.lowest(low, length)
+highestHigh = ta.highest(high, length)
+
+// Berechnung des gleitenden Durchschnitts
+sma = ta.sma(close, smaLength)
+
+// Funktion zur Berechnung des Mittelwerts von zwei Preisen
+midpoint(price1, price2) =>
+    (price1 + price2) / 2
+
+// Bullische und bärische Muster-Identifikation
+isBullish(o, c) => c > o
+isBearish(o, c) => c < o
+
+// Funktion zur Überprüfung eines Abwärtstrends
+isDowntrend() => close[1] < close[2] and close[2] < close[3]
+
+// Funktion zur Überprüfung eines Aufwärtstrends
+isUptrend() => close[1] > close[2] and close[2] > close[3]
+
+// Bullische Muster
+bullishHammer = (low - math.min(open, close) > 2 * (math.max(open, close) - high)) and isDowntrend()
+bullishInvertedHammer = (high - math.max(open, close) > 2 * (math.min(open, close) - low)) and isDowntrend()
+bullishPiercing = (isBearish(close[1], open[1]) and isBullish(open, close) and open < close[1] and close > midpoint(open[1], close[1])) and isDowntrend()
+bullishHarami = (isBearish(close[1], open[1]) and isBullish(open, close) and open > close[1] and close < open[1]) and isDowntrend()
+bullishKicking = (isBearish(close[1], open[1]) and isBullish(open, close) and low > high[1]) and isDowntrend()
+bullishEngulfing = (isBearish(close[1], open[1]) and isBullish(open, close) and open < close[1] and close > open[1]) and isDowntrend()
+bullishMorningStar = (isBearish(close[2], open[2]) and (open[1] < close[2] and close[1] > open[2]) and isBullish(open, close) and close > midpoint(open[2], close[2])) and isDowntrend()
+bullishBeltHold = (isBullish(open, close) and low == open and close > midpoint(high, low)) and isDowntrend()
+bullishThreeWhiteSoldiers = (isBullish(open[2], close[2]) and isBullish(open[1], close[1]) and isBullish(open, close) and close[1] > close[2] and close > close[1]) and isDowntrend()
+
+// Bärische Muster
+bearishHangingMan = (high - math.max(open, close) > 2 * (math.min(open, close) - low)) and isUptrend()
+bearishShootingStar = (high - close > 2 * (open - low)) and isUptrend()
+bearishBeltHold = (isBearish(open, close) and high == open and close < midpoint(high, low)) and isUptrend()
+bearishHarami = (isBullish(close[1], open[1]) and isBearish(open, close) and open < close[1] and close > open[1]) and isUptrend()
+bearishKicking = (isBullish(close[1], open[1]) and isBearish(open, close) and high < low[1]) and isUptrend()
+bearishEngulfing = (isBullish(close[1], open[1]) and isBearish(open, close) and open > close[1] and close < open[1]) and isUptrend()
+bearishEveningStar = (isBullish(close[2], open[2]) and (open[1] > close[2] and close[1] < open[2]) and isBearish(open, close) and close < midpoint(open[2], close[2])) and isUptrend()
+bearishDarkCloud = (isBullish(close[1], open[1]) and isBearish(open, close) and open > close[1] and close < midpoint(open[1], close[1])) and isUptrend()
+bearishThreeBlackCrows = (isBearish(open[2], close[2]) and isBearish(open[1], close[1]) and isBearish(open, close) and close[1] < close[2] and close < close[1]) and isUptrend()
+
+// Kombinierte Kauf- und Verkaufbedingungen
+buySignal = low == lowestLow and close > sma and (bullishHammer or bullishInvertedHammer or bullishPiercing or bullishHarami or bullishKicking or bullishEngulfing or bullishMorningStar or bullishBeltHold or bullishThreeWhiteSoldiers)
+sellSignal = high == highestHigh and close < sma and (bearishHangingMan or bearishShootingStar or bearishBeltHold or bearishHarami or bearishKicking or bearishEngulfing or bearishEveningStar or bearishDarkCloud or bearishThreeBlackCrows)
+
+// Plotte die Kauf- und Verkaufssignale auf dem Chart
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", textcolor=color.white, size=size.small)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.white, size=size.small)
+
+// Plotte den gleitenden Durchschnitt auf dem Chart
+plot(sma, title="SMA", color=color.white, linewidth=2)
+
+// Alarme
+alertcondition(buySignal, title="Buy Signal Alert", message="Buy signal generated: Price is at the lowest of the last period, above the SMA, and a bullish pattern is detected.")
+alertcondition(sellSignal, title="Sell Signal Alert", message="Sell signal generated: Price is at the highest of the last period, below the SMA, and a bearish pattern is detected.")

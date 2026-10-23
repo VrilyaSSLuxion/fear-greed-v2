@@ -1,0 +1,564 @@
+//@version=6
+// JOIN US TELEGRAM >> https://t.me/tradingtiger123
+indicator('TT SCALPER V3', 'TT SCALPER V3', overlay = true, max_labels_count = 500)
+
+//------------------------------------------------------------------------------
+//Settings
+//-----------------------------------------------------------------------------{
+length = 10
+
+minMult = 1
+maxMult = 5
+step = .5
+
+//Trigger error
+if minMult > maxMult
+    runtime.error('Minimum factor is greater than maximum factor in the range')
+
+perfAlpha = input.float(100, 'Performance Memory', minval = 2)
+fromCluster = 'Best'
+
+//Optimization
+maxIter = 1000
+maxData = 10000
+
+//Martingale Settings
+initialCapital = input.float(100.0, 'Initial Capital ($)', minval = 0.01, group = 'Martingale')
+baseRiskPercent = input.float(2.0, 'Base Risk Per Trade (%)', minval = 0.1, maxval = 10, group = 'Martingale')
+riskRewardRatio = input.float(1, 'Risk/Reward Ratio', minval = 0.1, group = 'Martingale')
+maxMartingale = input.int(10, 'Max Martingale Level', minval = 1, maxval = 20, group = 'Martingale')
+commissionRate = input.float(0.006, 'Commission Rate (%)', minval = 0, maxval = 5, step = 0.001, group = 'Martingale')
+martingaleType = 'Classic Double'
+
+//Style
+bearCss = color.red
+bullCss = color.teal
+
+amaBearCss = color.new(color.red, 50)
+amaBullCss = color.new(color.teal, 50)
+
+showGradient = input(true, 'Candle Coloring', group = 'Style')
+showSignals = input(true, 'Show Signals', group = 'Style')
+showSLTP = input(true, 'Show SL/TP Levels', group = 'Style')
+
+//Dashboard
+showDash = input(true, 'Show Dashboard', group = 'Dashboard')
+dashLoc = input.string('Top Right', 'Location', options = ['Top Right', 'Bottom Right', 'Bottom Left'], group = 'Dashboard')
+textSize = input.string('Small', 'Size', options = ['Tiny', 'Small', 'Normal'], group = 'Dashboard')
+
+// NEW: MA150 Filter Inputs
+useMA150 = input.bool(true, 'Use MA150 Filter', group = 'Filters')
+maTypeOpt = input.string('SMA', 'MA Type (150)', options = ['SMA', 'EMA', 'WMA'], group = 'Filters')
+maPeriod150 = input.int(150, 'MA Period', minval = 1, group = 'Filters')
+//-----------------------------------------------------------------------------}
+//UDT's
+//-----------------------------------------------------------------------------{
+type supertrend
+	float upper = hl2
+	float lower = hl2
+	float output
+	float perf = 0
+	float factor
+	int trend = 0
+
+type vector
+	array<float> out
+
+type tradeData
+	float entryPrice = 0
+	float stopLoss = 0
+	float takeProfit = 0
+	float positionSize = 0
+	int direction = 0
+	int martingaleLevel = 1
+	bool isActive = false
+	bool waitingForTrendChange = true
+	float fixedStopDistance = 0
+	float fixedRiskReward = 0
+	float sequenceLoss = 0 // Track total loss in current sequence
+
+type sequenceData
+	int sequenceNumber = 0
+	float sequenceProfit = 0
+	int tradesInSequence = 0
+	bool isWinningSequence = false
+
+//-----------------------------------------------------------------------------}
+//Supertrend
+//-----------------------------------------------------------------------------{
+var holder = array.new<supertrend>(0)
+var factors = array.new<float>(0)
+
+//Populate supertrend type array
+if barstate.isfirst
+    for i = 0 to int((maxMult - minMult) / step) by 1
+        factors.push(minMult + i * step)
+        holder.push(supertrend.new())
+
+atr = ta.atr(length)
+
+//Compute Supertrend for multiple factors
+k = 0
+for factor in factors
+    get_spt = holder.get(k)
+
+    up = hl2 + atr * factor
+    dn = hl2 - atr * factor
+
+    get_spt.trend := close > get_spt.upper ? 1 : close < get_spt.lower ? 0 : get_spt.trend
+    get_spt.upper := close[1] < get_spt.upper ? math.min(up, get_spt.upper) : up
+    get_spt.lower := close[1] > get_spt.lower ? math.max(dn, get_spt.lower) : dn
+
+    diff = nz(math.sign(close[1] - get_spt.output))
+    get_spt.perf := get_spt.perf + 2 / (perfAlpha + 1) * (nz(close - close[1]) * diff - get_spt.perf)
+    get_spt.output := get_spt.trend == 1 ? get_spt.lower : get_spt.upper
+    get_spt.factor := factor
+    k := k + 1
+    k
+
+//-----------------------------------------------------------------------------}
+//K-means clustering
+//-----------------------------------------------------------------------------{
+factor_array = array.new<float>(0)
+data = array.new<float>(0)
+
+//Populate data arrays
+if last_bar_index - bar_index <= maxData
+    for element in holder
+        data.push(element.perf)
+        factor_array.push(element.factor)
+
+//Intitalize centroids using quartiles
+centroids = array.new<float>(0)
+centroids.push(data.percentile_linear_interpolation(25))
+centroids.push(data.percentile_linear_interpolation(50))
+centroids.push(data.percentile_linear_interpolation(75))
+
+//Intialize clusters
+var array<vector> factors_clusters = na
+var array<vector> perfclusters = na
+
+if last_bar_index - bar_index <= maxData
+    for _ = 0 to maxIter by 1
+        factors_clusters := array.from(vector.new(array.new<float>(0)), vector.new(array.new<float>(0)), vector.new(array.new<float>(0)))
+        perfclusters := array.from(vector.new(array.new<float>(0)), vector.new(array.new<float>(0)), vector.new(array.new<float>(0)))
+
+        //Assign value to cluster
+        i = 0
+        for value in data
+            dist = array.new<float>(0)
+            for centroid in centroids
+                dist.push(math.abs(value - centroid))
+
+            idx = dist.indexof(dist.min())
+            perfclusters.get(idx).out.push(value)
+            factors_clusters.get(idx).out.push(factor_array.get(i))
+            i := i + 1
+            i
+
+        //Update centroids
+        new_centroids = array.new<float>(0)
+        for cluster_ in perfclusters
+            new_centroids.push(cluster_.out.avg())
+
+        //Test if centroid changed
+        if new_centroids.get(0) == centroids.get(0) and new_centroids.get(1) == centroids.get(1) and new_centroids.get(2) == centroids.get(2)
+            break
+
+        centroids := new_centroids
+        centroids
+
+//-----------------------------------------------------------------------------}
+//Signals and trailing stop
+//-----------------------------------------------------------------------------{
+//Get associated supertrend
+var float target_factor = na
+var float perf_idx = na
+var float perf_ama = na
+
+var from = switch fromCluster
+    'Best' => 2
+    'Average' => 1
+    'Worst' => 0
+
+//Performance index denominator
+den = ta.ema(math.abs(close - close[1]), int(perfAlpha))
+
+if not na(perfclusters)
+    //Get average factors within target cluster 
+    target_factor := nz(factors_clusters.get(from).out.avg(), target_factor)
+
+    //Get performance index of target cluster 
+    perf_idx := math.max(nz(perfclusters.get(from).out.avg()), 0) / den
+    perf_idx
+
+//Get new supertrend
+var upper = hl2
+var lower = hl2
+var os = 0
+
+up = hl2 + atr * target_factor
+dn = hl2 - atr * target_factor
+upper := close[1] < upper ? math.min(up, upper) : up
+lower := close[1] > lower ? math.max(dn, lower) : dn
+os := close > upper ? 1 : close < lower ? 0 : os
+ts = bool(os) ? lower : upper
+
+//Get trailing stop adaptive MA
+if na(ts[1]) and not na(ts)
+    perf_ama := ts
+    perf_ama
+else
+    perf_ama := perf_ama + perf_idx * (ts - perf_ama)
+    perf_ama
+
+//-----------------------------------------------------------------------------}
+// MA150 calculation (filter)
+//-----------------------------------------------------------------------------{
+ma150 = maTypeOpt == 'EMA' ? ta.ema(close, maPeriod150) : maTypeOpt == 'WMA' ? ta.wma(close, maPeriod150) : ta.sma(close, maPeriod150)
+plot(useMA150 ? ma150 : na, title = 'MA150', linewidth = 2)
+//-----------------------------------------------------------------------------}
+//TRUE Martingale Trading System
+//-----------------------------------------------------------------------------{
+var tradeData currentTrade = tradeData.new()
+var sequenceData currentSequence = sequenceData.new()
+var float totalEquity = initialCapital
+var int totalTrades = 0
+var int totalSequences = 0
+var int winningSequences = 0
+var int losingSequences = 0
+var float totalSequenceProfit = 0
+var float maxDrawdown = 0
+var float peakEquity = initialCapital
+var int consecutiveLosses = 0
+var int maxConsecutiveLosses = 0
+var int firstTradeTime = na
+var int maxMartingaleReached = 1
+var float baseRiskAmount = 0
+
+// Initialize base risk amount
+if barstate.isfirst
+    baseRiskAmount := initialCapital * (baseRiskPercent / 100)
+    baseRiskAmount
+
+// Trend Change Detection
+trendChanged = os != os[1] and not na(os[1])
+
+// Signal Variables
+var bool longSignal = false
+var bool shortSignal = false
+var bool justEntered = false
+var bool slHitThisBar = false
+
+// Line objects for trade levels
+var line entryLine = na
+var line slLine = na
+var line tpLine = na
+
+// Check for exits first
+if currentTrade.isActive
+    // Check for TP hit
+    tpHit = currentTrade.direction == 1 and high >= currentTrade.takeProfit or currentTrade.direction == 0 and low <= currentTrade.takeProfit
+
+    // Check for SL hit  
+    slHit = currentTrade.direction == 1 and low <= currentTrade.stopLoss or currentTrade.direction == 0 and high >= currentTrade.stopLoss
+
+    if tpHit
+        // Calculate profit (dollar amount)
+        dollarProfit = currentTrade.positionSize * (math.abs(currentTrade.takeProfit - currentTrade.entryPrice) / currentTrade.entryPrice)
+
+        // Calculate commission
+        totalCommission = currentTrade.positionSize * (commissionRate / 100) * 2
+        netProfit = dollarProfit - totalCommission
+
+        // Calculate percentage for display
+        profitPercent = netProfit / totalEquity * 100
+
+        // Sequence won - Reset everything
+        currentSequence.sequenceProfit := netProfit - currentTrade.sequenceLoss
+        currentSequence.isWinningSequence := true
+        currentSequence.tradesInSequence := currentSequence.tradesInSequence + 1
+        profitPercent := netProfit / currentTrade.positionSize * 100
+        // Add label
+        label.new(bar_index, currentTrade.takeProfit, '✅\nSEQ' + str.tostring(currentSequence.tradesInSequence) + '\n+' + str.tostring(profitPercent, '#.#') + '%', color = color.new(color.green, 10), style = label.style_arrowup, textcolor = color.white, size = size.large)
+
+        // Update equity with net profit
+        totalEquity := totalEquity + netProfit
+        peakEquity := math.max(peakEquity, totalEquity)
+        totalSequenceProfit := totalSequenceProfit + currentSequence.sequenceProfit
+
+        // Count sequence as win
+        totalSequences := totalSequences + 1
+        winningSequences := winningSequences + 1
+        totalTrades := totalTrades + 1
+        consecutiveLosses := 0
+
+        // Reset for new sequence
+        currentTrade.martingaleLevel := 1
+        currentTrade.sequenceLoss := 0
+        currentTrade.fixedStopDistance := 0
+        currentTrade.fixedRiskReward := 0
+        currentTrade.isActive := false
+        currentTrade.waitingForTrendChange := true
+        currentSequence := sequenceData.new()
+        currentSequence
+
+    else if slHit
+        // Calculate loss (dollar amount)
+        dollarLoss = currentTrade.positionSize * (math.abs(currentTrade.stopLoss - currentTrade.entryPrice) / currentTrade.entryPrice)
+
+        // Calculate commission
+        totalCommission = currentTrade.positionSize * (commissionRate / 100) * 2
+        netLoss = dollarLoss + totalCommission
+
+        // Add to sequence loss
+        currentTrade.sequenceLoss := currentTrade.sequenceLoss + netLoss
+        currentSequence.tradesInSequence := currentSequence.tradesInSequence + 1
+
+// Calculate percentage for display
+
+        lossPercent = netLoss / currentTrade.positionSize * 100
+        // Add label
+        label.new(bar_index, currentTrade.stopLoss, '❌\nSEQ' + str.tostring(currentSequence.tradesInSequence) + '\n-' + str.tostring(lossPercent, '#.#') + '%', color = color.new(color.red, 10), style = label.style_arrowdown, textcolor = color.white, size = size.large)
+
+
+        // Update equity with net loss
+        totalEquity := totalEquity - netLoss
+        consecutiveLosses := consecutiveLosses + 1
+        maxConsecutiveLosses := math.max(maxConsecutiveLosses, consecutiveLosses)
+        totalTrades := totalTrades + 1
+
+        // Calculate drawdown
+        drawdown = (peakEquity - totalEquity) / peakEquity * 100
+        maxDrawdown := math.max(maxDrawdown, drawdown)
+
+        // Track max martingale level
+        maxMartingaleReached := math.max(maxMartingaleReached, currentTrade.martingaleLevel)
+
+        // Increase martingale level or reset sequence
+        if currentTrade.martingaleLevel < maxMartingale
+            currentTrade.martingaleLevel := currentTrade.martingaleLevel + 1
+            currentTrade.martingaleLevel
+        else // Max level reached - close sequence as loss
+            currentSequence.sequenceProfit := -currentTrade.sequenceLoss
+            currentSequence.isWinningSequence := false
+            totalSequences := totalSequences + 1
+            losingSequences := losingSequences + 1
+            totalSequenceProfit := totalSequenceProfit + currentSequence.sequenceProfit
+
+            // Reset for new sequence
+            currentTrade.martingaleLevel := 1
+            currentTrade.sequenceLoss := 0
+            currentTrade.waitingForTrendChange := true
+            currentSequence := sequenceData.new()
+            currentSequence
+
+        currentTrade.isActive := false
+        currentTrade.waitingForTrendChange := currentTrade.martingaleLevel == 1 ? true : false
+        currentTrade.waitingForTrendChange
+
+// Entry Logic
+if not currentTrade.isActive and not na(target_factor) and not na(ts)
+    // Case 1: After SL in same sequence - continue immediately
+    if not currentTrade.waitingForTrendChange
+        // APPLY MA150 FILTER HERE
+        longSignal := os == 1 and (not useMA150 or close > ma150)
+        shortSignal := os == 0 and (not useMA150 or close < ma150)
+        shortSignal
+
+    // Case 2: New sequence - wait for trend change
+    else if trendChanged
+        currentTrade.waitingForTrendChange := false
+        longSignal := os == 1 and (not useMA150 or close > ma150)
+        shortSignal := os == 0 and (not useMA150 or close < ma150)
+        shortSignal
+
+// Open new trade
+if (longSignal or shortSignal) and not currentTrade.isActive and not na(target_factor)
+    currentTrade.isActive := true
+    currentTrade.entryPrice := close
+    currentTrade.direction := longSignal ? 1 : 0
+    justEntered := true
+
+    // Record first trade time
+    if na(firstTradeTime)
+        firstTradeTime := time
+        firstTradeTime
+
+    // Calculate stop distance
+    var float stopDistance = 0
+
+    if currentTrade.martingaleLevel == 1
+        // First trade in sequence
+        stopDistance := math.abs(close - ts)
+        minStopDistance = close * 0.001
+        stopDistance := math.max(stopDistance, minStopDistance)
+
+        // Store fixed values for sequence
+        currentTrade.fixedStopDistance := stopDistance
+        currentTrade.fixedRiskReward := riskRewardRatio
+
+        // Position size = base risk
+        currentTrade.positionSize := baseRiskAmount
+        currentTrade.positionSize
+    else // Martingale trade - Seçilen tipe göre
+        stopDistance := currentTrade.fixedStopDistance
+
+        if martingaleType == 'Classic Double'
+            // Klasik Martingale: Her level için 2x
+            multiplier = math.pow(2, currentTrade.martingaleLevel - 1)
+            currentTrade.positionSize := baseRiskAmount * multiplier
+            currentTrade.positionSize
+
+
+    // Calculate SL and TP
+    currentTrade.stopLoss := longSignal ? close - stopDistance : close + stopDistance
+    profitDistance = stopDistance * currentTrade.fixedRiskReward
+    currentTrade.takeProfit := longSignal ? close + profitDistance : close - profitDistance
+    currentTrade.takeProfit
+else
+    justEntered := false
+    justEntered
+
+// Reset signals
+longSignal := false
+shortSignal := false
+
+//-----------------------------------------------------------------------------}
+//Plots and Visual Indicators
+//-----------------------------------------------------------------------------{
+css = bool(os) ? bullCss : bearCss
+
+// SuperTrend line
+//plot(ts, 'SuperTrend', css, linewidth=3)
+
+// Entry Signal Shapes - Küçük ve şık simgeler
+plotshape(justEntered and currentTrade.direction == 1 and showSignals, 'Long Entry', shape.triangleup, location.belowbar, currentTrade.martingaleLevel == 1 ? color.new(color.yellow, 30) : color.new(color.yellow, 30), size = size.normal)
+
+plotshape(justEntered and currentTrade.direction == 0 and showSignals, 'Short Entry', shape.triangledown, location.abovebar, currentTrade.martingaleLevel == 1 ? color.new(color.yellow, 30) : color.new(color.yellow, 30), size = size.normal)
+
+// Entry Labels with Martingale Level
+if justEntered and currentTrade.direction == 1 and showSignals
+    label.new(bar_index, low, 'L' + str.tostring(currentTrade.martingaleLevel), color = color.new(currentTrade.martingaleLevel == 1 ? color.green : color.orange, 30), style = label.style_none, textcolor = color.white, size = size.tiny)
+
+if justEntered and currentTrade.direction == 0 and showSignals
+    label.new(bar_index, high, 'S' + str.tostring(currentTrade.martingaleLevel), color = color.new(currentTrade.martingaleLevel == 1 ? color.red : color.orange, 30), style = label.style_none, textcolor = color.white, size = size.tiny)
+
+// Current trade levels - Noktalar halinde göster, birleşmesin
+entryLevel = currentTrade.isActive and showSLTP ? currentTrade.entryPrice : na
+slLevel = currentTrade.isActive and showSLTP ? currentTrade.stopLoss : na
+tpLevel = currentTrade.isActive and showSLTP ? currentTrade.takeProfit : na
+
+// Trade levels with fills
+entry_plot = plot(entryLevel, 'Entry Level', color = currentTrade.isActive and showSLTP ? color.new(color.black, 0) : na, linewidth = 2, style = plot.style_circles, editable = false)
+sl_plot = plot(slLevel, 'Stop Loss Level', color = currentTrade.isActive and showSLTP ? color.new(color.black, 0) : na, linewidth = 2, style = plot.style_circles, editable = false)
+tp_plot = plot(tpLevel, 'Take Profit Level', color = currentTrade.isActive and showSLTP ? color.new(color.black, 0) : na, linewidth = 2, style = plot.style_circles, editable = false)
+
+// Fill areas between levels
+fill(entry_plot, tp_plot, color.new(color.green, 85), editable = false, title = 'Profit Zone')
+fill(entry_plot, sl_plot, color.new(color.red, 85), editable = false, title = 'Loss Zone')
+// Candle coloring
+barcolor(showGradient ? bool(os) ? color.new(color.green, 0) : color.new(color.red, 0) : na)
+
+//-----------------------------------------------------------------------------}
+//Dashboard
+//-----------------------------------------------------------------------------{
+if showDash and barstate.islast
+    sequenceWinRate = totalSequences > 0 ? winningSequences / totalSequences * 100 : 0
+    tradeWinRate = totalTrades > 0 ? winningSequences / totalTrades * 100 : 0 // Approximation
+    equityChangePercent = (totalEquity - initialCapital) / initialCapital * 100
+    dollarEquity = totalEquity / initialCapital
+
+    var table dashboard = na
+    table.delete(dashboard)
+
+    loc = dashLoc == 'Top Right' ? position.top_right : dashLoc == 'Bottom Right' ? position.bottom_right : position.bottom_left
+    size = textSize == 'Tiny' ? size.tiny : textSize == 'Small' ? size.small : size.normal
+
+    dashboard := table.new(loc, 2, 31, bgcolor = color.new(color.black, 85), border_width = 2)
+
+    // Header
+    table.cell(dashboard, 0, 0, 'TT SCALPER V3', text_color = color.white, text_size = size, bgcolor = color.new(color.blue, 50))
+    table.cell(dashboard, 1, 0, 'System $$', text_color = color.white, text_size = size, bgcolor = color.new(color.blue, 50))
+
+    // Session Info
+    table.cell(dashboard, 0, 1, 'First Trade Date:', text_color = color.white, text_size = size)
+    firstTradeDate = na(firstTradeTime) ? 'No Trades Yet' : str.format('{0,date,dd.MM.yyyy}', firstTradeTime)
+    table.cell(dashboard, 1, 1, firstTradeDate, text_color = na(firstTradeTime) ? color.gray : color.yellow, text_size = size)
+
+    table.cell(dashboard, 0, 2, 'Starting Capital:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 2, '$' + str.tostring(initialCapital, '#'), text_color = color.white, text_size = size)
+
+    table.cell(dashboard, 0, 3, 'Current Equity:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 3, '$' + str.tostring(totalEquity, '#.##'), text_color = totalEquity >= initialCapital ? color.green : color.red, text_size = size)
+
+
+    table.cell(dashboard, 0, 5, 'Max Martingale:', text_color = color.white, text_size = size)
+    maxMartingaleColor = maxMartingaleReached == 1 ? color.green : maxMartingaleReached <= 3 ? color.yellow : color.red
+    table.cell(dashboard, 1, 5, 'x' + str.tostring(maxMartingaleReached), text_color = maxMartingaleColor, text_size = size)
+
+    // Current Status
+    table.cell(dashboard, 0, 6, 'Current Trend:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 6, bool(os) ? 'BULLISH' : 'BEARISH', text_color = bool(os) ? color.green : color.red, text_size = size)
+
+    table.cell(dashboard, 0, 7, 'Trade Status:', text_color = color.white, text_size = size)
+    tradeStatus = currentTrade.isActive ? 'ACTIVE' : currentTrade.waitingForTrendChange ? 'WAITING' : 'READY'
+    statusColor = currentTrade.isActive ? color.yellow : currentTrade.waitingForTrendChange ? color.orange : color.gray
+    table.cell(dashboard, 1, 7, tradeStatus, text_color = statusColor, text_size = size)
+
+    table.cell(dashboard, 0, 8, 'Position:', text_color = color.white, text_size = size)
+    positionText = currentTrade.isActive ? (currentTrade.direction == 1 ? 'LONG' : 'SHORT') + ' x' + str.tostring(currentTrade.martingaleLevel) : 'NONE'
+    positionColor = currentTrade.isActive ? currentTrade.direction == 1 ? color.green : color.red : color.gray
+    table.cell(dashboard, 1, 8, positionText, text_color = positionColor, text_size = size)
+
+    table.cell(dashboard, 0, 9, 'Martingale Level:', text_color = color.white, text_size = size)
+    levelColor = currentTrade.martingaleLevel == 1 ? color.white : currentTrade.martingaleLevel <= 3 ? color.orange : color.red
+    table.cell(dashboard, 1, 9, str.tostring(currentTrade.martingaleLevel), text_color = levelColor, text_size = size)
+
+    table.cell(dashboard, 0, 10, 'Sequence Loss:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 10, currentTrade.sequenceLoss > 0 ? '-$' + str.tostring(currentTrade.sequenceLoss, '#.##') : '$0', text_color = currentTrade.sequenceLoss > 0 ? color.red : color.gray, text_size = size)
+
+    // Current Trade Info
+    if currentTrade.isActive
+        table.cell(dashboard, 0, 11, 'Entry Price:', text_color = color.white, text_size = size)
+        table.cell(dashboard, 1, 11, str.tostring(currentTrade.entryPrice, '#.####'), text_color = color.yellow, text_size = size)
+
+        table.cell(dashboard, 0, 12, 'Position Size:', text_color = color.white, text_size = size)
+        table.cell(dashboard, 1, 12, '$' + str.tostring(currentTrade.positionSize, '#'), text_color = color.aqua, text_size = size)
+
+        table.cell(dashboard, 0, 13, 'Stop Loss:', text_color = color.white, text_size = size)
+        table.cell(dashboard, 1, 13, str.tostring(currentTrade.stopLoss, '#.####'), text_color = color.red, text_size = size)
+
+        table.cell(dashboard, 0, 14, 'Take Profit:', text_color = color.white, text_size = size)
+        table.cell(dashboard, 1, 14, str.tostring(currentTrade.takeProfit, '#.####'), text_color = color.green, text_size = size)
+    else
+        table.cell(dashboard, 0, 11, 'Entry Price:', text_color = color.gray, text_size = size)
+        table.cell(dashboard, 1, 11, '---', text_color = color.gray, text_size = size)
+
+        table.cell(dashboard, 0, 12, 'Position Size:', text_color = color.gray, text_size = size)
+        table.cell(dashboard, 1, 12, '---', text_color = color.gray, text_size = size)
+
+        table.cell(dashboard, 0, 13, 'Stop Loss:', text_color = color.gray, text_size = size)
+        table.cell(dashboard, 1, 13, '---', text_color = color.gray, text_size = size)
+
+        table.cell(dashboard, 0, 14, 'Take Profit:', text_color = color.gray, text_size = size)
+        table.cell(dashboard, 1, 14, '---', text_color = color.gray, text_size = size)
+
+    // Performance Stats
+    table.cell(dashboard, 0, 15, 'Total Profit:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 15, (totalSequenceProfit >= 0 ? '+$' : '-$') + str.tostring(math.abs(totalSequenceProfit), '#.##'), text_color = totalSequenceProfit >= 0 ? color.green : color.red, text_size = size)
+
+    table.cell(dashboard, 0, 17, 'Total Sequences:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 17, str.tostring(totalSequences), text_color = color.white, text_size = size)
+
+    table.cell(dashboard, 0, 18, 'Sequence Win Rate:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 18, str.tostring(sequenceWinRate, '#.#') + '%', text_color = sequenceWinRate >= 50 ? color.green : color.red, text_size = size)
+
+    table.cell(dashboard, 0, 21, 'Total Trades:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 21, str.tostring(totalTrades), text_color = color.white, text_size = size)
+
+    table.cell(dashboard, 0, 23, 'Max Drawdown:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 23, str.tostring(maxDrawdown, '#.#') + '%', text_color = color.red, text_size = size)
+
+    table.cell(dashboard, 0, 24, 'Base Risk:', text_color = color.white, text_size = size)
+    table.cell(dashboard, 1, 24, '$' + str.tostring(baseRiskAmount, '#.##') + ' (' + str.tostring(baseRiskPercent, '#.#') + '%)', text_color = color.orange, text_size = size)

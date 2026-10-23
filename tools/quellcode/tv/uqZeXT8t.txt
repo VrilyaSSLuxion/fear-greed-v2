@@ -1,0 +1,52 @@
+//@version=5
+indicator("-VrilyaSS-RSI Bounce Buy/Sell Signals with Trend Reversals-", overlay=true)
+
+// Input parameters for RSI
+rsi_source = input.source(close, title="RSI Source")
+rsi_length = input.int(14, title="RSI Length")
+ma_length = input.int(10, title="RSI MA Length")
+swing_period = input.int(3, title="Swing Period")
+
+// Separate RSI levels for Buy and Sell
+buy_rsi_level = input.int(47, title="Buy RSI Level")
+sell_rsi_level = input.int(53, title="Sell RSI Level")
+
+// Calculate RSI
+rsi = ta.rsi(rsi_source, rsi_length)
+
+// Calculate RSI MA
+rsi_ma = ta.sma(rsi, ma_length)
+
+// Calculate Swing Highs and Lows
+swing_high = ta.highest(high, swing_period)
+swing_low = ta.lowest(low, swing_period)
+
+// Define the states
+var bool was_below_buy_level = na
+var bool was_above_sell_level = na
+
+// Track the state of RSI crossing above or below the defined levels
+if (rsi < buy_rsi_level)
+    was_below_buy_level := true
+else if (rsi > buy_rsi_level)
+    was_below_buy_level := false
+
+if (rsi > sell_rsi_level)
+    was_above_sell_level := true
+else if (rsi < sell_rsi_level)
+    was_above_sell_level := false
+
+// Define Buy and Sell Conditions with RSI MA direction
+buy_condition = was_below_buy_level[1] and rsi > buy_rsi_level and low == swing_low and rsi_ma > ta.sma(rsi[1], ma_length)
+sell_condition = was_above_sell_level[1] and rsi < sell_rsi_level and high == swing_high and rsi_ma < ta.sma(rsi[1], ma_length)
+
+// Plot Buy and Sell Signals
+plotshape(series=buy_condition, location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy", title="Buy Signal", size=size.small)
+plotshape(series=sell_condition, location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell", title="Sell Signal", size=size.small)
+
+// Alert Conditions
+alertcondition(buy_condition, title="Buy Signal Alert", message="RSI Bounce Buy Signal")
+alertcondition(sell_condition, title="Sell Signal Alert", message="RSI Bounce Sell Signal")
+
+// General Buy/Sell Signal Alert
+alertcondition(buy_condition or sell_condition, title="Buy/Sell Signal Alert", message="RSI Bounce Buy or Sell Signal")

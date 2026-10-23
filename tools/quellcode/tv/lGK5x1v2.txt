@@ -1,0 +1,56 @@
+//@version=5
+indicator("-VrilyaSS-Hammer Pattern-Indicator-", overlay=true)
+
+// Inputs
+length = input(20, title="Lookback Length")
+show_bullish = input(true, title="Show Bullish Hammers")
+show_bearish = input(true, title="Show Bearish Hammers")
+
+// RSI and Stochastic Inputs
+rsi_length = input(14, title="RSI Length")
+rsi_ob = input(70, title="RSI Overbought")
+rsi_os = input(30, title="RSI Oversold")
+stoch_k = input(14, title="Stochastic %K Length")
+stoch_d = input(3, title="Stochastic %D Length")
+stoch_ob = input(80, title="Stochastic Overbought")
+stoch_os = input(20, title="Stochastic Oversold")
+
+// Calculate RSI and Stochastic
+rsi = ta.rsi(close, rsi_length)
+k = ta.stoch(close, high, low, stoch_k)
+d = ta.sma(k, stoch_d)
+
+// Hammer Pattern Function
+isHammer(candleOpen, candleHigh, candleLow, candleClose) =>
+    bodySize = math.abs(candleClose - candleOpen)
+    lowerShadow = candleOpen < candleClose ? (candleOpen - candleLow) : (candleClose - candleLow)
+    upperShadow = candleHigh - math.max(candleOpen, candleClose)
+    lowerShadow > 2 * bodySize and upperShadow < bodySize
+
+// Variables to store the hammer signals
+var bool isBullishHammer = na
+var bool isBearishHammer = na
+
+// Determine if current bar is a hammer and meets RSI/Stochastic conditions
+isBullishHammer := na
+isBearishHammer := na
+
+if isHammer(open, high, low, close)
+    if show_bullish and close > open and rsi < rsi_os and k < stoch_os and d < stoch_os
+        isBullishHammer := true
+    if show_bearish and close < open and rsi > rsi_ob and k > stoch_ob and d > stoch_ob
+        isBearishHammer := true
+
+// Plot hammers
+plotshape(series=isBullishHammer, style=shape.labelup, color=color.green, textcolor=color.black, text="Bullish Hammer", location=location.belowbar, size=size.tiny)
+plotshape(series=isBearishHammer, style=shape.labeldown, color=color.red, textcolor=color.black, text="Bearish Hammer", location=location.abovebar, size=size.tiny)
+
+// Alert conditions
+alertcondition(isBullishHammer, title="Bullish Hammer Alert", message="Buy - Bullish Hammer detected")
+alertcondition(isBearishHammer, title="Bearish Hammer Alert", message="Sell - Bearish Hammer detected")
+
+// Chart Title
+var label titleLabel = na
+if not na(titleLabel)
+    label.delete(titleLabel)
+titleLabel := label.new(x=bar_index, y=high, text="Hammer Pattern (" + str.tostring(length) + " candles)", style=label.style_label_down, color=color.blue, textcolor=color.black, size=size.tiny)

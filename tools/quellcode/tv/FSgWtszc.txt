@@ -1,0 +1,33 @@
+//@version=5
+indicator("1-Minute-RSI and Fast-5-MA-Indicator", overlay=true)
+
+// Input settings
+rsiLength = input.int(14, title="RSI Length")
+rsiSource = input.source(open, title="RSI Source")
+rsiOverbought = input.int(70, title="RSI Overbought Level", minval=50, maxval=100)
+rsiOversold = input.int(30, title="RSI Oversold Level", minval=0, maxval=50)
+fastMaLength = input.int(5, title="Fast MA Length")
+
+// Calculations
+rsi = ta.rsi(rsiSource, rsiLength)
+fastMa = ta.sma(close, fastMaLength)
+
+// Buy Condition
+buyCondition = ta.crossover(close, fastMa) and rsi < rsiOversold
+
+// Sell Condition
+sellCondition = ta.crossunder(close, fastMa) and rsi > rsiOverbought
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, location=location.belowbar, color=color.new(color.green, 0), style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, location=location.abovebar, color=color.new(color.red, 0), style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal: Price crosses above Fast MA and RSI is below oversold level.")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal: Price crosses below Fast MA and RSI is above overbought level.")
+
+// Plot RSI and Fast MA for reference
+plot(rsi, title="RSI", color=color.yellow, linewidth=2, display=display.none)
+hline(rsiOversold, "RSI Oversold Level", color=color.green, linewidth=3, linestyle=hline.style_solid, display=display.none)
+hline(rsiOverbought, "RSI Overbought Level", color=color.red, linewidth=3, linestyle=hline.style_solid, display=display.none)
+plot(fastMa, title="Fast MA", color=color.white, linewidth=2)

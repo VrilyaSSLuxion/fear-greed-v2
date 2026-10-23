@@ -1,0 +1,56 @@
+//@version=6
+indicator("Fibonacci Levels Signal", overlay=true)
+
+// Eingabe-Einstellungen
+length = input.int(20, minval=1, title="Lookback-Periode für High/Low")
+
+// Berechnung der Fibonacci-Retracement-Level
+highestHigh = ta.highest(high, length)
+lowestLow = ta.lowest(low, length)
+priceRange = highestHigh - lowestLow
+
+fib_0_5 = lowestLow + priceRange * 0.5
+fib_0_559 = lowestLow + priceRange * 0.559
+fib_0_618 = lowestLow + priceRange * 0.618
+fib_0_677 = lowestLow + priceRange * 0.677
+
+// Überprüfen, ob Fibonacci-Level berührt wurden
+fib_0_5_touched = (low <= fib_0_5 and high >= fib_0_5)
+fib_0_559_touched = (low <= fib_0_559 and high >= fib_0_559)
+fib_0_618_touched = (low <= fib_0_618 and high >= fib_0_618)
+fib_0_677_touched = (low <= fib_0_677 and high >= fib_0_677)
+
+// Bestimmen, ob bullisch oder bärisch
+is_bullish_0_5 = close > fib_0_5
+is_bearish_0_5 = close < fib_0_5
+is_bullish_0_559 = close > fib_0_559
+is_bearish_0_559 = close < fib_0_559
+is_bullish_0_618 = close > fib_0_618
+is_bearish_0_618 = close < fib_0_618
+is_bullish_0_677 = close > fib_0_677
+is_bearish_0_677 = close < fib_0_677
+
+// Fibonacci-Level-Linien zeichnen
+line.new(bar_index[length], fib_0_5, bar_index, fib_0_5, color=color.new(color.blue, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_559, bar_index, fib_0_559, color=color.new(color.green, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_618, bar_index, fib_0_618, color=color.new(color.orange, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_677, bar_index, fib_0_677, color=color.new(color.purple, 0), width=1, style=line.style_solid)
+
+// Signale mit Labels plotten
+plotshape(fib_0_5_touched and is_bullish_0_5, style=shape.labelup, location=location.belowbar, color=color.green, title="Fib 0.5 Signal", text="Fib 0.5")
+plotshape(fib_0_5_touched and is_bearish_0_5, style=shape.labelup, location=location.abovebar, color=color.red, title="Fib 0.5 Signal", text="Fib 0.5")
+
+plotshape(fib_0_559_touched and is_bullish_0_559, style=shape.labelup, location=location.belowbar, color=color.green, title="Fib 0.559 Signal", text="Fib 0.559")
+plotshape(fib_0_559_touched and is_bearish_0_559, style=shape.labelup, location=location.abovebar, color=color.red, title="Fib 0.559 Signal", text="Fib 0.559")
+
+plotshape(fib_0_618_touched and is_bullish_0_618, style=shape.labelup, location=location.belowbar, color=color.green, title="Fib 0.618 Signal", text="Fib 0.618")
+plotshape(fib_0_618_touched and is_bearish_0_618, style=shape.labelup, location=location.abovebar, color=color.red, title="Fib 0.618 Signal", text="Fib 0.618")
+
+plotshape(fib_0_677_touched and is_bullish_0_677, style=shape.labelup, location=location.belowbar, color=color.green, title="Fib 0.677 Signal", text="Fib 0.677")
+plotshape(fib_0_677_touched and is_bearish_0_677, style=shape.labelup, location=location.abovebar, color=color.red, title="Fib 0.677 Signal", text="Fib 0.677")
+
+// Alerts
+alertcondition(fib_0_5_touched, title="Fib 0.5 Berührt", message="Der Preis hat das 0.5 Fibonacci-Level berührt!")
+alertcondition(fib_0_559_touched, title="Fib 0.559 Berührt", message="Der Preis hat das 0.559 Fibonacci-Level berührt!")
+alertcondition(fib_0_618_touched, title="Fib 0.618 Berührt", message="Der Preis hat das 0.618 Fibonacci-Level berührt!")
+alertcondition(fib_0_677_touched, title="Fib 0.677 Berührt", message="Der Preis hat das 0.677 Fibonacci-Level berührt!")

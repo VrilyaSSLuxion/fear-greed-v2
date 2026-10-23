@@ -1,0 +1,26 @@
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ceyhun
+
+indicator("-VrilyaSS-Top Bottom-ceyhun-", overlay=true)
+
+per = input(14, title="Bottom Period")
+loc = (low < ta.lowest(low[1], per)) and (low <= ta.lowest(low[per], per))
+bottom = ta.barssince(loc)
+
+per2 = input(14, title="Top Period")
+loc2 = (high > ta.highest(high[1], per2)) and (high >= ta.highest(high[per2], per2))
+top = ta.barssince(loc2)
+
+/////BUY-SELL/////
+Buy = ta.crossover(bottom, top)
+Sell = ta.crossunder(bottom, top)
+
+plotshape(Buy, title="BUY", style=shape.labelup, location=location.belowbar, color=color.green, text="BUY", textcolor=color.black)
+plotshape(Sell, title="SELL", style=shape.labeldown, location=location.abovebar, color=color.red, text="SELL", textcolor=color.black)
+
+background = top < bottom ? color.new(#0000FF, 85) : top > bottom ? color.new(#FF0000, 85) : na
+bgcolor(color=background)
+
+alertcondition(Buy, title="Buy Signal", message="Buy")
+alertcondition(Sell, title="Sell Signal", message="Sell")

@@ -1,0 +1,33 @@
+//@version=5
+indicator(title="-VrilyaSS-Engulfing-Candle by Bands-(SMA-20)-", shorttitle="-VrilyaSS-Engulfing-Candle by Bands-(SMA-20)-", overlay=true)
+
+// Inputs
+bandLength = input.int(20, title="-Band-Length-20-")
+bandMultiplier = input.float(2.0, title="-Band-Multiplier-2.0-")
+engulfingFactor = input.float(0.5, title="-Engulfing-Factor-0.5-", minval=0.1, maxval=1.0)
+
+// Calculate Bands (Simple Moving Averages)
+basis = ta.sma(close, bandLength)
+upperBand = basis + bandMultiplier * ta.stdev(close, bandLength)
+lowerBand = basis - bandMultiplier * ta.stdev(close, bandLength)
+
+// Determine Engulfing Candles
+bullishEngulfing = (open < close[1] and close > open[1] and close > open and open <= close[1] and close[1] > open[1])
+bearishEngulfing = (open > close[1] and close < open[1] and close < open and open >= close[1] and close[1] < open[1])
+
+// Determine Engulfing from Bands
+bullishFromBottomBand = bullishEngulfing and close > lowerBand and open <= basis
+bearishFromTopBand = bearishEngulfing and close < upperBand and open >= basis
+
+// Plot Bands
+plot(upperBand, title="-Upper-Band-", color=color.red, linewidth = 3 )
+plot(basis, title="-Basis-", color=color.white, linewidth = 2 )
+plot(lowerBand, title="-Lower-Band-", color=color.green, linewidth = 3 )
+
+// Plot Signals
+plotshape(series=bullishFromBottomBand, title="-Bullish-Engulfing from -Bottom-Band-", location=location.belowbar, color=color.green, textcolor = color.black, style=shape.labelup, text="Buy")
+plotshape(series=bearishFromTopBand, title="-Bearish-Engulfing from -Top-Band-", location=location.abovebar, color=color.red, textcolor = color.black, style=shape.labeldown, text="Sell")
+
+// Alerts for Signals
+alertcondition(bullishFromBottomBand, title="Bullish Engulfing from Bottom Band", message="Bullish Engulfing from Bottom Band")
+alertcondition(bearishFromTopBand, title="Bearish Engulfing from Top Band", message="Bearish Engulfing from Top Band")

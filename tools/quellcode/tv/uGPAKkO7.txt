@@ -1,0 +1,48 @@
+//@version=5
+//By SiamGhosT
+
+indicator('TSA TDI', shorttitle='TSA TDI', format=format.price, precision=2, overlay=true)
+
+// TDI
+rsi = ta.rsi(close, 8)
+ma = ta.sma(rsi, 34)
+offs = 1.6185 * ta.stdev(rsi, 34)
+up = ma + offs
+dn = ma - offs
+mid = (up + dn) / 2
+fastMA = ta.sma(rsi, 2)
+
+// Definiere Bedingungen für Kauf- und Verkaufssignale
+buy_signal_condition = fastMA <= 30 and fastMA < mid and fastMA < dn
+sell_signal_condition = fastMA >= 70 and fastMA > mid and fastMA > up
+
+// Initialisiere Zähler für Signale
+var int buy_signal_counter = 0
+var int sell_signal_counter = 0
+
+// Bestimme Kauf- und Verkaufssignale unter Berücksichtigung des Zählers
+buy_signal = buy_signal_condition and buy_signal_counter == 0
+sell_signal = sell_signal_condition and sell_signal_counter == 0
+
+// Wenn Kaufsignal gepostet wurde, setze Zähler und Signal zurück
+if buy_signal
+    buy_signal_counter := 5
+
+// Wenn Verkaufssignal gepostet wurde, setze Zähler und Signal zurück
+if sell_signal
+    sell_signal_counter := 5
+
+// Verringere Zähler nach jedem Bar um 1
+if buy_signal_counter > 0
+    buy_signal_counter := buy_signal_counter - 1
+
+if sell_signal_counter > 0
+    sell_signal_counter := sell_signal_counter - 1
+
+// Plotten von Kauf- und Verkaufssignalen als Labels
+plotshape(series=buy_signal, title="-Buy-", text="Buy", style=shape.labelup, location=location.belowbar, color=color.green, textcolor=color.black, size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-", text="Sell", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.black, size=size.tiny)
+
+// Alerts for buy and sell signals
+alertcondition(buy_signal, title='Buy Alert', message='Buy Signal on {{ticker}}')
+alertcondition(sell_signal, title='Sell Alert', message='Sell Signal on {{ticker}}')

@@ -1,0 +1,34 @@
+//@version=5
+indicator(title="1-Minuten Schnell Trade Indikator", shorttitle="Schnell Trade", overlay=true)
+
+// Eingaben für die EMAs und RSI
+ema_short_period = input.int(3, title="Kurzfristige EMA Periode")
+ema_medium_period = input.int(6, title="Mittelfristige EMA Periode")
+rsi_period = input.int(2, title="RSI Periode")
+momentum_period = input.int(3, title="Momentum Periode")
+
+// Berechnung der EMAs
+ema_short = ta.ema(close, ema_short_period)
+ema_medium = ta.ema(close, ema_medium_period)
+
+// Berechnung des RSI
+rsi = ta.rsi(close, rsi_period)
+
+// Berechnung des Momentums
+momentum = ta.mom(close, momentum_period)
+
+// Kauf- und Verkaufsbedingungen
+buySignal = ta.crossover(ema_short, ema_medium) and rsi < 30 and momentum > 0
+sellSignal = ta.crossunder(ema_short, ema_medium) and rsi > 70 and momentum < 0
+
+// Signale auf dem Chart anzeigen
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, textcolor=color.white, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, textcolor=color.white, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// Plotten der EMAs
+plot(ema_short, title="EMA Kurzfristig", color=color.yellow, linewidth=2)
+plot(ema_medium, title="EMA Mittelfristig", color=color.blue, linewidth=2)
+
+// Alerts
+alertcondition(buySignal, title="Buy Signal", message="Buy Signal - 1-Minuten Schnell Trade")
+alertcondition(sellSignal, title="Sell Signal", message="Sell Signal - 1-Minuten Schnell Trade")

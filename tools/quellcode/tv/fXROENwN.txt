@@ -1,0 +1,114 @@
+//@version=5
+indicator("Breakout Trader-(BA)-Bollinger-Bands+SMA-20+VWAP-", overlay=true)
+
+// Eingaben
+length = input.int(20, title="-SMA-Length-20-", minval=1)
+vwap_length = input.int(14, title="-VWAP-Length-14-", minval=1)
+multiplier = input.float(1.5, title="-Multiplier for Breakout Levels-1.5-", minval=0.1)
+
+// Quellen für verschiedene Parameter
+sourceClose = input(close, title="Source: Close")
+sourceOpen = input(open, title="Source: Open")
+sourceHigh = input(high, title="Source: High")
+sourceLow = input(low, title="Source: Low")
+sourceHLC3 = input(hlc3, title="Source: HLC3")
+
+// SMA und VWAP berechnen für verschiedene Quellen
+sma_close = ta.sma(sourceClose, length)
+sma_open = ta.sma(sourceOpen, length)
+sma_high = ta.sma(sourceHigh, length)
+sma_low = ta.sma(sourceLow, length)
+sma_hlc3 = ta.sma(sourceHLC3, length)
+
+vwap_close = ta.vwap(sourceClose)
+vwap_open = ta.vwap(sourceOpen)
+vwap_high = ta.vwap(sourceHigh)
+vwap_low = ta.vwap(sourceLow)
+vwap_hlc3 = ta.vwap(sourceHLC3)
+
+// Bollinger Bänder für Breakout Level für verschiedene Quellen
+basis_close = ta.sma(sourceClose, vwap_length)
+basis_open = ta.sma(sourceOpen, vwap_length)
+basis_high = ta.sma(sourceHigh, vwap_length)
+basis_low = ta.sma(sourceLow, vwap_length)
+basis_hlc3 = ta.sma(sourceHLC3, vwap_length)
+
+dev_close = multiplier * ta.stdev(sourceClose, vwap_length)
+dev_open = multiplier * ta.stdev(sourceOpen, vwap_length)
+dev_high = multiplier * ta.stdev(sourceHigh, vwap_length)
+dev_low = multiplier * ta.stdev(sourceLow, vwap_length)
+dev_hlc3 = multiplier * ta.stdev(sourceHLC3, vwap_length)
+
+upper_close = basis_close + dev_close
+upper_open = basis_open + dev_open
+upper_high = basis_high + dev_high
+upper_low = basis_low + dev_low
+upper_hlc3 = basis_hlc3 + dev_hlc3
+
+lower_close = basis_close - dev_close
+lower_open = basis_open - dev_open
+lower_high = basis_high - dev_high
+lower_low = basis_low - dev_low
+lower_hlc3 = basis_hlc3 - dev_hlc3
+
+// Bedingungen für Long und Short Signale für verschiedene Quellen
+longCondition_close = ta.crossover(sourceClose, upper_close)
+longCondition_open = ta.crossover(sourceOpen, upper_open)
+longCondition_high = ta.crossover(sourceHigh, upper_high)
+longCondition_low = ta.crossover(sourceLow, upper_low)
+longCondition_hlc3 = ta.crossover(sourceHLC3, upper_hlc3)
+
+shortCondition_close = ta.crossunder(sourceClose, lower_close)
+shortCondition_open = ta.crossunder(sourceOpen, lower_open)
+shortCondition_high = ta.crossunder(sourceHigh, lower_high)
+shortCondition_low = ta.crossunder(sourceLow, lower_low)
+shortCondition_hlc3 = ta.crossunder(sourceHLC3, lower_hlc3)
+
+// Kauf- und Verkaufssignale für verschiedene Quellen
+buy_signal_close = longCondition_close
+buy_signal_open = longCondition_open
+buy_signal_high = longCondition_high
+buy_signal_low = longCondition_low
+buy_signal_hlc3 = longCondition_hlc3
+
+sell_signal_close = shortCondition_close
+sell_signal_open = shortCondition_open
+sell_signal_high = shortCondition_high
+sell_signal_low = shortCondition_low
+sell_signal_hlc3 = shortCondition_hlc3
+
+// Plots
+plot(sma_close, color=color.white, title="-SMA-Close-")
+plot(sma_open, color=color.orange, title="-SMA-Open-")
+plot(sma_high, color=color.blue, title="-SMA-High-")
+plot(sma_low, color=color.purple, title="-SMA-Low-")
+plot(sma_hlc3, color=color.yellow, title="-SMA-HLC3-")
+
+// Bollinger Bänder als Linien zeichnen
+plot(upper_close, color=color.red, title="-Upper-Band-Close-", linewidth=3)
+plot(upper_open, color=color.orange, title="-Upper-Band-Open-", linewidth=3)
+plot(upper_high, color=color.blue, title="-Upper-Band-High-", linewidth=3)
+plot(upper_low, color=color.purple, title="-Upper-Band-Low-", linewidth=3)
+plot(upper_hlc3, color=color.yellow, title="-Upper-Band-HLC3-", linewidth=3)
+
+plot(lower_close, color=color.green, title="-Lower-Band-Close-", linewidth=3)
+plot(lower_open, color=color.orange, title="-Lower-Band-Open-", linewidth=3)
+plot(lower_high, color=color.blue, title="-Lower-Band-High-", linewidth=3)
+plot(lower_low, color=color.purple, title="-Lower-Band-Low-", linewidth=3)
+plot(lower_hlc3, color=color.yellow, title="-Lower-Band-HLC3-", linewidth=3)
+
+// Signale auf dem Chart anzeigen
+plotshape(series=buy_signal_close ? upper_close : na, title="-Buy-Signal-Close-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal_close ? lower_close : na, title="-Sell-Signal-Close-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+plotshape(series=buy_signal_open ? upper_open : na, title="-Buy-Signal-Open-", location=location.belowbar, color=color.orange, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal_open ? lower_open : na, title="-Sell-Signal-Open-", location=location.abovebar, color=color.orange, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+plotshape(series=buy_signal_high ? upper_high : na, title="-Buy-Signal-High-", location=location.belowbar, color=color.blue, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal_high ? lower_high : na, title="-Sell-Signal-High-", location=location.abovebar, color=color.blue, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+plotshape(series=buy_signal_low ? upper_low : na, title="-Buy-Signal-Low-", location=location.belowbar, color=color.purple, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal_low ? lower_low : na, title="-Sell-Signal-Low-", location=location.abovebar, color=color.purple, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+plotshape(series=buy_signal_hlc3 ? upper_hlc3 : na, title="-Buy-Signal-HLC3-", location=location.belowbar, color=color.yellow, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal_hlc3 ? lower_hlc3 : na, title="-Sell-Signal-HLC3-", location=location.abovebar, color=color.yellow, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

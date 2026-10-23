@@ -1,0 +1,67 @@
+//@version=5
+indicator("Custom V-Shape RSI Buy/Sell Signal", overlay=true)
+
+// Einstellbare Parameter für Buy-Signale
+rsi_length = input.int(14, title="RSI Length")
+rsi_buy_range_start = input.float(14, title="RSI Buy Range Start")
+rsi_buy_range_end = input.float(21, title="RSI Buy Range End")
+rsi_buy_level = input.float(21, title="RSI Buy Level")
+
+// Einstellbare Parameter für Sell-Signale
+rsi_sell_range_start = input.float(79, title="RSI Sell Range Start")
+rsi_sell_range_end = input.float(86, title="RSI Sell Range End")
+rsi_sell_level = input.float(79, title="RSI Sell Level")
+
+// Einstellbare Quelle für RSI-Berechnung
+rsi_source_type = input.string(title="RSI Source Type", defval="close", options=["close", "open", "high", "low", "ohlc4", "hl2", "hlc3", "ohlc3", "close[1]"])
+
+// RSI-Berechnung
+rsi_source = close
+if rsi_source_type == "open"
+    rsi_source := open
+if rsi_source_type == "high"
+    rsi_source := high
+if rsi_source_type == "low"
+    rsi_source := low
+if rsi_source_type == "ohlc4"
+    rsi_source := ohlc4
+if rsi_source_type == "hl2"
+    rsi_source := (high + low) / 2
+if rsi_source_type == "hlc3"
+    rsi_source := (high + low + close) / 3
+if rsi_source_type == "ohlc3"
+    rsi_source := (open + high + low + close) / 4
+if rsi_source_type == "close[1]"
+    rsi_source := close[1]
+
+rsi = ta.rsi(rsi_source, rsi_length)
+
+// Zustandsvariablen für Buy und Sell
+var bool buy_signal = na
+var bool sell_signal = na
+
+// Zustandsübergänge für Buy
+if (rsi < rsi_buy_range_end and not buy_signal)
+    buy_signal := true
+if (rsi > rsi_buy_level and buy_signal)
+    buy_signal := false
+
+// Zustandsübergänge für Sell
+if (rsi > rsi_sell_range_start and not sell_signal)
+    sell_signal := true
+if (rsi < rsi_sell_level and sell_signal)
+    sell_signal := false
+
+// Kaufsignal plotten und Alarme einstellen
+plotshape(series=buy_signal, location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+alertcondition(buy_signal, title="Buy Signal", message="Buy Signal on {{ticker}} - RSI: {{close}}")
+
+// Verkaufssignal plotten und Alarme einstellen
+plotshape(series=sell_signal, location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+alertcondition(sell_signal, title="Sell Signal", message="Sell Signal on {{ticker}} - RSI: {{close}}")
+
+// Reset der Signale nach Plot
+if (buy_signal)
+    buy_signal := na
+if (sell_signal)
+    sell_signal := na

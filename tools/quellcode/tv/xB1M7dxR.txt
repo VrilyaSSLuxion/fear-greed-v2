@@ -1,0 +1,43 @@
+//@version=5
+indicator("-VrilyaSS-1-3 Minute Trade Indicator-BB+MACD+RSI-", overlay=true)
+
+// Eingabefelder für Indikator-Einstellungen
+lengthRSI = input.int(14, title="RSI Length")
+overboughtRSI = input.int(70, title="RSI Overbought Level")
+oversoldRSI = input.int(30, title="RSI Oversold Level")
+
+shortMACD = input.int(12, title="MACD Short Length")
+longMACD = input.int(26, title="MACD Long Length")
+signalMACD = input.int(9, title="MACD Signal Length")
+
+lengthBB = input.int(20, title="Bollinger Bands Length")
+multBB = input.float(2.0, title="Bollinger Bands Multiplier")
+
+// Berechnungen für RSI
+rsi = ta.rsi(close, lengthRSI)
+
+// Berechnungen für MACD
+[macdLine, signalLine, _] = ta.macd(close, shortMACD, longMACD, signalMACD)
+
+// Berechnungen für Bollinger Bands
+basis = ta.sma(close, lengthBB)
+dev = multBB * ta.stdev(close, lengthBB)
+upperBB = basis + dev
+lowerBB = basis - dev
+
+// Kauf- und Verkaufssignale
+buySignal = ta.crossover(rsi, oversoldRSI) and macdLine < signalLine and close < lowerBB
+sellSignal = ta.crossunder(rsi, overboughtRSI) and macdLine > signalLine and close > upperBB
+
+// Plotten der Bollinger Bands mit unterschiedlichen Linienstärken
+plot(upperBB, color=color.red, title="Upper Bollinger Band", linewidth=2)
+plot(lowerBB, color=color.green, title="Lower Bollinger Band", linewidth=2)
+plot(basis, color=color.white, title="Basis Bollinger Band", linewidth=1)
+
+// Kauf- und Verkaufssignale anzeigen
+plotshape(series=buySignal, location=location.belowbar, color=color.green, text="Buy", textcolor=color.black, style=shape.labelup, title="Buy Signal")
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, text="Sell", textcolor=color.black, style=shape.labeldown, title="Sell Signal")
+
+// Hintergrundfarbe für Kauf- und Verkaufssignale
+bgcolor(buySignal ? color.new(color.green, 70) : na, title="Buy Background")
+bgcolor(sellSignal ? color.new(color.red, 70) : na, title="Sell Background")

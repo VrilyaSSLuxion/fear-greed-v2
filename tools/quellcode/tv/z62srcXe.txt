@@ -1,0 +1,82 @@
+//@version=5
+indicator("-VrilyaSS-EMA-30+Stochastic with RSI+MACD-Buy/Sell Indicator-", overlay=true)
+
+// Eingaben für den EMA
+emaLength = input.int(30, title="EMA Length")
+ema = ta.ema(close, emaLength)
+
+// Eingaben für den RSI
+rsiLength = input.int(14, title="RSI Length")
+rsiMALength = input.int(9, title="RSI-MA Length")
+rsi = ta.rsi(close, rsiLength)
+rsiMA = ta.sma(rsi, rsiMALength)
+
+// Eingaben für den MACD
+macdFastLength = input.int(12, title="MACD Fast Length")
+macdSlowLength = input.int(26, title="MACD Slow Length")
+macdSignalLength = input.int(9, title="MACD Signal Length")
+[macdLine, macdSignal, macdHist] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalLength)
+
+// Eingaben für den Stochastic
+stochKLength = input.int(14, title="Stochastic %K Length")
+stochDLength = input.int(3, title="Stochastic %D Length")
+stochSmoothingLength = input.int(3, title="Stochastic Smoothing Length")
+stochK = ta.sma(ta.stoch(close, high, low, stochKLength), stochSmoothingLength)
+stochD = ta.sma(stochK, stochDLength)
+
+// Bedingung für die EMA-Kreuzung
+emaCrossAbove = ta.crossover(close, ema)
+emaCrossBelow = ta.crossunder(close, ema)
+
+// Bedingung, dass die EMA in der Mitte der Kerze liegt
+emaInMiddleOfCandle = (low < ema and ema < high)
+
+// Bedingungen für die Kerze
+isBullish = close > open
+isBearish = close < open
+
+// EMA Verlauf prüfen
+emaUpward = ta.sma(ema - ema[1], 1) > 0
+emaDownward = ta.sma(ema - ema[1], 1) < 0
+
+// RSI Verlauf prüfen
+rsiUpward = ta.sma(rsi - rsi[1], 1) > 0
+rsiDownward = ta.sma(rsi - rsi[1], 1) < 0
+
+// MACD Verlauf prüfen
+macdBullish = macdLine > macdSignal
+macdBearish = macdLine < macdSignal
+
+// Stochastic-Kreuzungen prüfen
+stochBullishCross = ta.crossover(stochK, stochD)
+stochBearishCross = ta.crossunder(stochK, stochD)
+
+// Signale erstellen
+buySignal = emaCrossAbove and isBullish and emaInMiddleOfCandle and emaUpward and close > ema and rsi > rsiMA and rsiUpward and macdBullish and stochBullishCross
+sellSignal = emaCrossBelow and isBearish and emaInMiddleOfCandle and emaDownward and close < ema and rsi < rsiMA and rsiDownward and macdBearish and stochBearishCross
+
+// Plotte die EMA
+plot(ema, color=color.blue, linewidth=2, title="EMA 30")
+
+// Plotte den RSI und den RSI-MA in einem separaten Fenster
+plot(rsi, color=color.blue, linewidth=2, title="RSI", display=display.none)
+plot(rsiMA, color=color.red, linewidth=1, title="RSI-MA", display=display.none)
+
+// Plotte den MACD und die Signal-Linie in einem separaten Fenster
+hline(0, "Zero Line", color=color.gray, linestyle=hline.style_dashed, display=display.none)
+plot(macdLine, color=color.blue, title="MACD Line", display=display.none)
+plot(macdSignal, color=color.red, title="MACD Signal Line", display=display.none)
+plot(macdLine - macdSignal, color=color.purple, title="MACD Histogram", display=display.none)
+
+// Plotte den Stochastic in einem separaten Fenster
+plot(stochK, color=color.blue, title="%K", display=display.none)
+plot(stochD, color=color.red, title="%D", display=display.none)
+
+// Plotte Kauf- und Verkaufssignale
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", textcolor=color.black, size=size.small)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.black, size=size.small)
+
+// Alarme
+alertcondition(buySignal, title="Buy Signal Alert", message="Buy signal generated based on EMA 30 crossover, bullish candle, EMA in the middle, RSI conditions, MACD conditions, and Stochastic cross.")
+alertcondition(sellSignal, title="Sell Signal Alert", message="Sell signal generated based on EMA 30 crossover, bearish candle, EMA in the middle, RSI conditions, MACD conditions, and Stochastic cross.")
+alertcondition(buySignal or sellSignal, title="Buy/Sell Signal Alert", message="Buy or Sell signal generated based on EMA 30, RSI, MACD, and Stochastic conditions.")

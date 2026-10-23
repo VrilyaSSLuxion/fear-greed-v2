@@ -1,0 +1,26 @@
+//@version=5
+indicator("Bollinger Bands Buy/Sell", overlay=true)
+
+// Bollinger-Band-Einstellungen
+length = 20
+src = close
+mult = 2.0
+
+// Berechnung der Bollinger-Bänder
+basis = ta.sma(src, length)
+dev = mult * ta.stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+
+// Bollinger-Bänder zeichnen
+plot(upper, color=color.red, linewidth=2, title="Upper Bollinger Band")
+plot(lower, color=color.green, linewidth=2, title="Lower Bollinger Band")
+plot(basis, color=color.gray, linewidth=1, title="Basis Bollinger Band")  // Mittelband wird hier gezeichnet
+
+// Buy- und Sell-Signale
+buySignal = close < lower and ta.crossover(close, open)
+sellSignal = close > upper and ta.crossunder(close, open)
+
+// Kauf- und Verkaufspfeile zeichnen
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")

@@ -1,0 +1,56 @@
+//@version=5
+strategy("RSI & Stochastic Strategy with Buy/Sell Signals", overlay=true)
+
+// RSI Settings
+rsiLength = input.int(14, "RSI Length")
+rsiSource = input(close, "RSI Source")
+rsiOversold = input.int(30, "RSI Oversold Level")
+rsiOverbought = input.int(70, "RSI Overbought Level")
+
+// Stochastic Settings
+stochKLength = input.int(14, "Stochastic %K Length")
+stochDLength = input.int(3, "Stochastic %D Length")
+stochSmoothK = input.int(3, "Stochastic Smoothing")
+stochOversold = input.int(20, "Stochastic Oversold Level")
+stochOverbought = input.int(80, "Stochastic Overbought Level")
+
+// RSI Calculation
+rsiValue = ta.rsi(rsiSource, rsiLength)
+rsiCrossOver = ta.crossover(rsiValue, rsiOversold)
+rsiCrossUnder = ta.crossunder(rsiValue, rsiOverbought)
+
+// Stochastic Calculation
+k = ta.sma(ta.stoch(close, high, low, stochKLength), stochSmoothK)
+d = ta.sma(k, stochDLength)
+stochBullCross = ta.crossover(k, d)
+stochBearCross = ta.crossunder(k, d)
+stochInOversold = k < stochOversold and d < stochOversold
+stochInOverbought = k > stochOverbought and d > stochOverbought
+
+// Buy Signal
+buySignal = rsiCrossOver and stochInOversold and stochBullCross
+
+// Sell Signal
+sellSignal = rsiCrossUnder and stochInOverbought and stochBearCross
+
+// Plot Buy and Sell Signals
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", size=size.small)
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", size=size.small)
+
+// Execute Buy and Sell Orders
+if (buySignal)
+    strategy.entry("Buy", strategy.long)
+if (sellSignal)
+    strategy.close("Buy")
+
+// Plot RSI and Stochastic for reference
+hline(rsiOverbought, "RSI Overbought", color=color.red, linestyle=hline.style_solid, linewidth=2)
+hline(50, "RSI Middle", color=color.white, linestyle=hline.style_solid, linewidth=2)
+hline(rsiOversold, "RSI Oversold", color=color.green, linestyle=hline.style_solid, linewidth=2)
+plot(rsiValue, "RSI", color=color.yellow, linewidth=2)
+
+hline(stochOverbought, "Stoch Overbought", color=color.red, linestyle=hline.style_solid, linewidth=2)
+hline(50, "Stoch Middle", color=color.white, linestyle=hline.style_solid, linewidth=2)  // Middle white line at 50 for Stochastic
+hline(stochOversold, "Stoch Oversold", color=color.green, linestyle=hline.style_solid, linewidth=2)
+plot(k, "Stoch %K", color=color.aqua, linewidth=2)
+plot(d, "Stoch %D", color=color.red, linewidth=3)

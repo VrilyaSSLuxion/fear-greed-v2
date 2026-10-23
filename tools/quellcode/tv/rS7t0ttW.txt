@@ -1,0 +1,21 @@
+//@version=5
+indicator(title="-VrilyaSS-SMA-Moving Average Simple-", shorttitle="-VrilyaSS-SMA-Moving Average Simple-", overlay=true, timeframe="", timeframe_gaps=true)
+len = input.int(50, minval=1, title="-Length-50-default-9-")
+src = input(ohlc4, title="-Source-ohlc4-default-close-")
+offset = input.int(title="-Offset-0-default-0-", defval=0, minval=-500, maxval=500, display = display.data_window)
+out = ta.sma(src, len)
+plot(out, linewidth = 2, color=color.white, title="-MA-Color-1-white-100%-Line-2---default-Color-17-blue-100%-Line-1-", offset=offset)
+
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+typeMA = input.string(title = "-Method-SMA-default-SMA-", defval = "SMA", options=["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="-Smoothing-Glättung-", display = display.data_window)
+smoothingLength = input.int(title = "-Length-5-default-5-", defval = 5, minval = 1, maxval = 100, group="-Smoothing-Glättung-", display = display.data_window)
+
+smoothingLine = ma(out, smoothingLength, typeMA)
+plot(smoothingLine, title="-Smoothing Line-default-Color-12-orange-100%-Line-1-", color=#f37f20, offset=offset, display=display.none)

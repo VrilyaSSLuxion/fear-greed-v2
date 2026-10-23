@@ -1,0 +1,46 @@
+//@version=5
+strategy("RSI & Stochastic Cross Strategy", overlay=true)
+
+// Inputs for RSI
+rsi_length = input.int(title="RSI Period", defval=14)
+rsi_src = input.source(title="RSI Source", defval=close)
+
+// Inputs for Stochastic
+k_length = input.int(title="Stochastic %K Length", defval=14)
+d_length = input.int(title="Stochastic %D Length", defval=3)
+smooth_k = input.int(title="Stochastic Smoothing", defval=3)
+
+// Calculate RSI
+rsi = ta.rsi(rsi_src, rsi_length)
+
+// Calculate Stochastic
+k = ta.sma(ta.stoch(close, high, low, k_length), smooth_k)
+d = ta.sma(k, d_length)
+
+// Define Stochastic cross conditions
+bullish_stoch_cross = ta.crossover(k, d)
+bearish_stoch_cross = ta.crossunder(k, d)
+
+// Define RSI cross conditions
+rsi_cross_50_from_below = ta.crossover(rsi, 50)
+rsi_cross_50_from_above = ta.crossunder(rsi, 50)
+
+// Define buy and sell conditions
+buy_condition = bullish_stoch_cross and rsi_cross_50_from_below
+sell_condition = bearish_stoch_cross and rsi_cross_50_from_above
+
+// Execute trades
+if (buy_condition)
+    strategy.entry("Buy", strategy.long)
+if (sell_condition)
+    strategy.entry("Sell", strategy.short)
+
+// Plot RSI
+plot(rsi, title="RSI", color=color.blue, linewidth=2)
+
+// Plot Stochastic
+plot(k, title="%K", color=color.green)
+plot(d, title="%D", color=color.red)
+
+// Plot RSI 50 level
+hline(50, title="RSI 50 Level", color=color.gray, linestyle=hline.style_dotted)

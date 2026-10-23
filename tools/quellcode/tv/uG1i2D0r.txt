@@ -1,0 +1,40 @@
+//@version=6
+indicator("Fibonacci Levels Signal", overlay=true)
+
+// Input settings
+length = input.int(20, minval=1, title="Lookback Period for High/Low")
+signal_color = input.color(color.new(color.red, 0), title="Signal Color")
+
+// Calculate Fibonacci retracement levels
+highestHigh = ta.highest(high, length)
+lowestLow = ta.lowest(low, length)
+priceRange = highestHigh - lowestLow
+
+fib_0_5 = lowestLow + priceRange * 0.5
+fib_0_559 = lowestLow + priceRange * 0.559
+fib_0_618 = lowestLow + priceRange * 0.618
+fib_0_677 = lowestLow + priceRange * 0.677
+
+// Check if Fibonacci levels are touched
+fib_0_5_touched = (low <= fib_0_5 and high >= fib_0_5)
+fib_0_559_touched = (low <= fib_0_559 and high >= fib_0_559)
+fib_0_618_touched = (low <= fib_0_618 and high >= fib_0_618)
+fib_0_677_touched = (low <= fib_0_677 and high >= fib_0_677)
+
+// Plot the Fibonacci levels
+line.new(bar_index[length], fib_0_5, bar_index, fib_0_5, color=color.new(color.blue, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_559, bar_index, fib_0_559, color=color.new(color.green, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_618, bar_index, fib_0_618, color=color.new(color.orange, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_677, bar_index, fib_0_677, color=color.new(color.purple, 0), width=1, style=line.style_solid)
+
+// Signal when the levels are touched
+plotshape(fib_0_5_touched, style=shape.labelup, location=location.absolute, color=signal_color, title="Fib 0.5 Signal", text="Fib 0.5")
+plotshape(fib_0_559_touched, style=shape.labelup, location=location.absolute, color=signal_color, title="Fib 0.559 Signal", text="Fib 0.559")
+plotshape(fib_0_618_touched, style=shape.labelup, location=location.absolute, color=signal_color, title="Fib 0.618 Signal", text="Fib 0.618")
+plotshape(fib_0_677_touched, style=shape.labelup, location=location.absolute, color=signal_color, title="Fib 0.677 Signal", text="Fib 0.677")
+
+// Alerts
+alertcondition(fib_0_5_touched, title="Fib 0.5 Touched", message="The price has touched the 0.5 Fibonacci level!")
+alertcondition(fib_0_559_touched, title="Fib 0.559 Touched", message="The price has touched the 0.559 Fibonacci level!")
+alertcondition(fib_0_618_touched, title="Fib 0.618 Touched", message="The price has touched the 0.618 Fibonacci level!")
+alertcondition(fib_0_677_touched, title="Fib 0.677 Touched", message="The price has touched the 0.677 Fibonacci level!")

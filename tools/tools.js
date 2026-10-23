@@ -63,12 +63,28 @@ function overview() {
       <div id="cats"></div>
     </div>`;
   $('#q').addEventListener('input', e => { QUERY = e.target.value.trim().toLowerCase(); renderCats(); });
-  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => document.getElementById('cat-' + b.dataset.go)?.scrollIntoView());
+  // Knopf oben: Bereich aufklappen und hinspringen
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+    OPEN_CATS.add(b.dataset.go); saveOpen(); renderCats();
+    document.getElementById('cat-' + b.dataset.go)?.scrollIntoView();
+  });
   renderCats();
 }
 
+// aufgeklappte Bereiche (MetaTrader, TradingView, …) merkt sich der Browser
+const OPEN_CATS = new Set((() => { try { return JSON.parse(localStorage.getItem('tt_bereiche') || '[]'); } catch (e) { return []; } })());
+const saveOpen = () => { try { localStorage.setItem('tt_bereiche', JSON.stringify([...OPEN_CATS])); } catch (e) { } };
+// Link mit ?bereich=tradingview (mehrere mit Komma) öffnet diese Bereiche
+for (const b of (new URLSearchParams(location.search).get('bereich') || '').split(',')) if (b) OPEN_CATS.add(b);
+
 function renderCats() {
+  const count = id => id === 'tradingview' && window.TVV?.ready() ? TVV.count() : ITEMS.filter(i => i.category === id).length;
   $('#cats').innerHTML = `<div class="page">${CATS.map(c => {
+    // bei einer Suche sind alle Bereiche offen, sonst nur die angeklickten
+    const isOpen = OPEN_CATS.has(c.id) || !!QUERY;
+    const head = `<button class="cat-head" data-cat="${c.id}" aria-expanded="${isOpen}">
+      <span class="chev">${isOpen ? '▾' : '▸'}</span><h2>${c.title}</h2><span class="sub">${esc(c.sub)}</span><b class="cnt">${count(c.id)}</b></button>`;
+    if (!isOpen) return `<section class="cat" id="cat-${c.id}">${head}</section>`;
     const all = ITEMS.filter(i => i.category === c.id).sort(byName);
     const hits = all.filter(matches);
     let body;
@@ -78,8 +94,11 @@ function renderCats() {
     else if (!all.length) body = `<div class="empty">${esc(c.empty)}</div>`;
     else if (!hits.length) body = `<p class="nohit">Keine Treffer in ${esc(c.title)}.</p>`;
     else body = `<div class="grid">${hits.map(card).join('')}</div>`;
-    return `<section class="cat" id="cat-${c.id}"><div class="cat-head"><h2>${c.title}</h2><span>${esc(c.sub)}</span></div>${body}</section>`;
+    return `<section class="cat open" id="cat-${c.id}">${head}<div class="cat-body">${body}</div></section>`;
   }).join('')}</div>`;
+  document.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
+    const id = b.dataset.cat; OPEN_CATS.has(id) ? OPEN_CATS.delete(id) : OPEN_CATS.add(id); saveOpen(); renderCats();
+  });
   if (window.TVV?.ready()) TVV.bind(() => QUERY);
 }
 

@@ -1,0 +1,36 @@
+//@version=5
+indicator("-VrilyaSS-RSI and Stochastic Buy/Sell Signals-18072024-small-", overlay=true)
+
+// Input parameters for RSI and Stochastic
+rsi_source = input.source(close, title="RSI Source")
+rsi_length = input.int(14, title="RSI Length")
+stoch_length = input.int(14, title="Stochastic Length")
+stoch_k = input.int(3, title="%K Smoothing")
+stoch_d = input.int(3, title="%D Smoothing")
+
+// Calculate RSI
+rsi = ta.rsi(rsi_source, rsi_length)
+
+// Calculate Stochastic
+k = ta.sma(ta.stoch(close, high, low, stoch_length), stoch_k)
+d = ta.sma(k, stoch_d)
+
+// Define Bullish and Bearish Crosses
+bullish_stoch_cross = ta.crossover(k, d)
+bearish_stoch_cross = ta.crossunder(k, d)
+
+// Define Buy and Sell Conditions
+buy_condition = ta.crossover(rsi, 50) and (k < 20 or bullish_stoch_cross)
+sell_condition = ta.crossunder(rsi, 50) and (k > 80 or bearish_stoch_cross)
+
+// Plot Buy and Sell Signals
+plotshape(series=buy_condition, location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="B", title="-Buy Signal-buy_condition = ta.crossover(rsi, 50) and (k < 20 or bullish_stoch_cross)-", size=size.small)
+plotshape(series=sell_condition, location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="S", title="-Sell Signal-sell_condition = ta.crossunder(rsi, 50) and (k > 80 or bearish_stoch_cross)-", size=size.small)
+
+// Alert Conditions
+alertcondition(buy_condition, title="Buy Signal Alert", message="-RSI and Stochastic Buy Signal-VrilyaSS-RSI and Stochastic Buy/Sell Signals-18072024-")
+alertcondition(sell_condition, title="Sell Signal Alert", message="-RSI and Stochastic Sell Signal-VrilyaSS-RSI and Stochastic Buy/Sell Signals-18072024-")
+
+// Combined Alert Condition for Buy or Sell Signal
+combined_condition = buy_condition or sell_condition
+alertcondition(combined_condition, title="Buy/Sell Signal Alert", message="-RSI and Stochastic Buy/Sell Signal-VrilyaSS-RSI and Stochastic Buy/Sell Signals-18072024-")

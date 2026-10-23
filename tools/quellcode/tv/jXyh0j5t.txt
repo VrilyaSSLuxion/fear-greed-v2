@@ -1,0 +1,25 @@
+//@version=5
+indicator(title="-VrilyaSS-1-Minute Schnell Trade Indikator-9+21-EMA-13072024-", shorttitle="-VrilyaSS-1-Minute Schnell Trade Indikator-9+21-EMA-13072024-", overlay=true)
+
+// Eingaben für die EMAs
+ema_fast_period = input.int(9, title="Schneller EMA Periode", minval=1)
+ema_slow_period = input.int(21, title="Langsamer EMA Periode", minval=1)
+
+// Berechnung der EMAs
+ema_fast = ta.ema(close, ema_fast_period)
+ema_slow = ta.ema(close, ema_slow_period)
+
+// Definieren von Kauf- und Verkaufssignalen
+buy_signal = ta.crossover(ema_fast, ema_slow)
+sell_signal = ta.crossunder(ema_fast, ema_slow)
+
+// Farben für die Hintergrundanzeige je nach Signal
+bgcolor(buy_signal ? color.new(color.green, 90) : sell_signal ? color.new(color.red, 90) : na)
+
+// Plot Kauf- und Verkaufssignale auf dem Chart
+plotshape(series=buy_signal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.white)
+plotshape(series=sell_signal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.white)
+
+// Alerts für Kauf- und Verkaufssignale
+alertcondition(buy_signal, title="Buy Signal", message="Buy Signal - 1-Min Schnell Trade Indikator")
+alertcondition(sell_signal, title="Sell Signal", message="Sell Signal - 1-Min Schnell Trade Indikator")

@@ -1,0 +1,34 @@
+//@version=5
+indicator(title="RSI and EMA Strategy", shorttitle="RSI-EMA", overlay=true)
+
+// Input parameters
+rsi_length = input.int(14, title="RSI Length")
+ema_length = input.int(9, title="EMA Length")
+oversold_level = input.int(30, title="Oversold Level")
+overbought_level = input.int(70, title="Overbought Level")
+
+// Calculate RSI
+rsi_value = ta.rsi(close, rsi_length)
+
+// Calculate EMA
+ema_value = ta.ema(close, ema_length)
+
+// Plot RSI and EMA
+plot(rsi_value, title="RSI", color=color.blue)
+plot(ema_value, title="EMA", color=color.red)
+
+// Plot horizontal lines for oversold and overbought levels
+hline(oversold_level, "Oversold", color=color.green)
+hline(overbought_level, "Overbought", color=color.red)
+
+// Strategy conditions
+long_condition = ta.crossover(rsi_value, oversold_level) and ta.crossover(close, ema_value)
+short_condition = ta.crossunder(rsi_value, overbought_level) and ta.crossunder(close, ema_value)
+
+// Plot buy and sell signals with larger triangles
+plotshape(series=long_condition, location=location.belowbar, color=color.green, style=shape.triangleup, title="Buy Signal", size=size.large)
+plotshape(series=short_condition, location=location.abovebar, color=color.red, style=shape.triangledown, title="Sell Signal", size=size.large)
+
+// Strategy alerts
+alertcondition(long_condition, title="Buy Signal", message="Buy Signal on {{ticker}}!")
+alertcondition(short_condition, title="Sell Signal", message="Sell Signal on {{ticker}}!")

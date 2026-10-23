@@ -1,0 +1,39 @@
+//@version=5
+indicator("-Fast Breakout Indicator-(FBI)-Bollinger-Bands+SMA-20+VWAP-", overlay=true)
+
+// Eingabequelle
+sourceType = input.source(close, title="-Source-close-")
+
+// Eingaben
+length = input.int(20, title="-SMA-Length-20-", minval=1)
+vwap_length = input.int(14, title="-VWAP-Length-14-", minval=1)
+multiplier = input.float(1.5, title="-Multiplier for Breakout Levels-1.5-", minval=0.1)
+
+// SMA und VWAP berechnen
+sma = ta.sma(sourceType, length)
+vwap = ta.vwap(sourceType)
+
+// Bollinger Bänder für Breakout Level
+basis = ta.sma(sourceType, vwap_length)
+dev = multiplier * ta.stdev(sourceType, vwap_length)
+upper = basis + dev
+lower = basis - dev
+
+// Bedingungen für Long und Short Signale
+longCondition = ta.crossover(sourceType, upper)
+shortCondition = ta.crossunder(sourceType, lower)
+
+// Kauf- und Verkaufssignale
+buy_signal = longCondition
+sell_signal = shortCondition
+
+// Plots
+plot(sma, linewidth=2, color=color.white, title="-SMA-")
+
+// Bollinger Bänder als Linien zeichnen
+plot(upper, color=color.red, title="-Upper-Band-", linewidth=3)
+plot(lower, color=color.green, title="-Lower-Band-", linewidth=3)
+
+// Signale auf dem Chart anzeigen
+plotshape(series=buy_signal ? upper : na, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal ? lower : na, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

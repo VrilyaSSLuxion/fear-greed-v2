@@ -1,0 +1,85 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HamidBox
+
+//@version=4
+study("-VrilyaSS-RSI Signals-Advanced RSI-(RSI Signals by HB-HamidBox)-", overlay=true, shorttitle="-VrilyaSS-RSI Signals-Advanced RSI-(RSI Signals by HB-HamidBox)-")
+
+//Inputs
+rsiL = input(title="-RSI-Length-7-", type=input.integer, defval=7)
+rsiOBI = input(title="-RSI-Overbought-70-", type=input.integer, defval=70)
+rsiOSI = input(title="-RSI-Oversold-30-", type=input.integer, defval=30)
+fibLevel = input(title="-Hammer Body Size-0.333-", type=input.float, defval=0.333, step=0.01)
+BullBearEngulf = input(title="-Bullish+Bearish Engulfing-", type=input.bool, defval=true)
+hammerShooting = input(title="-Hammer Shooting Bar-", type=input.bool, defval=false)
+twoBullBearBar = input(title="-Two Bull Bear Bar-", type=input.bool, defval=false)
+
+//RSI VALUE
+myRsi = rsi(close , rsiL)
+
+//RSI OVERBOUGHT / OVERSOLD
+rsiOB = myRsi >= rsiOBI
+rsiOS = myRsi <= rsiOSI
+
+///////////=Hammer & Shooting star=/////////////
+
+bullFib = (low - high) * fibLevel + high
+bearFib = (high - low) * fibLevel + low
+
+// Determine which price source closses or open highest/lowest
+bearCandle = close < open ? close : open
+bullCandle = close > open ? close : open 
+
+// Determine if we have a valid hammer or shooting star
+hammer = (bearCandle >= bullFib) and rsiOS
+shooting = (bullCandle <= bearFib) and rsiOB
+
+twoGreenBars = (close > open and close[1] > open[1]) and rsiOS
+twoRedBars = (close < open and close[1] < open[1]) and rsiOB
+
+/////////////////////////////////////////////
+
+// Engulfing candles
+bullE = (close > open[1] and close[1] < open[1])
+ //or hammer or twoGreenBars 
+ 
+bearE = close < open[1] and close[1] > open[1]
+ //or shooting or twoRedBars 
+
+///////////////////////////////////////////
+
+
+// ((x) y) farmula defination is: X is gona be executed before Y,
+TradeSignal = ((rsiOS or rsiOS[1]) and bullE) or ((rsiOB or rsiOB[1]) and bearE)
+
+if (TradeSignal and bearE and BullBearEngulf)
+    label.new(x= bar_index, y= na, text="Exit", yloc= yloc.abovebar,color= color.maroon, textcolor= color.white, style= label.style_label_down, size=size.normal)
+plotshape(TradeSignal and bearE and BullBearEngulf, title="Overbought", location=location.abovebar, color=color.orange, style=shape.triangledown, size=size.tiny, text="")
+
+if (TradeSignal and bullE and BullBearEngulf)
+    label.new(x= bar_index, y= na, text="Buy", yloc= yloc.belowbar,color= color.green, textcolor= color.white, style= label.style_label_up, size=size.normal)
+plotshape(TradeSignal and bullE and BullBearEngulf, title="Oversold", location=location.belowbar, color=color.lime, style=shape.triangleup, size=size.tiny, text="")
+
+//////////////////////////////
+
+if (shooting and hammerShooting)
+    label.new(x= bar_index, y= na, text="SS", yloc= yloc.abovebar,color= color.purple, textcolor= color.white, style= label.style_label_down, size=size.normal)
+plotshape(shooting and hammerShooting, title="Overbought + hammer/shooting", location=location.abovebar, color=color.purple, style=shape.triangledown, size=size.tiny, text="")
+
+if (hammer and hammerShooting)
+    label.new(x= bar_index, y= na, text="HMR", yloc= yloc.belowbar,color= color.blue, textcolor= color.white, style= label.style_label_up, size=size.normal)
+plotshape(hammer and hammerShooting, title="Oversold + hammer/shooting", location=location.belowbar, color=color.lime, style=shape.triangleup, size=size.tiny, text="")
+
+///////////////////////////
+
+if (twoGreenBars and twoBullBearBar)
+    label.new(x= bar_index, y= na, text="2Bull", yloc= yloc.belowbar,color= color.olive, textcolor= color.white, style= label.style_label_up, size=size.normal)
+plotshape(twoGreenBars and twoBullBearBar, title="Oversold + 2bulls", location=location.belowbar, color=color.lime, style=shape.triangleup, size=size.tiny, text="")
+
+if (twoRedBars and twoBullBearBar)
+    label.new(x= bar_index, y= na, text="2Bear", yloc= yloc.abovebar,color= color.red, textcolor= color.white, style= label.style_label_down, size=size.normal)
+plotshape(twoRedBars and twoBullBearBar, title="Overbought + 2bears", location=location.abovebar, color=color.blue, style=shape.triangledown, size=size.tiny, text="")
+
+
+// Send Alert if Candle meets our condition
+alertcondition(TradeSignal, title="-RSI SIGNAL-VrilyaSS-RSI Signals-Advanced RSI-(RSI Signals by HB-HamidBox)-", message="-VrilyaSS-RSI Signals-Advanced RSI-(RSI Signals by HB-HamidBox)-RSI Signal Detected fot {{ticker}}-")
+

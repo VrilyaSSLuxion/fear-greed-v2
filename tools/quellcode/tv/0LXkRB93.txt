@@ -1,0 +1,24 @@
+//@version=5
+strategy("Stochastic und RSI Strategie", overlay=true)
+
+// Input-Variablen für die Stochastic und RSI-Parameter
+stoch_k = input(14, title="Stochastic K")
+stoch_d = input(3, title="Stochastic D")
+rsi_length = input(14, title="RSI Length")
+
+// Stochastic und RSI-Berechnungen
+stoch_k_val = ta.stoch(close, high, low, stoch_k)
+stoch_d_val = ta.sma(stoch_k_val, stoch_d)
+rsi_val = ta.rsi(close, rsi_length)
+
+// Kaufsignalbedingungen
+buy_signal = ta.crossover(stoch_k_val, stoch_d_val) and stoch_k_val > 20 and ta.crossover(rsi_val, 50)
+
+// Verkaufssignalbedingungen
+sell_signal = ta.crossunder(stoch_k_val, stoch_d_val) and stoch_k_val < 80 and ta.crossunder(rsi_val, 50)
+
+// Handelslogik
+if (buy_signal)
+    strategy.entry("Buy", strategy.long)
+if (sell_signal)
+    strategy.close("Buy")

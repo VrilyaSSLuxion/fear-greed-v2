@@ -1,0 +1,460 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingView
+
+//@version=6
+indicator("Visible Fibonacci", "Vis. Fib", true, max_lines_count = 500)
+
+// Visible Fibonacci
+// v4.3, Added "Actual HTF Candle" (minimal changes to preserve Visible Range logic)
+
+import PineCoders/VisibleChart/5 as chart
+
+//#region ———————————————————— Constants and inputs
+
+// Colors
+color GRAY    = color.gray
+color RED     = color.red
+color ORANGE  = color.orange
+color TEAL    = color.teal
+color RUBY    = #e91e63
+color AQUA    = color.aqua
+color BLUE    = color.blue
+color GREEN   = color.green
+color PURPLE  = color.purple
+color LIME    = color.lime
+color FUCHSIA = color.fuchsia
+color CYAN    = #00bcd4
+color YELLOW  = #ffeb3b
+color MAROON  = #880e4f
+color WHITE   = color.white
+
+// Line types
+string TY01 = " ─ Line"
+string TY02 = " ┄ Dashed line"
+string TY03 = " ┉ Dotted line"
+
+// Fib level types
+string LV01  = "Values"
+string LV02  = "Percent"
+
+// Fib calculation types
+string FT01  = "Visible chart range"
+string FT02  = "Visible Zig Zag"
+string FT03  = "Last closed bar"
+string FT04  = "Current bar"
+string FT05  = "Last closed HTF candle"
+string FT06  = "Actual HTF candle"  // ← NEU
+
+// Label locations
+string LB01  = "Left"
+string LB02  = "Center"
+string LB03  = "Right"
+string LB04  = "Top"
+string LB05  = "Middle"
+string LB06  = "Bottom"
+
+// Label sizes
+string SZ01  = "tiny"
+string SZ02  = "small"
+string SZ03  = "normal"
+string SZ04  = "large"
+string SZ05  = "huge"
+
+// Tooltips
+string TT_FT = "Choose from calculation types:\n\n• 'Visible chart range'\nCalculates based on the visible chart range.\n\n• 'Visible Zig Zag'\nCalculates based on zig zag pivots.\n\n• 'Last closed bar'\nCalculates based on the previous bar.\n\n• 'Current bar'\nCalculates based on the current developing bar.\n\n• 'Last closed HTF candle'\nCalculates based on the last closed candle of the selected timeframe.\n\n• 'Actual HTF candle' ⭐\nCalculates based on the CURRENT developing candle of the selected timeframe (e.g., today's range on a 1H chart with 1D HTF)."  // ← aktualisiert
+
+// Inputs
+string fibTypeInput      = input.string(FT05,  "Fib calculation type",      options = [FT01, FT02, FT03, FT04, FT05, FT06], tooltip = TT_FT)  // ← FT06 hinzugefügt
+string htfInput          = input.timeframe("1D", "  Timeframe for HTF candle", tooltip = "Used when 'Last closed HTF candle' or 'Actual HTF candle' is selected.")  // ← Tooltip aktualisiert
+
+string GRP1              = "Visible Zig Zag"
+bool   showZZInput       = input.bool(true,    "Show Zig Zag",              group = GRP1, inline = "00")
+bool   addPivotInput     = input.bool(true,    "Detect additional pivots",  group = GRP1, inline = "01")
+int    lengthInput       = input.int(50,       "   Pivot length",           group = GRP1, minval = 1)
+color  zzBullColorInput  = input.color(GRAY,   "   ",                       group = GRP1, inline = "02")
+color  zzBearColorInput  = input.color(GRAY,   "",                          group = GRP1, inline = "02")
+int    zzwidthInput      = input.int(2,        "",                          group = GRP1, inline = "02", minval  = 1)
+string zzStyleInput      = input.string(TY01,  "",                          group = GRP1, inline = "02", options = [TY01, TY02, TY03])
+int    pivotInput        = input.int(1,        "   nth last pivot",         group = GRP1, minval = 0)
+
+string GRP2              = "Fib Levels"
+bool   useBodyInput      = input.bool(false,   "Use Body (O/C) instead of Wick (H/L)", group = GRP2)
+
+bool   extendRtInput     = input.bool(true,    "Extend to real time",       group = GRP2)
+bool   extendBarsInput   = input.bool(true,   "Extend xx bars to right",   group = GRP2, inline = "ext_bars")
+int    barsToRightInput  = input.int(48,        "",                          group = GRP2, inline = "ext_bars", minval = 0)
+bool   extendRightInput  = input.bool(false,   "Extend lines right",        group = GRP2)
+bool   extendLeftInput   = input.bool(false,   "Extend lines left",         group = GRP2)
+bool   trendLineInput    = input.bool(true,    "Trend line",                group = GRP2, inline = "10")
+color  trendColorInput   = input.color(color.white,   "",                          group = GRP2, inline = "10")
+int    trendWidthInput   = input.int(1,        "",                          group = GRP2, inline = "10", minval  = 1)
+string trendStyleInput   = input.string(TY02,  "",                          group = GRP2, inline = "10", options = [TY01, TY02, TY03])
+int    levelsWidthInput  = input.int(1,        "Level lines",               group = GRP2, inline = "11", minval  = 1)
+string fibStyleInput     = input.string(TY01,  "",                          group = GRP2, inline = "11", options = [TY01, TY02, TY03])
+string extStyleInput     = input.string(TY01,  "",                          group = GRP2, inline = "11", options = [TY01, TY02, TY03])
+
+// Fib levels inputs (unverändert – aus Platzgründen gekürzt, original beibehalten)
+bool showNeg70Input = input.bool(false, "", group = GRP2, inline = "20"), float levelNeg70Input = input.float(-0.7, "", group = GRP2, inline = "20"), color colorNeg70Input = input.color(MAROON, "", group = GRP2, inline = "20")
+bool showNeg60Input = input.bool(true, "", group = GRP2, inline = "20"), float levelNeg60Input = input.float(-0.6, "", group = GRP2, inline = "20"), color colorNeg60Input = input.color(RED, "", group = GRP2, inline = "20")
+bool showNeg50Input = input.bool(true, "", group = GRP2, inline = "20"), float levelNeg50Input = input.float(-0.5, "", group = GRP2, inline = "20"), color colorNeg50Input = input.color(CYAN, "", group = GRP2, inline = "20")
+bool showNeg40Input = input.bool(true, "", group = GRP2, inline = "20"), float levelNeg40Input = input.float(-0.4, "", group = GRP2, inline = "20"), color colorNeg40Input = input.color(YELLOW, "", group = GRP2, inline = "20")
+bool showNeg30Input = input.bool(true, "", group = GRP2, inline = "20"), float levelNeg30Input = input.float(-0.3, "", group = GRP2, inline = "20"), color colorNeg30Input = input.color(GREEN, "", group = GRP2, inline = "20")
+bool show000Input   = input.bool(true, "", group = GRP2, inline = "20"), float level000Input   = input.float(0, "", group = GRP2, inline = "20"), color color000Input   = input.color(GREEN, "", group = GRP2, inline = "20")
+bool show050Input   = input.bool(true, "", group = GRP2, inline = "21"), float level050Input   = input.float(0.5, "", group = GRP2, inline = "21"), color color050Input   = input.color(WHITE, "", group = GRP2, inline = "21")
+bool show100Input   = input.bool(true, "", group = GRP2, inline = "21"), float level100Input   = input.float(1, "", group = GRP2, inline = "21"), color color100Input   = input.color(RED, "", group = GRP2, inline = "21")
+bool show130Input   = input.bool(true, "", group = GRP2, inline = "21"), float level130Input   = input.float(1.3, "", group = GRP2, inline = "21"), color color130Input   = input.color(WHITE, "", group = GRP2, inline = "21")
+bool show140Input   = input.bool(true, "", group = GRP2, inline = "22"), float level140Input   = input.float(1.4, "", group = GRP2, inline = "22"), color color140Input   = input.color(WHITE, "", group = GRP2, inline = "22")
+bool show150Input   = input.bool(true, "", group = GRP2, inline = "22"), float level150Input   = input.float(1.5, "", group = GRP2, inline = "22"), color color150Input   = input.color(WHITE, "", group = GRP2, inline = "22")
+bool show160Input   = input.bool(true, "", group = GRP2, inline = "22"), float level160Input   = input.float(1.6, "", group = GRP2, inline = "22"), color color160Input   = input.color(WHITE, "", group = GRP2, inline = "22")
+bool showNeg65Input = input.bool(true, "", group = GRP2, inline = "23"), float levelNeg65Input = input.float(-0.65, "", group = GRP2, inline = "23"), color colorNeg65Input = input.color(RED, "", group = GRP2, inline = "23")
+bool showNeg55Input = input.bool(true, "", group = GRP2, inline = "23"), float levelNeg55Input = input.float(-0.55, "", group = GRP2, inline = "23"), color colorNeg55Input = input.color(WHITE, "", group = GRP2, inline = "23")
+bool showNeg45Input = input.bool(true, "", group = GRP2, inline = "23"), float levelNeg45Input = input.float(-0.45, "", group = GRP2, inline = "23"), color colorNeg45Input = input.color(WHITE, "", group = GRP2, inline = "23")
+bool showNeg35Input = input.bool(true, "", group = GRP2, inline = "24"), float levelNeg35Input = input.float(-0.35, "", group = GRP2, inline = "24"), color colorNeg35Input = input.color(WHITE, "", group = GRP2, inline = "24")
+bool showNeg25Input = input.bool(true, "", group = GRP2, inline = "24"), float levelNeg25Input = input.float(-0.25, "", group = GRP2, inline = "24"), color colorNeg25Input = input.color(WHITE, "", group = GRP2, inline = "24")
+bool show010Input   = input.bool(true, "", group = GRP2, inline = "24"), float level010Input   = input.float(0.1, "", group = GRP2, inline = "24"), color color010Input   = input.color(RED, "", group = GRP2, inline = "24")
+bool show090Input   = input.bool(true, "", group = GRP2, inline = "24"), float level090Input   = input.float(0.9, "", group = GRP2, inline = "24"), color color090Input   = input.color(WHITE, "", group = GRP2, inline = "24")
+bool show125Input   = input.bool(true, "", group = GRP2, inline = "25"), float level125Input   = input.float(1.25, "", group = GRP2, inline = "25"), color color125Input   = input.color(GREEN, "", group = GRP2, inline = "25")
+bool show135Input   = input.bool(true, "", group = GRP2, inline = "25"), float level135Input   = input.float(1.35, "", group = GRP2, inline = "25"), color color135Input   = input.color(GREEN, "", group = GRP2, inline = "25")
+bool show145Input   = input.bool(true, "", group = GRP2, inline = "25"), float level145Input   = input.float(1.45, "", group = GRP2, inline = "25"), color color145Input   = input.color(YELLOW, "", group = GRP2, inline = "25")
+bool show155Input   = input.bool(true, "", group = GRP2, inline = "25"), float level155Input   = input.float(1.55, "", group = GRP2, inline = "25"), color color155Input   = input.color(CYAN, "", group = GRP2, inline = "25")
+bool show165Input   = input.bool(true, "", group = GRP2, inline = "26"), float level165Input   = input.float(1.65, "", group = GRP2, inline = "26"), color color165Input   = input.color(RED, "", group = GRP2, inline = "26")
+bool show236Input   = input.bool(false, "", group = GRP2, inline = "26"), float level236Input   = input.float(0.236, "", group = GRP2, inline = "26"), color color236Input   = input.color(RED, "", group = GRP2, inline = "26")
+bool show382Input   = input.bool(false, "", group = GRP2, inline = "26"), float level382Input   = input.float(0.382, "", group = GRP2, inline = "26"), color color382Input   = input.color(ORANGE, "", group = GRP2, inline = "26")
+bool show500Input   = input.bool(false, "", group = GRP2, inline = "27"), float level500Input   = input.float(0.5, "", group = GRP2, inline = "27"), color color500Input   = input.color(GREEN, "", group = GRP2, inline = "27")
+bool show618Input   = input.bool(false, "", group = GRP2, inline = "27"), float level618Input   = input.float(0.618, "", group = GRP2, inline = "27"), color color618Input   = input.color(TEAL, "", group = GRP2, inline = "27")
+bool show786Input   = input.bool(false, "", group = GRP2, inline = "27"), float level786Input   = input.float(0.786, "", group = GRP2, inline = "27"), color color786Input   = input.color(AQUA, "", group = GRP2, inline = "27")
+bool show161Input   = input.bool(false, "", group = GRP2, inline = "27"), float level161Input   = input.float(1.618, "", group = GRP2, inline = "27"), color color161Input   = input.color(BLUE, "", group = GRP2, inline = "27")
+bool show261Input   = input.bool(false, "", group = GRP2, inline = "28"), float level261Input   = input.float(2.618, "", group = GRP2, inline = "28"), color color261Input   = input.color(RED, "", group = GRP2, inline = "28")
+bool show361Input   = input.bool(false, "", group = GRP2, inline = "28"), float level361Input   = input.float(3.618, "", group = GRP2, inline = "28"), color color361Input   = input.color(PURPLE, "", group = GRP2, inline = "28")
+bool show423Input   = input.bool(false, "", group = GRP2, inline = "28"), float level423Input   = input.float(4.236, "", group = GRP2, inline = "28"), color color423Input   = input.color(RUBY, "", group = GRP2, inline = "28")
+bool show127Input   = input.bool(false, "", group = GRP2, inline = "28"), float level127Input   = input.float(1.272, "", group = GRP2, inline = "28"), color color127Input   = input.color(ORANGE, "", group = GRP2, inline = "28")
+bool show141Input   = input.bool(false, "", group = GRP2, inline = "29"), float level141Input   = input.float(1.414, "", group = GRP2, inline = "29"), color color141Input   = input.color(RED, "", group = GRP2, inline = "29")
+bool show227Input   = input.bool(false, "", group = GRP2, inline = "29"), float level227Input   = input.float(2.272, "", group = GRP2, inline = "29"), color color227Input   = input.color(ORANGE, "", group = GRP2, inline = "29")
+bool show241Input   = input.bool(false, "", group = GRP2, inline = "29"), float level241Input   = input.float(2.414, "", group = GRP2, inline = "29"), color color241Input   = input.color(GREEN, "", group = GRP2, inline = "29")
+bool show200Input   = input.bool(false, "", group = GRP2, inline = "29"), float level200Input   = input.float(2, "", group = GRP2, inline = "29"), color color200Input   = input.color(TEAL, "", group = GRP2, inline = "29")
+bool show300Input   = input.bool(false, "", group = GRP2, inline = "30"), float level300Input   = input.float(3, "", group = GRP2, inline = "30"), color color300Input   = input.color(AQUA, "", group = GRP2, inline = "30")
+bool show327Input   = input.bool(false, "", group = GRP2, inline = "30"), float level327Input   = input.float(3.272, "", group = GRP2, inline = "30"), color color327Input   = input.color(GRAY, "", group = GRP2, inline = "30")
+bool show341Input   = input.bool(false, "", group = GRP2, inline = "30"), float level341Input   = input.float(3.414, "", group = GRP2, inline = "30"), color color341Input   = input.color(BLUE, "", group = GRP2, inline = "30")
+bool show400Input   = input.bool(false, "", group = GRP2, inline = "30"), float level400Input   = input.float(4, "", group = GRP2, inline = "30"), color color400Input   = input.color(RED, "", group = GRP2, inline = "30")
+bool show427Input   = input.bool(false, "", group = GRP2, inline = "31"), float level427Input   = input.float(4.272, "", group = GRP2, inline = "31"), color color427Input   = input.color(PURPLE, "", group = GRP2, inline = "31")
+bool show441Input   = input.bool(false, "", group = GRP2, inline = "31"), float level441Input   = input.float(4.414, "", group = GRP2, inline = "31"), color color441Input   = input.color(RUBY, "", group = GRP2, inline = "31")
+bool show461Input   = input.bool(false, "", group = GRP2, inline = "31"), float level461Input   = input.float(4.618, "", group = GRP2, inline = "31"), color color461Input   = input.color(ORANGE, "", group = GRP2, inline = "31")
+bool show476Input   = input.bool(false, "", group = GRP2, inline = "31"), float level476Input   = input.float(4.764, "", group = GRP2, inline = "31"), color color476Input   = input.color(TEAL, "", group = GRP2, inline = "31")
+bool   useFillInput      = input.bool(true,    "Background",                group = GRP2, inline = "fill")
+int    bgTranspInput     = input.int(85,       "",                          group = GRP2, inline = "fill")
+bool   invertFibInput    = input.bool(false,   "Reverse",                   group = GRP2)
+bool   useLogScaleInput  = input.bool(false,   "Log scale fibs",            group = GRP2)
+
+string GRP3              = "Labels"
+bool   showPricesInput   = input.bool(true,    "Prices",                    group = GRP3)
+bool   showLevelsInput   = input.bool(true,    "Levels",                    group = GRP3, inline = "40")
+string levelTypeInput    = input.string(LV01,  "",                          group = GRP3, inline = "40", options = [LV01, LV02])
+string labelXInput       = input.string(LB02,  "Fib labels",                group = GRP3, inline = "41", options = [LB01, LB02, LB03])
+string labelYInput       = input.string(LB05,  "",                          group = GRP3, inline = "41", options = [LB04, LB05, LB06])
+string labelSizeInput    = input.string(SZ03,  "",                          group = GRP3, inline = "41", options = [SZ01, SZ02, SZ03, SZ04, SZ05])
+bool   tLabelsInput      = input.bool(false,    "Time labels",               group = GRP3, inline = "42")
+string tLabelSizeInput   = input.string(SZ03,  "",                          group = GRP3, inline = "42", options = [SZ01, SZ02, SZ03, SZ04, SZ05])
+//#endregion
+
+//#region ———————————————————— User-defined types
+
+type point
+    float y
+    int   x
+
+type pivotPoint
+    point start
+    point end
+    int   dir
+    line  ln
+    int   bars = 0
+
+type fibLevel
+    float level
+    color fibColor
+    line  fibLine
+    line  extLine
+    label fibLabel
+//#endregion
+
+//#region ———————————————————— Global Variables
+
+var array<float>    levels      = array.new<float>()
+var array<fibLevel> fibLevels   = array.new<fibLevel>()
+var array<int>      sortedArray = array.new<int>()
+
+bool isZigZag      = fibTypeInput == FT02
+bool isLastClosed  = fibTypeInput == FT03
+bool isCurrent     = fibTypeInput == FT04
+bool isHTF         = fibTypeInput == FT05
+bool isActualHTF   = fibTypeInput == FT06  // ← NEU
+
+string extendExt = extendRightInput ? extend.right : extend.none
+string extendFib = switch
+    not extendRtInput and extendLeftInput and extendRightInput => extend.both
+    not extendRtInput and extendRightInput => extend.right
+    extendLeftInput => extend.left
+    => extend.none
+
+bool   showLabels  = showPricesInput or showLevelsInput
+bool   showPercent = levelTypeInput == LV02
+string labelStyle  = switch
+    labelYInput == LB04 and labelXInput == LB01 => label.style_label_lower_right
+    labelYInput == LB05 and labelXInput == LB01 => label.style_label_right
+    labelYInput == LB06 and labelXInput == LB01 => label.style_label_upper_right
+    labelYInput == LB04 and labelXInput == LB02 => label.style_label_down
+    labelYInput == LB05 and labelXInput == LB02 => label.style_label_center
+    labelYInput == LB06 and labelXInput == LB02 => label.style_label_up
+    labelYInput == LB04 and labelXInput == LB03 => label.style_label_lower_left
+    labelYInput == LB05 and labelXInput == LB03 => label.style_label_left
+    labelYInput == LB06 and labelXInput == LB03 => label.style_label_upper_left
+//#endregion
+
+//#region ———————————————————— Functions
+
+toLog(series float value) =>
+    float exponent = math.abs(value)
+    float product  = math.log10(exponent + 0.0001) + 4
+    float result   = exponent < 1e-8 ? 0 : value < 0 ? - product : product
+
+fromLog(series float value) =>
+    float exponent = math.abs(value)
+    float product  = math.pow(10, exponent - 4) - 0.0001
+    float result   = exponent < 1e-8 ? 0 : value < 0 ? - product : product
+
+getPrice(series float value, series float hiPrice, series float loPrice, series bool isBull) =>
+    float hiPoint  = useLogScaleInput ? toLog(hiPrice) : hiPrice
+    float loPoint  = useLogScaleInput ? toLog(loPrice) : loPrice
+    float fibPrice = (
+         isBull and invertFibInput or not isBull and not invertFibInput ?
+         loPoint + ((hiPoint - loPoint) * value) :
+         hiPoint - ((hiPoint - loPoint) * value)
+     )
+    float result = useLogScaleInput ? fromLog(fibPrice) : fibPrice
+
+lineStyle(simple string styleString) =>
+    string result = switch styleString
+        TY01 => line.style_solid
+        TY02 => line.style_dashed
+        TY03 => line.style_dotted
+
+populate(simple bool condition, simple float value, series color color) =>
+    if condition
+        fibLevel fib = fibLevel.new(value, color)
+        fib.fibLine := line.new(na, na, na, na, xloc.bar_time, extendFib, color, lineStyle(fibStyleInput), levelsWidthInput)
+        if extendRtInput or extendBarsInput
+            fib.extLine := line.new(na, na, na, na, xloc.bar_time, extendExt, color, lineStyle(extStyleInput), levelsWidthInput)
+        if showLabels
+            fib.fibLabel := label.new(na, na, "", xloc.bar_time, yloc.price, color(na), labelStyle, color, labelSizeInput)
+        array.push(levels, value)
+        array.push(fibLevels, fib)
+
+setBg() =>
+    line temp1 = na
+    line temp2 = na
+    for sortedIndex in sortedArray
+        fibLevel fib = array.get(fibLevels, sortedIndex)
+        color fillColor = color.new(fib.fibColor, bgTranspInput)
+        if not na(temp1)
+            linefill.new(temp1, fib.fibLine, fillColor)
+            if extendRtInput or extendBarsInput
+                linefill.new(temp2, fib.extLine, fillColor)
+        temp1 := fib.fibLine
+        temp2 := fib.extLine
+
+labelText(series float value, series float price) =>
+    string levelString = showPercent ? str.tostring(value * 100, format.percent) : str.format("{0, number, #.###}", value)
+    string result = switch
+        showPricesInput and showLevelsInput => str.format("{0}({1})", levelString, str.tostring(price, format.mintick))
+        showPricesInput                     => str.format("({0})", str.tostring(price, format.mintick))
+        showLevelsInput                     => levelString
+
+labelTime(series int leftTime, series int rightTime, series int finalRightTime) =>
+    int result = switch labelXInput
+        LB01 => leftTime
+        LB02 => int(math.avg(leftTime, extendBarsInput ? finalRightTime : extendRtInput ? chart.right_visible_bar_time : rightTime))
+        LB03 => extendBarsInput ? finalRightTime : extendRtInput ? chart.right_visible_bar_time : rightTime
+
+timeLabel(series int x, series float y, simple color color, series string style) =>
+    var label tLabel = label.new(na, na, na, xloc.bar_time, yloc.price, color.new(color, 80), style, color, tLabelSizeInput)
+    label.set_xy(tLabel, x, y)
+    label.set_text(tLabel, str.format("{0}\n{1}", str.tostring(y, format.mintick), str.format_time(x, "dd/MM/yy @ HH:mm:ss")))
+
+hiLoLine(series int x1, series float y1, series int x2, series float y2) =>
+    var line hlLine = line.new(na, na, na, na, xloc.bar_time, extend.none, trendColorInput, lineStyle(trendStyleInput), trendWidthInput)
+    line.set_xy1(hlLine, x1, y1)
+    line.set_xy2(hlLine, x2, y2)
+
+setLevels(series int leftTime, series int rightTime, series float hiPrice, series float loPrice, series bool isBull, series int finalRightTime) =>
+    int lTime = labelTime(leftTime, rightTime, finalRightTime)
+    for fib in fibLevels
+        float fibPrice = getPrice(fib.level, hiPrice, loPrice, isBull)
+        line.set_xy1(fib.fibLine, leftTime,  fibPrice)
+        line.set_xy2(fib.fibLine, rightTime, fibPrice)
+        if extendRtInput or extendBarsInput
+            line.set_xy1(fib.extLine, rightTime, fibPrice)
+            line.set_xy2(fib.extLine, extendBarsInput ? finalRightTime : chart.right_visible_bar_time, fibPrice)
+        if showLabels
+            label.set_xy(fib.fibLabel, lTime, fibPrice)
+            label.set_text(fib.fibLabel, labelText(fib.level, fibPrice))
+
+addToArray(id, simple int max, value) =>
+    array.unshift(id, value)
+    if array.size(id) > max
+        array.pop(id)
+
+addPivot(simple int length, array<pivotPoint> pivotArray, simple bool addPivots = true) =>
+    pivotPoint piv  = array.get(pivotArray, 0)
+    int   altLen    = math.max(piv.bars, 1)
+    int   hiBar     = ta.highestbars(length)
+    int   loBar     = ta.lowestbars(length)
+    int   altHiBar  = ta.highestbars(altLen)
+    int   altLoBar  = ta.lowestbars(altLen)
+    float altHi     = ta.highest(altLen)
+    float altLo     = ta.lowest(altLen)
+    bool  missedPiv = piv.bars >= length and addPivots and not (hiBar == 0 and high > piv.end.y or loBar == 0 and low < piv.end.y)
+    var int dir = na
+    dir := switch
+        missedPiv => nz(dir, altHiBar < altLoBar ? 1 : -1) * -1
+        hiBar + loBar == 0 => dir * -1
+        hiBar == 0 =>  1
+        loBar == 0 => -1
+        => dir
+    if dir != dir[1] and time <= chart.right_visible_bar_time
+        [hiLo, altHiLo, offset, lineColor] = switch
+            dir > 0 => [high, altHi, altHiBar, zzBullColorInput]
+            =>         [low,  altLo, altLoBar, zzBearColorInput]
+        [pivY, bars] = switch
+            missedPiv => [altHiLo, math.abs(offset)]
+            =>           [hiLo, 0]
+        point newPoint   = point.new(pivY, time[bars])
+        pivotPoint pivot = pivotPoint.new(piv.end, newPoint, dir, bars = bars)
+        if showZZInput and time >= chart.left_visible_bar_time
+            pivot.ln := line.new(piv.end.x, piv.end.y, time[bars], pivY, xloc.bar_time, extend.none, lineColor, lineStyle(zzStyleInput), zzwidthInput)
+        addToArray(pivotArray, math.max(3, pivotInput + 1), pivot)
+
+updatePivot(simple int length, array<pivotPoint> pivotArray) =>
+    if time <= chart.right_visible_bar_time
+        pivotPoint piv = array.get(pivotArray, 0)
+        int   dir  = piv.dir
+        float hiLo = dir > 0 ? high : low
+        piv.bars  += 1
+        if hiLo * dir > piv.end.y * dir
+            piv.end.y := hiLo
+            piv.end.x := time
+            piv.bars  := 0
+            if showZZInput and time >= chart.left_visible_bar_time
+                if na(piv.ln)
+                    color lineColor = dir > 0 ? zzBullColorInput : zzBearColorInput
+                    piv.ln := line.new(piv.start.x, piv.start.y, time, hiLo, xloc.bar_time, extend.none, lineColor, lineStyle(zzStyleInput), zzwidthInput)
+            line.set_xy2(piv.ln, time, hiLo)
+
+zigZag(simple int length, simple bool addPivots = true) =>
+    var array<pivotPoint> pivots = array.new<pivotPoint>(1, pivotPoint.new(point.new(close), point.new(close)))
+    updatePivot(length, pivots)
+    addPivot(length, pivots, addPivots)
+    pivots
+
+findHiLo(simple int nthPivot) =>
+    int   leftX  = na, float leftY  = na, int   rightX = na, float rightY = na
+    if isZigZag
+        array<pivotPoint> pivotArray = zigZag(lengthInput, addPivotInput)
+        if barstate.islast
+            pivotPoint pivot = array.get(pivotArray, nthPivot)
+            leftX  := pivot.start.x, leftY  := pivot.start.y, rightX := pivot.end.x, rightY := pivot.end.y
+            if showZZInput
+                line.set_style(pivot.ln, lineStyle(trendStyleInput))
+    [leftX, leftY, rightX, rightY]
+//#endregion
+
+//#region ———————————————————— Calculations
+
+// HTF data - LAST CLOSED candle (original)
+[htfH_closed, htfL_closed, htfO_closed, htfC_closed, htfT_closed] = request.security(syminfo.tickerid, htfInput, [high[1], low[1], open[1], close[1], time[1]], lookahead = barmerge.lookahead_on)
+
+// HTF data - ACTUAL/DEVELOPING candle (NEU)
+[htfH_actual, htfL_actual, htfO_actual, htfC_actual, htfT_actual] = request.security(syminfo.tickerid, htfInput, [high, low, open, close, time], lookahead = barmerge.lookahead_on)
+
+// Zig Zag data
+[zzLeftX, zzLeftY, zzRightX, zzRightY] = findHiLo(pivotInput)
+
+// Initialize variables (NO 'var' - must recalculate on every bar for visible range!)
+float chartHigh = na
+float chartLow  = na
+int   hiTime    = na
+int   loTime    = na
+bool  isBull    = false
+int   finalRightTime = na
+
+// ——— Calculation logic ———
+if isLastClosed or isCurrent
+    int idx = isCurrent ? 0 : 1
+    float cHigh = useBodyInput ? math.max(open[idx], close[idx]) : high[idx]
+    float cLow  = useBodyInput ? math.min(open[idx], close[idx]) : low[idx]
+    chartHigh := cHigh
+    chartLow  := cLow
+    hiTime    := time[idx]
+    loTime    := time[idx]
+    isBull    := close[idx] > open[idx]
+else if isHTF
+    float cHigh = useBodyInput ? math.max(htfO_closed, htfC_closed) : htfH_closed
+    float cLow  = useBodyInput ? math.min(htfO_closed, htfC_closed) : htfL_closed
+    chartHigh := cHigh
+    chartLow  := cLow
+    hiTime    := htfT_closed
+    loTime    := htfT_closed
+    isBull    := htfC_closed > htfO_closed
+else if isActualHTF  // ← NEUER BLOCK für Actual HTF Candle
+    float cHigh = useBodyInput ? math.max(htfO_actual, htfC_actual) : htfH_actual
+    float cLow  = useBodyInput ? math.min(htfO_actual, htfC_actual) : htfL_actual
+    chartHigh := cHigh
+    chartLow  := cLow
+    hiTime    := htfT_actual
+    loTime    := htfT_actual
+    isBull    := htfC_actual > htfO_actual
+else
+    // ✅ Visible Range / Zig Zag logic – UNVERÄNDERT aus v4.2
+    bool  zzBull    = zzLeftY < zzRightY
+    chartHigh       := isZigZag ? math.max(zzLeftY, zzRightY) : chart.high()
+    chartLow        := isZigZag ? math.min(zzLeftY, zzRightY) : chart.low()
+    hiTime          := isZigZag ? (zzBull ? zzRightX : zzLeftX) : chart.highBarTime()
+    loTime          := isZigZag ? (zzBull ? zzLeftX : zzRightX) : chart.lowBarTime()
+    isBull          := isZigZag ? zzBull : loTime < hiTime
+
+// Calculate finalRightTime for extensions
+int rightTime = math.max(hiTime, loTime)
+int bar_duration = int(math.max(time - time[1], 1))
+finalRightTime := extendBarsInput ? (rightTime + bar_duration * barsToRightInput) : rightTime
+
+// Create fibLevel objects on first bar
+if barstate.isfirst
+    populate(showNeg70Input, levelNeg70Input, colorNeg70Input), populate(showNeg60Input, levelNeg60Input, colorNeg60Input), populate(showNeg50Input, levelNeg50Input, colorNeg50Input)
+    populate(showNeg40Input, levelNeg40Input, colorNeg40Input), populate(showNeg30Input, levelNeg30Input, colorNeg30Input), populate(show000Input, level000Input, color000Input)
+    populate(show050Input, level050Input, color050Input), populate(show100Input, level100Input, color100Input), populate(show130Input, level130Input, color130Input)
+    populate(show140Input, level140Input, color140Input), populate(show150Input, level150Input, color150Input), populate(show160Input, level160Input, color160Input)
+    populate(showNeg65Input, levelNeg65Input, colorNeg65Input), populate(showNeg55Input, levelNeg55Input, colorNeg55Input), populate(showNeg45Input, levelNeg45Input, colorNeg45Input)
+    populate(showNeg35Input, levelNeg35Input, colorNeg35Input), populate(showNeg25Input, levelNeg25Input, colorNeg25Input), populate(show010Input, level010Input, color010Input)
+    populate(show090Input, level090Input, color090Input), populate(show125Input, level125Input, color125Input), populate(show135Input, level135Input, color135Input)
+    populate(show145Input, level145Input, color145Input), populate(show155Input, level155Input, color155Input), populate(show165Input, level165Input, color165Input)
+    populate(show236Input, level236Input, color236Input), populate(show382Input, level382Input, color382Input), populate(show500Input, level500Input, color500Input)
+    populate(show618Input, level618Input, color618Input), populate(show786Input, level786Input, color786Input), populate(show161Input, level161Input, color161Input)
+    populate(show261Input, level261Input, color261Input), populate(show361Input, level361Input, color361Input), populate(show423Input, level423Input, color423Input)
+    populate(show127Input, level127Input, color127Input), populate(show141Input, level141Input, color141Input), populate(show227Input, level227Input, color227Input)
+    populate(show241Input, level241Input, color241Input), populate(show200Input, level200Input, color200Input), populate(show300Input, level300Input, color300Input)
+    populate(show327Input, level327Input, color327Input), populate(show341Input, level341Input, color341Input), populate(show400Input, level400Input, color400Input)
+    populate(show427Input, level427Input, color427Input), populate(show441Input, level441Input, color441Input), populate(show461Input, level461Input, color461Input), populate(show476Input, level476Input, color476Input)
+    sortedArray := array.sort_indices(levels)
+    if useFillInput
+        setBg()
+
+// Draw/Update everything on the last bar
+if barstate.islast
+    int leftTime = math.min(hiTime, loTime)
+    int rightTime = math.max(hiTime, loTime)
+    setLevels(leftTime, rightTime, chartHigh, chartLow, isBull, finalRightTime)
+    if tLabelsInput
+        timeLabel(hiTime, chartHigh, LIME,    (isBull ? label.style_label_lower_right : label.style_label_lower_left))
+        timeLabel(loTime, chartLow,  FUCHSIA, (isBull ? label.style_label_upper_left  : label.style_label_upper_right))
+    if trendLineInput and not (showZZInput and isZigZag) and not (isLastClosed or isCurrent or isHTF or isActualHTF)  // ← isActualHTF hinzugefügt
+        hiLoLine(hiTime, chartHigh, loTime, chartLow)
+//#endregion

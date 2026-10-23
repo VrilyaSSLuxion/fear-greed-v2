@@ -1,0 +1,24 @@
+//@version=5
+indicator("-Quick Trade Indicator-(QTI)-Short-EMA-1+Long-EMA-3-Cross+Label-", shorttitle="-Quick Trade Indicator-(QTI)-Short-EMA-1+Long-EMA-3-Cross+Label-", overlay=true)
+
+// Inputparameter
+fast_ema_period = input.int(1, title="-Fast-EMA-Period-1-")
+fast_ema_source = input.source(close, title="-Fast-EMA-Period-Source-close-")
+slow_ema_period = input.int(3, title="-Slow-EMA-Period-3-")
+slow_ema_source = input.source(close, title="-Slow-EMA-Period-Source-close-")
+
+// Berechnung der EMAs
+fast_ema = ta.ema(fast_ema_source, fast_ema_period)
+slow_ema = ta.ema(slow_ema_source, slow_ema_period)
+
+// Signale
+buy_signal = ta.crossover(fast_ema, slow_ema)
+sell_signal = ta.crossunder(fast_ema, slow_ema)
+
+// Plots
+plot(fast_ema, color=color.red, title="-Fast-EMA-", linewidth=2)
+plot(slow_ema, color=color.green, title="-Slow-EMA-", linewidth=2)
+
+// Buy and Sell Markierungen
+plotshape(series=buy_signal, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

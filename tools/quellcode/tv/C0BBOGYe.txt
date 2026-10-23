@@ -1,0 +1,65 @@
+//@version=5
+indicator("-VrilyaSS-Prestige Options-(BB+Stochastic)-30S-Chart-1M-Trades-", overlay=true)
+
+// Inputs for Bollinger Bands
+bbLength = input.int(20, title="BB Length")
+src = input(close, title="Source")
+mult = input.float(2.0, title="BB Multiplier")
+
+// Inputs for Stochastic
+stochLength = input.int(5, title="Stochastic Length")
+kSmoothing = input.int(3, title="%K Smoothing")
+dSmoothing = input.int(3, title="%D Smoothing")
+overboughtLevel = input.int(80, title="Stochastic Overbought Level")
+oversoldLevel = input.int(20, title="Stochastic Oversold Level")
+levelUp = input.int(21, title="Level for Upward Movement")
+levelDown = input.int(79, title="Level for Downward Movement")
+
+// Bollinger Bands Calculation
+basis = ta.sma(src, bbLength)
+dev = mult * ta.stdev(src, bbLength)
+upper = basis + dev
+lower = basis - dev
+
+// Plotting Bollinger Bands
+plot(upper, color=color.red, linewidth=2, title="Upper Bollinger Band")
+plot(basis, color=color.white, linewidth=2, title="Basis Bollinger Band")
+plot(lower, color=color.green, linewidth=2, title="Lower Bollinger Band")
+
+// Stochastic Calculation
+k = ta.sma(ta.stoch(close, high, low, stochLength), kSmoothing)
+d = ta.sma(k, dSmoothing)
+
+// Plotting Overbought and Oversold Levels
+hline(overboughtLevel, "Overbought", color=color.red, display = display.none)
+hline(oversoldLevel, "Oversold", color=color.green, display = display.none)
+
+// Conditions for primary buy signal
+stochOversold = k < oversoldLevel and d < oversoldLevel
+bullishCross = ta.crossover(k, d)
+buyCondition1 = ta.crossover(close, lower) and stochOversold and bullishCross and ta.valuewhen(bullishCross, k, 0) > ta.valuewhen(bullishCross, d, 0)
+
+// Conditions for primary sell signal
+stochOverbought = k > overboughtLevel and d > overboughtLevel
+bearishCross = ta.crossunder(k, d)
+sellCondition1 = ta.crossunder(close, upper) and stochOverbought and bearishCross and ta.valuewhen(bearishCross, k, 0) < ta.valuewhen(bearishCross, d, 0)
+
+// Conditions for secondary buy signal
+stochUpward = k > levelUp and d > levelUp and ta.crossover(k, d)
+buyCondition2 = ta.crossover(close, lower) and ta.valuewhen(bullishCross, k, 0) > ta.valuewhen(bullishCross, d, 0) and stochUpward and k > d
+
+// Conditions for secondary sell signal
+stochDownward = k < levelDown and d < levelDown and ta.crossunder(k, d)
+sellCondition2 = ta.crossunder(close, upper) and ta.valuewhen(bearishCross, k, 0) < ta.valuewhen(bearishCross, d, 0) and stochDownward and k < d
+
+// Plotting Buy and Sell Signals
+plotshape(series=buyCondition1, location=location.belowbar, color=color.green, style=shape.labelup, text="B1", textcolor=color.black, title="Buy Signal 1-buyCondition1 = ta.crossover(close, lower) and stochOversold and bullishCross and ta.valuewhen(bullishCross, k, 0) > ta.valuewhen(bullishCross, d, 0)-", size=size.small)
+plotshape(series=sellCondition1, location=location.abovebar, color=color.red, style=shape.labeldown, text="S1", textcolor=color.black, title="Sell Signal 1-sellCondition1 = ta.crossunder(close, upper) and stochOverbought and bearishCross and ta.valuewhen(bearishCross, k, 0) < ta.valuewhen(bearishCross, d, 0)-", size=size.small)
+plotshape(series=buyCondition2, location=location.belowbar, color=color.green, style=shape.labelup, text="B2", textcolor=color.black, title="Buy Signal 2-buyCondition2 = ta.crossover(close, lower) and ta.valuewhen(bullishCross, k, 0) > ta.valuewhen(bullishCross, d, 0) and stochUpward and k > d-", size=size.small)
+plotshape(series=sellCondition2, location=location.abovebar, color=color.red, style=shape.labeldown, text="S2", textcolor=color.black, title="Sell Signal 2-sellCondition2 = ta.crossunder(close, upper) and ta.valuewhen(bearishCross, k, 0) < ta.valuewhen(bearishCross, d, 0) and stochDownward and k < d-", size=size.small)
+
+// Alert Conditions
+alertcondition(buyCondition1, title="Buy Alert 1", message="Primary Buy signal")
+alertcondition(sellCondition1, title="Sell Alert 1", message="Primary Sell signal")
+alertcondition(buyCondition2, title="Buy Alert 2", message="Secondary Buy signal")
+alertcondition(sellCondition2, title="Sell Alert 2", message="Secondary Sell signal")

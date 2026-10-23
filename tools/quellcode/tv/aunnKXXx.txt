@@ -1,0 +1,35 @@
+//@version=5
+indicator("-VrilyaSS-BB-(15-1)-5-M-Chart-15 M-Trade-closeunderlow+uplastca-", overlay=true)
+
+// Inputs für Bollinger Bands
+bbLength = input.int(15, title="Bollinger Bands Length-15-")
+bbMultiplier = input.float(1.0, title="Bollinger Bands Multiplier-1-")
+[bbBasis, bbUpper, bbLower] = ta.bb(close, bbLength, bbMultiplier)
+
+// Inputs für die Anzahl der vorherigen Kerzen in der Aufwärtsbewegung
+uptrendLength = input.int(3, title="Anzahl der Kerzen in der Aufwärtsbewegung")
+
+// Bedingungen für Verkaufsignal
+previousCandleGreen = close[1] > open[1]
+currentCandleRed = close < open
+currentCandleLargerThanPrevious = math.abs(close - open) > math.abs(close[1] - open[1])
+closeBelowLowerBand = close < bbLower
+
+// Prüfe, ob die vorherigen Kerzen eine Aufwärtsbewegung gemacht haben
+uptrend = true
+for i = 2 to uptrendLength + 1
+    if close[i] <= open[i]
+        uptrend := false
+
+sellSignal = uptrend and currentCandleRed and currentCandleLargerThanPrevious and closeBelowLowerBand
+
+// Plotte Bollinger Bands
+plot(bbUpper, color=color.red, title="Bollinger Upper Band")
+plot(bbBasis, color=color.blue, title="Bollinger Basis")
+plot(bbLower, color=color.green, title="Bollinger Lower Band")
+
+// Plotte Verkaufsignal
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.white, size=size.small)
+
+// Alarme
+alertcondition(sellSignal, title="Sell Signal Alert", message="Sell signal generated based on Bollinger Bands and candle conditions.")

@@ -1,0 +1,31 @@
+//@version=5
+indicator("Volume Delta with MACD Filter", overlay=true)
+
+// Input settings
+macdShortLength = input.int(12, title="MACD Short Length")
+macdLongLength = input.int(26, title="MACD Long Length")
+macdSignalSmoothing = input.int(9, title="MACD Signal Smoothing")
+volumeDeltaThreshold = input.int(100000, title="Volume Delta Threshold")
+enableBuySignal = input.bool(true, title="Enable Buy Signal")
+enableSellSignal = input.bool(true, title="Enable Sell Signal")
+
+// Calculate Volume Delta
+volumeDelta = ta.change(volume)
+deltaVolumePositive = volumeDelta > volumeDeltaThreshold
+deltaVolumeNegative = volumeDelta < -volumeDeltaThreshold
+
+// Calculate MACD
+[macdLine, signalLine, _] = ta.macd(close, macdShortLength, macdLongLength, macdSignalSmoothing)
+macdHist = macdLine - signalLine
+
+// Buy and Sell Conditions with MACD Filter
+buyCondition = enableBuySignal and deltaVolumePositive and macdHist > 0
+sellCondition = enableSellSignal and deltaVolumeNegative and macdHist < 0
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sellCondition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal detected")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal detected")

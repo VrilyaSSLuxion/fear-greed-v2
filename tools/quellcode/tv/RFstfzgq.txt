@@ -1,0 +1,64 @@
+//@version=5
+indicator("-VrilyaSS-Binary Tricks Revn-5+10-SMA-Cross-15S-Chart-1MTrades-", shorttitle="-VrilyaSS-Binary Tricks Revn-5+10-SMA-Cross-15S-Chart-1MTrades-", overlay=true)
+
+// Eingaben für die Fast SMA
+fast_sma_source = input.source(close, title="-Fast SMA 1 Source")
+fast_sma_length = input.int(5, title="-Fast SMA 1 Length-5-")
+
+// Eingaben für die Slow SMA
+slow_sma_source = input.source(close, title="-Slow SMA 2 Source")
+slow_sma_length = input.int(10, title="-Slow SMA 2 Length-10-")
+
+// Berechnung der SMAs
+fast_sma = ta.sma(fast_sma_source, fast_sma_length)
+slow_sma = ta.sma(slow_sma_source, slow_sma_length)
+
+// Bedingungen für die Kreuzungen
+bullish_cross = ta.crossover(fast_sma, slow_sma)
+bearish_cross = ta.crossunder(fast_sma, slow_sma)
+
+// U-Turn Buy/Sell Bedingungen
+u_buy_signal = ta.crossover(close, ta.lowest(fast_sma, 5))
+u_sell_signal = ta.crossunder(close, ta.highest(fast_sma, 5))
+
+// Zusätzliche Bedingungen für Buy Signal 3 und Sell Signal 3
+buy_signal_3 = ta.crossover(fast_sma, slow_sma) and ta.rising(slow_sma, 1)
+sell_signal_3 = ta.crossunder(fast_sma, slow_sma) and ta.falling(slow_sma, 1)
+
+// Zusätzliche Bedingungen für Buy Signal 4 und Sell Signal 4
+buy_signal_4 = u_buy_signal and ta.rising(slow_sma, 1)
+sell_signal_4 = u_sell_signal and ta.falling(slow_sma, 1)
+
+// Bedingungen für Buy Signal 5 und Sell Signal 5
+buy_signal_5 = u_buy_signal and ta.crossover(ta.lowest(slow_sma, 5), ta.lowest(slow_sma[1], 5))
+sell_signal_5 = u_sell_signal and ta.crossunder(ta.highest(slow_sma, 5), ta.highest(slow_sma[1], 5))
+
+// Bedingungen für Buy Signal 6 und Sell Signal 6
+buy_signal_6 = ta.crossover(close, ta.lowest(fast_sma, 5)) and ta.rising(slow_sma, 5)
+sell_signal_6 = ta.crossunder(close, ta.highest(fast_sma, 5)) and ta.falling(slow_sma, 5)
+
+// Buy und Sell Labels zeichnen
+plotshape(series=bullish_cross, title="-Buy Signal-bullish_cross = ta.crossover(fast_sma, slow_sma)", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.black, size=size.small)
+plotshape(series=bearish_cross, title="-Sell Signal-bearish_cross = ta.crossunder(fast_sma, slow_sma)", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.black, size=size.small)
+
+// U-Turn Buy und Sell Labels zeichnen
+plotshape(series=u_buy_signal, title="-U-Turn Buy Signal-u_buy_signal = ta.crossover(close, ta.lowest(fast_sma, 5))", location=location.belowbar, color=color.green, style=shape.labelup, text="UT-Buy", textcolor=color.white, size=size.small)
+plotshape(series=u_sell_signal, title="-U-Turn Sell Signal-u_sell_signal = ta.crossunder(close, ta.highest(fast_sma, 5))", location=location.abovebar, color=color.red, style=shape.labeldown, text="UT-Sell", textcolor=color.white, size=size.small)
+
+// Zusätzliche Buy und Sell Labels zeichnen
+plotshape(series=buy_signal_3, title="-Buy Signal 3-buy_signal_3 = ta.crossover(fast_sma, slow_sma) and ta.rising(slow_sma, 1)-", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY3", textcolor=color.black, size=size.small)
+plotshape(series=sell_signal_3, title="-Sell Signal 3-sell_signal_3 = ta.crossunder(fast_sma, slow_sma) and ta.falling(slow_sma, 1)-", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL3", textcolor=color.black, size=size.small)
+plotshape(series=buy_signal_4, title="-Buy Signal 4-buy_signal_4 = u_buy_signal and ta.rising(slow_sma, 1)-", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY4", textcolor=color.black, size=size.small)
+plotshape(series=sell_signal_4, title="-Sell Signal 4-sell_signal_4 = u_sell_signal and ta.falling(slow_sma, 1)-", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL4", textcolor=color.black, size=size.small)
+
+// Buy und Sell Labels für Signal 5 zeichnen
+plotshape(series=buy_signal_5, title="-Buy Signal 5-buy_signal_5 = u_buy_signal and ta.crossover(ta.lowest(slow_sma, 5), ta.lowest(slow_sma[1], 5))-", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY5", textcolor=color.white, size=size.small)
+plotshape(series=sell_signal_5, title="-Sell Signal 5-sell_signal_5 = u_sell_signal and ta.crossunder(ta.highest(slow_sma, 5), ta.highest(slow_sma[1], 5))-", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL5", textcolor=color.white, size=size.small)
+
+// Buy und Sell Labels für Signal 6 zeichnen
+plotshape(series=buy_signal_6, title="-Buy Signal 6-buy_signal_6 = ta.crossover(close, ta.lowest(fast_sma, 5)) and ta.rising(slow_sma, 5)-", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY6", textcolor=color.white, size=size.small)
+plotshape(series=sell_signal_6, title="-Sell Signal 6-sell_signal_6 = ta.crossunder(close, ta.highest(fast_sma, 5)) and ta.falling(slow_sma, 5)-", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL6", textcolor=color.white, size=size.small)
+
+// SMAs auf dem Chart anzeigen
+plot(fast_sma, title="Fast SMA 5", color=color.yellow, linewidth=2)
+plot(slow_sma, title="Slow SMA 10", color=color.green, linewidth=2)

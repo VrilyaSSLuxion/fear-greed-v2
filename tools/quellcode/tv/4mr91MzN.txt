@@ -1,0 +1,28 @@
+//@version=5
+indicator("Custom Buy/Sell Signals", overlay=true)
+
+// Inputs for RSI
+rsi_length = input.int(title="RSI Period", defval=14)
+rsi_src = input.source(title="RSI Source", defval=close)
+
+// Inputs for Stochastic
+k_length = input.int(title="Stochastic %K Length", defval=14)
+d_length = input.int(title="Stochastic %D Length", defval=3)
+smooth_k = input.int(title="Stochastic Smoothing", defval=3)
+
+// Calculate RSI
+rsi = ta.rsi(rsi_src, rsi_length)
+
+// Calculate Stochastic
+k = ta.sma(ta.stoch(close, high, low, k_length), smooth_k)
+d = ta.sma(k, d_length)
+
+// Buy Signal Conditions
+buy_signal_condition = (rsi > 49.5 and rsi[1] <= 49.5) and (ta.crossover(k, d) and k < 20)
+
+// Sell Signal Conditions
+sell_signal_condition = (rsi < 50.5 and rsi[1] >= 50.5) and (ta.crossunder(k, d) and k > 80)
+
+// Plot Buy and Sell Signals
+plotshape(series=buy_signal_condition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(series=sell_signal_condition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)

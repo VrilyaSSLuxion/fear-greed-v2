@@ -1,0 +1,50 @@
+//@version=5
+//By SiamGhosT
+
+indicator('TSA TDI', shorttitle='TSA TDI', format=format.price, precision=2)
+
+// TDI
+rsi = ta.rsi(close, 8)
+ma = ta.sma(rsi, 34)
+offs = 1.6185 * ta.stdev(rsi, 34)
+up = ma + offs
+dn = ma - offs
+mid = (up + dn) / 2
+fastMA = ta.sma(rsi, 2)
+
+hline(75, 'OverBought', color=color.gray, linestyle=hline.style_dashed, editable=true)
+hline(25, 'OverSold', color=color.gray, linestyle=hline.style_dashed, editable=true)
+
+hline(80, 'Horizontal Line', color=color.gray, linestyle=hline.style_dashed, editable=true)
+hline(50, 'Horizontal Line', color=color.gray, linestyle=hline.style_dashed, editable=true)
+hline(20, 'Horizontal Line', color=color.gray, linestyle=hline.style_dashed, editable=true)
+
+upl = plot(up, 'Upper Band', color=color.new(color.red, 0), linewidth=2)
+dnl = plot(dn, 'Lower Band', color=color.new(color.green, 0), linewidth=2)
+midl = plot(mid, 'Middle of Bands', color=color.new(color.orange, 0), linewidth=1)
+
+plot(fastMA, 'Fast MA', color=color.new(color.black, 0), linewidth=2)
+
+//------------------------------------------------------------------------------
+
+// Conditions for buy and sell signals
+buyCondition = ta.crossover(fastMA, mid) and fastMA[1] < mid[1] // Fast MA crosses above mid from below
+sellCondition = ta.crossunder(fastMA, mid) and fastMA[1] > mid[1] // Fast MA crosses below mid from above
+
+// Plot buy and sell labels at the mid line
+if (buyCondition)
+    label.new(bar_index, mid, text="BUY", style=label.style_label_up, color=color.green, textcolor=color.white, yloc=yloc.price, size=size.small)
+if (sellCondition)
+    label.new(bar_index, mid, text="SELL", style=label.style_label_down, color=color.red, textcolor=color.white, yloc=yloc.price, size=size.small)
+
+// Alerts for buy and sell signals
+alertcondition(buyCondition, title='Buy Alert', message='Buy Signal on {{ticker}}')
+alertcondition(sellCondition, title='Sell Alert', message='Sell Signal on {{ticker}}')
+
+// Existing alert conditions
+finUp = fastMA > 75 and fastMA > up
+finDn = fastMA < 25 and fastMA < dn
+alert = finUp or finDn
+
+if alert
+    alert('{"content":"' + syminfo.ticker + ' ' + timeframe.period + ' Sharkfin"}', alert.freq_once_per_bar_close)

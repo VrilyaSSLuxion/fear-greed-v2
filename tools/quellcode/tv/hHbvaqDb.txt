@@ -1,0 +1,29 @@
+//@version=5
+indicator("-Rapid Trade Indicator-(RTI)-Fast-EMA-5+Slow-EMA-20+ATR-", shorttitle="-Rapid Trade Indicator-(RTI)-Fast-EMA-5+Slow-EMA-20+ATR-", overlay=true)
+
+// Inputparameter
+fast_period = input.int(5, title="-Fast-EMA-Period-5-red-(11)-Line-2-")
+fast_source = input.source(close, title="-Fast-EMA-Quelle-")
+slow_period = input.int(20, title="-Slow-EMA-Period-green-(14)-Line-2-")
+slow_source = input.source(close, title="-Slow-EMA-Quelle-")
+atr_period = input.int(14, title="-ATR-Period-14-purple-(19)-Line-2-")
+
+// Berechnung der EMAs
+fast_ema = ta.ema(fast_source, fast_period)
+slow_ema = ta.ema(slow_source, slow_period)
+
+// Berechnung der ATR
+atr = ta.atr(atr_period)
+
+// Signale
+buy_signal = ta.crossover(fast_ema, slow_ema) and close > atr
+sell_signal = ta.crossunder(fast_ema, slow_ema) and close > atr // Deine Änderung
+
+// Plots
+plot(fast_ema, color=color.red, title="-Fast-EMA-Period-5-red-(11)-Line-2-", linewidth=2)
+plot(slow_ema, color=color.green, title="-Slow-EMA-Period-green-(14)-Line-2-", linewidth=2)
+plot(atr, color=color.purple, title="-ATR-Period-14-purple-(19)-Line-2-", linewidth=2, style=plot.style_stepline, display=display.none)
+
+// Buy and Sell Markierungen
+plotshape(series=buy_signal, title="Buy Signal", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="Sell Signal", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

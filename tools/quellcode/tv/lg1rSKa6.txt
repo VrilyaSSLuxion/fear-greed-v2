@@ -1,0 +1,38 @@
+//@version=5
+indicator("RSI, Stochastic & Bullish Engulfing Signal", overlay=true)
+
+// RSI Settings
+rsiLength = input.int(14, "RSI Length")
+rsiSource = input(close, "RSI Source")
+rsiOversold = input.int(30, "RSI Oversold Level")
+
+// Stochastic Settings
+stochKLength = input.int(14, "Stochastic %K Length")
+stochDLength = input.int(3, "Stochastic %D Length")
+stochSmoothK = input.int(3, "Stochastic Smoothing")
+stochOversold = input.int(20, "Stochastic Oversold Level")
+
+// RSI Calculation
+rsiValue = ta.rsi(rsiSource, rsiLength)
+rsiOversoldCondition = rsiValue < rsiOversold and ta.crossover(rsiValue, rsiOversold)
+
+// Stochastic Calculation
+k = ta.sma(ta.stoch(close, high, low, stochKLength), stochSmoothK)
+d = ta.sma(k, stochDLength)
+stochOversoldCondition = k < stochOversold and ta.crossover(k, d)
+
+// Bullish Engulfing Pattern
+isBullishEngulfing = close > open and open[1] > close[1] and close > open[1] and open < close[1]
+
+// Buy Signal
+buySignal = rsiOversoldCondition and stochOversoldCondition and isBullishEngulfing
+
+// Plot Buy Signal
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", size=size.small)
+
+// Plot RSI and Stochastic for reference
+hline(rsiOversold, "RSI Oversold", color=color.red)
+plot(rsiValue, "RSI", color=color.blue, linewidth=2)
+hline(stochOversold, "Stoch Oversold", color=color.red)
+plot(k, "Stoch %K", color=color.blue, linewidth=2)
+plot(d, "Stoch %D", color=color.orange, linewidth=2)

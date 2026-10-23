@@ -1,0 +1,36 @@
+//@version=5
+indicator("-VrilyaSS-Fast Trade Indicator-EMA-8+EMA-21-", overlay=true)
+
+// Inputs
+fastLength = input(8, title="-Fast-EMA-Length-8-")
+fastEmaSrc = input(close, title="-Fast-EMA-Source-close-")
+slowLength = input(21, title="-Slow-EMA-Length-21-")
+slowEmaSrc = input(close, title="-Slow-EMA-Source-close-")
+
+// Calculate EMAs
+fastEMA = ta.ema(fastEmaSrc, fastLength)
+slowEMA = ta.ema(slowEmaSrc, slowLength)
+
+// Plot EMAs
+plot(fastEMA, color=color.blue, title="-Fast-EMA-")
+plot(slowEMA, color=color.red, title="-Slow-EMA-")
+
+// Generate buy/sell signals
+buySignal = ta.crossover(fastEMA, slowEMA)
+sellSignal = ta.crossunder(fastEMA, slowEMA)
+
+// Plot buy/sell arrows
+plotshape(series=buySignal, title="-Buy-Signal-", style=shape.labelup, location=location.belowbar, color=color.green, textcolor=color.black, text="Buy", size=size.tiny)
+plotshape(series=sellSignal, title="-Sell-Signal-", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.black, text="Sell", size=size.tiny)
+
+// Alert conditions
+alertcondition(buySignal, title="-Buy-Signal-", message="-Buy-VrilyaSS-Fast Trade Indicator-EMA-8+EMA-21-")
+alertcondition(sellSignal, title="-Sell-Signal-", message="-Sell-VrilyaSS-Fast Trade Indicator-EMA-8+EMA-21-")
+
+// Chart Title (standardmäßig deaktiviert)
+showTitle = input(false, title="Show Chart Title")
+var label titleLabel = na
+if showTitle
+    if not na(titleLabel)
+        label.delete(titleLabel)
+    titleLabel := label.new(x=bar_index, y=high, text="Fast Trade Indicator", style=label.style_label_down, color=color.blue, textcolor=color.white, size=size.tiny)

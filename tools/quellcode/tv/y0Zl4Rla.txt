@@ -1,0 +1,45 @@
+//@version=5
+indicator("-WMA-1+WMA-26-Crossover with AO Confirmation-", overlay=true)
+
+// Inputs für WMAs
+wmaShortLength = input.int(13, title="WMA Short Length", minval=1)
+wmaLongLength = input.int(26, title="WMA Long Length", minval=1)
+
+// Berechnung der WMAs
+wmaShort = ta.wma(close, wmaShortLength)
+wmaLong = ta.wma(close, wmaLongLength)
+
+// Plotte WMAs
+plot(wmaShort, color=color.aqua, linewidth=2, title="13 WMA")
+plot(wmaLong, color=color.yellow, linewidth=2, title="26 WMA")
+
+// Inputs für Awesome Oscillator
+aoShortLength = input.int(4, title="AO Short Length", minval=1)
+aoLongLength = input.int(24, title="AO Long Length", minval=1)
+
+// Berechnung des Awesome Oscillators
+ao = ta.sma(hl2, aoShortLength) - ta.sma(hl2, aoLongLength)
+
+// Bullische und bärische Kreuzungen der WMAs
+bullishCrossover = ta.crossover(wmaShort, wmaLong)
+bearishCrossover = ta.crossunder(wmaShort, wmaLong)
+
+// AO-Bedingungen für Bestätigung
+aoAboveZero = ao > 0
+aoBelowZero = ao < 0
+
+// Kauf- und Verkaufssignale basierend auf WMA-Kreuzungen und AO-Bedingungen
+buySignal = bullishCrossover and aoAboveZero
+sellSignal = bearishCrossover and aoBelowZero
+
+// Plotte Kauf- und Verkaufssignale
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", textcolor=color.white, size=size.small)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.white, size=size.small)
+
+// Alarme
+alertcondition(buySignal, title="Buy Signal Alert", message="Buy signal generated based on WMA crossover and AO confirmation.")
+alertcondition(sellSignal, title="Sell Signal Alert", message="Sell signal generated based on WMA crossover and AO confirmation.")
+
+// Plotte Awesome Oscillator
+hline(0, "Zero Line", color=color.gray, linestyle=hline.style_dotted)
+plot(ao, color=color.red, title="Awesome Oscillator", style=plot.style_histogram, linewidth=2)

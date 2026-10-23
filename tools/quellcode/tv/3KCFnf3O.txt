@@ -1,0 +1,36 @@
+//@version=5
+indicator("-VrilyaSS-MA-Crossover-5-SMA+15-SMA-", overlay=true)
+
+// Inputs
+fastLength = input(5, title="-Fast-MA-Length-5-")
+slowLength = input(15, title="-Slow-MA-Length-15-")
+src = input(close, title="-Source-close-")
+
+// Calculate moving averages
+fastMA = ta.sma(src, fastLength)
+slowMA = ta.sma(src, slowLength)
+
+// Plot moving averages with thicker lines (linewidth=2)
+plot(fastMA, color=color.blue, title="-Fast-MA-", linewidth=2)
+plot(slowMA, color=color.red, title="-Slow-MA-", linewidth=2)
+
+// Generate trading signals
+longCondition = ta.crossover(fastMA, slowMA)
+shortCondition = ta.crossunder(fastMA, slowMA)
+
+// Plot arrows for buy/sell signals
+plotshape(series=longCondition, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy", size=size.tiny)
+plotshape(series=shortCondition, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell", size=size.tiny)
+
+// Alert conditions
+alertcondition(longCondition, title="-Buy-Signal-VrilyaSS-MA-Crossover-5-SMA+15-SMA-", message="-Buy-Fast-MA-5-crossed above Slow-MA-15-")
+alertcondition(shortCondition, title="-Sell-Signal-VrilyaSS-MA-Crossover-5-SMA+15-SMA-", message="-Sell-Fast-MA-5-crossed below Slow-MA-15-")
+
+// Chart Title
+var label titleLabel = na
+if not na(titleLabel)
+    label.delete(titleLabel)
+
+showTitle = input(false, title="Show Chart Title")
+if showTitle
+    titleLabel := label.new(x=bar_index, y=high, text="-Moving-Average-Crossover-Indicator-", style=label.style_label_down, color=color.blue, textcolor=color.white, size=size.tiny)

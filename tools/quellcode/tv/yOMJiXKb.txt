@@ -1,0 +1,23 @@
+//@version=5
+indicator("-Fast Breakout Indicator-(FBI)-SMA-10+SMA-30-CROSS-", shorttitle="-Fast Breakout Indicator-(FBI)-SMA-10+SMA-30-CROSS-", overlay=false)
+import TradingView/ta/7
+
+// Einstellungen für die Moving Averages
+fastLength = input.int(10, "Fast MA Length", minval=1)
+slowLength = input.int(30, "Slow MA Length", minval=1)
+
+// Berechnung der Moving Averages
+fastMA = ta.sma(close, fastLength)
+slowMA = ta.sma(close, slowLength)
+
+// Bedingungen für Long- und Short-Signale
+longCondition = ta.crossover(fastMA, slowMA)
+shortCondition = ta.crossunder(fastMA, slowMA)
+
+// Plot der Moving Averages
+plot(fastMA, color=color.blue, linewidth = 2, title="Fast MA")
+plot(slowMA, color=color.red, linewidth = 2, title="Slow MA")
+
+// Markierung der Long- und Short-Signale
+plotshape(series=longCondition ? fastMA : na, title="Buy Signal", location=location.belowbar, color=color.green, textcolor = color.black, style=shape.labelup, text="BUY")
+plotshape(series=shortCondition ? fastMA : na, title="Sell Signal", location=location.abovebar, color=color.red, textcolor = color.black, style=shape.labeldown, text="SELL")

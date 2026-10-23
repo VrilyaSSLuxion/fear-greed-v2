@@ -1,0 +1,42 @@
+//@version=5
+indicator("-VrilyaSS-Hammer Pattern-Indicator-", overlay=true)
+
+// Inputs
+length = input(20, title="Lookback Length")
+show_bullish = input(true, title="Show Bullish Hammers")
+show_bearish = input(false, title="Show Bearish Hammers")
+
+// Hammer Pattern Function
+isHammer(candleOpen, candleHigh, candleLow, candleClose) =>
+    bodySize = math.abs(candleClose - candleOpen)
+    lowerShadow = candleOpen < candleClose ? (candleOpen - candleLow) : (candleClose - candleLow)
+    upperShadow = candleHigh - math.max(candleOpen, candleClose)
+    lowerShadow > 2 * bodySize and upperShadow < bodySize
+
+// Variables to store the hammer signals
+var bool isBullishHammer = na
+var bool isBearishHammer = na
+
+// Determine if current bar is a hammer
+isBullishHammer := na
+isBearishHammer := na
+
+if isHammer(open, high, low, close)
+    if show_bullish and close > open
+        isBullishHammer := true
+    if show_bearish and close < open
+        isBearishHammer := true
+
+// Plot hammers
+plotshape(series=isBullishHammer, style=shape.labelup, color=color.green, textcolor=color.black, text="Bullish Hammer", location=location.belowbar, size=size.tiny)
+plotshape(series=isBearishHammer, style=shape.labeldown, color=color.red, textcolor=color.black, text="Bearish Hammer", location=location.abovebar, size=size.tiny)
+
+// Alert conditions
+alertcondition(isBullishHammer, title="Bullish Hammer Alert", message="Buy - Bullish Hammer detected")
+alertcondition(isBearishHammer, title="Bearish Hammer Alert", message="Sell - Bearish Hammer detected")
+
+// Chart Title
+var label titleLabel = na
+if not na(titleLabel)
+    label.delete(titleLabel)
+titleLabel := label.new(x=bar_index, y=high, text="Hammer Pattern (" + str.tostring(length) + " candles)", style=label.style_label_down, color=color.blue, textcolor=color.black, size=size.tiny)

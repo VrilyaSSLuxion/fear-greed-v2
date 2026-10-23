@@ -1,0 +1,37 @@
+//@version=5
+indicator(title="-VrilyaSS-RSI-MA Cross-Signals-", shorttitle="-VrilyaSS-RSI-MA Cross-Signals-", format=format.price, precision=2, timeframe="", timeframe_gaps=true)
+
+// RSI-Einstellungen
+rsiLengthInput = input.int(14, minval=1, title="RSI Length", group="RSI Settings")
+rsiSourceInput = input.source(close, "Source", group="RSI Settings")
+maTypeInput = input.string("SMA", title="MA Type", options=["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="MA Settings")
+maLengthInput = input.int(14, title="MA Length", group="MA Settings")
+
+// Benutzerdefinierte RSI-Bänder
+lower_band_level = input.int(50, minval=0, maxval=100, title="Lower RSI Band Level", group="RSI Bands")
+upper_band_level = input.int(50, minval=0, maxval=100, title="Upper RSI Band Level", group="RSI Bands")
+
+// Berechnung des RSI und der MA
+up = ta.rma(math.max(ta.change(rsiSourceInput), 0), rsiLengthInput)
+down = ta.rma(-math.min(ta.change(rsiSourceInput), 0), rsiLengthInput)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+rsiMA = ta.sma(rsi, maLengthInput)
+
+// Funktion zur Berechnung der Steigung (Slope)
+slope(source, length) =>
+    change = source - source[length]
+    slope_value = change / length
+    slope_value
+
+// Bedingungen für Kauf- und Verkaufssignale
+buySignalCondition = ta.crossover(rsi, rsiMA) and rsi < lower_band_level and slope(rsiMA, 10) > 0
+sellSignalCondition = ta.crossunder(rsi, rsiMA) and rsi > upper_band_level and slope(rsiMA, 10) < 0
+
+// Plotting der Signale
+plotshape(series=buySignalCondition, title="Buy Signal", location=location.belowbar, color=color.green, textcolor = color.black, style=shape.labelup, text="BUY", size=size.small)
+plotshape(series=sellSignalCondition, title="Sell Signal", location=location.abovebar, color=color.red, textcolor = color.black, style=shape.labeldown, text="SELL", size=size.small)
+
+
+// Alerts
+alertcondition(buySignalCondition, title="Buy Signal Detected", message="Buy Signal Detected")
+alertcondition(sellSignalCondition, title="Sell Signal Detected", message="Sell Signal Detected")

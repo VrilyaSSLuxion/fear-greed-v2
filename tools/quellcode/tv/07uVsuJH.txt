@@ -1,0 +1,40 @@
+//@version=5
+strategy("Stochastic and RSI Strategy", overlay=true)
+
+// Stochastic Settings
+stochKLength = input.int(14, "Stochastic %K Length")
+stochDLength = input.int(3, "Stochastic %D Length")
+stochOversold = input.int(25, "Stochastic Oversold Level")
+stochOverbought = input.int(75, "Stochastic Overbought Level")
+
+// RSI Settings
+rsiLength = input.int(14, "RSI Length")
+rsiOversold = input.int(35, "RSI Oversold Level")
+rsiOverbought = input.int(65, "RSI Overbought Level")
+
+// Stochastic Calculation
+k = ta.sma(ta.stoch(close, high, low, stochKLength), stochDLength)
+d = ta.sma(k, stochDLength)
+stochBullCross = ta.crossover(k, d) and k < stochOversold
+stochBearCross = ta.crossunder(k, d) and k > stochOverbought
+
+// RSI Calculation
+rsiValue = ta.rsi(close, rsiLength)
+rsiBullSignal = ta.crossover(rsiValue, rsiOversold)
+rsiBearSignal = ta.crossunder(rsiValue, rsiOverbought)
+
+// Buy Signal
+buySignal = stochBullCross and rsiBullSignal
+
+// Sell Signal
+sellSignal = stochBearCross and rsiBearSignal
+
+// Plot Buy and Sell Signals
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", size=size.small)
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", size=size.small)
+
+// Execute Buy and Sell Orders
+if (buySignal)
+    strategy.entry("Buy", strategy.long)
+if (sellSignal)
+    strategy.close("Buy")

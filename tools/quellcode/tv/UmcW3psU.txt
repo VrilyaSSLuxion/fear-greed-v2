@@ -1,0 +1,30 @@
+//@version=5
+indicator(title="-Quick Trade Indicator-(QTI)-(Tradingview-ALLIGATOR+BUY+SELL)-", shorttitle="-Quick Trade Indicator-(QTI)-(Tradingview-ALLIGATOR+BUY+SELL)-", overlay=true)
+
+// Williams Alligator Indicator
+smma(src, length) =>
+    smma =  0.0
+    smma := na(smma[1]) ? ta.sma(src, length) : (smma[1] * (length - 1) + src) / length
+
+jawLength = input.int(13, minval=1, title="-Jaw-Length-13-")
+teethLength = input.int(8, minval=1, title="-Teeth-Length-8-")
+lipsLength = input.int(5, minval=1, title="-Lips-Length-5-")
+jawOffset = input.int(8, title="-Jaw-Offset-8-")
+teethOffset = input.int(5, title="-Teeth-Offset-5-")
+lipsOffset = input.int(3, title="-Lips-Offset-3-")
+
+jaw = smma(hl2, jawLength)
+teeth = smma(hl2, teethLength)
+lips = smma(hl2, lipsLength)
+
+plot(jaw, "-Jaw-", offset=jawOffset, color=color.blue, linewidth=2)
+plot(teeth, "-Teeth-", offset=teethOffset, color=color.red, linewidth=2)
+plot(lips, "-Lips-", offset=lipsOffset, color=color.green, linewidth=2)
+
+// Buy and Sell signals based on Alligator Indicator
+bullish_crossover = ta.cross(jaw, lips) and ta.cross(jaw, teeth)
+bearish_crossover = ta.cross(teeth, lips) and ta.cross(jaw, teeth)
+
+// Plot Buy and Sell signals
+plotshape(series=bullish_crossover, title="-Buy Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=bearish_crossover, title="-Sell Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

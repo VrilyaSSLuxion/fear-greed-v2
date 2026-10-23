@@ -1,0 +1,41 @@
+//@version=5
+indicator("Custom Buy/Sell Indicator", shorttitle="BSI", overlay=true)
+
+// Parameter für den Stochastik-Oszillator
+kLength = input.int(14, title="K Length")
+dLength = input.int(3, title="D Length")
+smoothK = input.int(3, title="Smooth K")
+
+// Parameter für den RSI
+rsiLength = input.int(14, title="RSI Length")
+rsiBuyThreshold = input.float(25, title="RSI Buy Threshold")
+rsiSellThreshold = input.float(75, title="RSI Sell Threshold")
+
+// Berechnung des Stochastik-Oszillators
+k = ta.sma(ta.stoch(close, high, low, kLength), smoothK)
+d = ta.sma(k, dLength)
+
+// Berechnung des RSI
+rsi = ta.rsi(close, rsiLength)
+
+// Kaufbedingung: Bullisches Stochastik-Kreuz und RSI unter 25
+bullishKCross = ta.crossover(k, d)
+buyCondition = bullishKCross and rsi < rsiBuyThreshold
+
+// Verkaufbedingung: Bärisches Stochastik-Kreuz und RSI über 75
+bearishKCross = ta.crossunder(k, d)
+sellCondition = bearishKCross and rsi > rsiSellThreshold
+
+// Zeichnen der Signale auf dem Chart
+plotshape(series=buyCondition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sellCondition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Stochastik- und RSI-Werte für die Anzeige
+plot(k, title="%K", color=color.blue)
+plot(d, title="%D", color=color.orange)
+hline(20, "Oversold", color=color.green)
+hline(80, "Overbought", color=color.red)
+
+plot(rsi, title="RSI", color=color.purple)
+hline(rsiBuyThreshold, "RSI Buy Threshold", color=color.green)
+hline(rsiSellThreshold, "RSI Sell Threshold", color=color.red)

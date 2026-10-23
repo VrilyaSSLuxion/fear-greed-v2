@@ -1,0 +1,20 @@
+//@version=5
+indicator("RSI and Moving Average Strategy", overlay=true)
+
+// Input Parameter
+length = input.int(14, title="RSI Length")
+ma_length = input.int(20, title="Moving Average Length")
+
+// RSI Calculation
+rsi = ta.rsi(close, length)
+
+// Moving Average Calculation
+ma = ta.sma(close, ma_length)
+
+// Buy and Sell Conditions
+buy_condition = rsi < 30 and close < ma
+sell_condition = rsi > 70 and close > ma
+
+// Plot Buy and Sell Signals
+plotshape(series=buy_condition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sell_condition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")

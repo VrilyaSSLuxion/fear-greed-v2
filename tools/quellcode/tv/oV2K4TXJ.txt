@@ -1,0 +1,46 @@
+//@version=5
+indicator("Custom Buy/Sell Indicator", overlay=true)
+
+// Input settings
+macdShortLength = input.int(12, title="MACD Short Length")
+macdLongLength = input.int(26, title="MACD Long Length")
+macdSignalSmoothing = input.int(9, title="MACD Signal Smoothing")
+smaLength = input.int(50, title="SMA Length")
+atrLength = input.int(14, title="ATR Length")
+atrMultiplier = input.float(1.5, title="ATR Multiplier")
+volumeThreshold = input.int(100000, title="Volume Threshold")
+enableBuySignal = input.bool(true, title="Enable Buy Signal")
+enableSellSignal = input.bool(true, title="Enable Sell Signal")
+maxConsecutiveCandles = input.int(3, title="Max Consecutive Bullish/Bearish Candles")
+
+// MACD Calculation
+[macdLine, signalLine, _] = ta.macd(close, macdShortLength, macdLongLength, macdSignalSmoothing)
+macdHist = macdLine - signalLine
+
+// SMA Trendline
+sma = ta.sma(close, smaLength)
+
+// ATR Calculation
+atr = ta.atr(atrLength)
+atrRangeFilter = atr * atrMultiplier
+
+// Volume Delta Calculation
+volumeDelta = ta.change(volume)
+deltaVolumePositive = volumeDelta > volumeThreshold
+deltaVolumeNegative = volumeDelta < -volumeThreshold
+
+// Candle Counting
+bullishCount = ta.cum(close > open ? 1 : 0)
+bearishCount = ta.cum(close < open ? 1 : 0)
+
+// Buy and Sell Conditions
+buyCondition = enableBuySignal and deltaVolumePositive and macdHist > 0 and close > sma and atr < atrRangeFilter and bullishCount <= maxConsecutiveCandles
+sellCondition = enableSellSignal and deltaVolumeNegative and macdHist < 0 and close < sma and atr < atrRangeFilter and bearishCount <= maxConsecutiveCandles
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sellCondition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal detected")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal detected")

@@ -1,0 +1,146 @@
+//@version=5
+indicator("-VrilyaSS-TC-Double Candle Patterns-tiny-", overlay=true)
+
+// Funktionen zur Überprüfung der Muster
+isBullishKicker(o1, c1, o2, c2) =>
+    c1 < o1 and o2 > c2 and o2 > c1
+
+isBullishEngulfing(o1, c1, o2, c2) =>
+    c1 < o1 and c2 > o2 and c2 > o1 and o2 < c1
+
+isBullishHarami(o1, c1, o2, c2) =>
+    c1 < o1 and c2 > o2 and o2 > c1 and c2 < o1
+
+isBullishPiercingLine(o1, c1, l1, o2, c2) =>
+    c1 < o1 and c2 > o2 and o2 < l1 and c2 > (o1 + c1) / 2
+
+isBullishTweezerBottom(l1, l2, c2, o2) =>
+    l1 == l2 and c2 > o2
+
+isBearishKicker(o1, c1, o2, c2) =>
+    c1 > o1 and o2 < c2 and o2 < c1
+
+isBearishEngulfing(o1, c1, o2, c2) =>
+    c1 > o1 and c2 < o2 and c2 < o1 and o2 > c1
+
+isBearishHarami(o1, c1, o2, c2) =>
+    c1 > o1 and c2 < o2 and o2 < c1 and c2 > o1
+
+isBearishDarkCloudCover(o1, c1, h1, o2, c2) =>
+    c1 > o1 and c2 < o2 and o2 > h1 and c2 < (o1 + c1) / 2
+
+isBearishTweezerTop(h1, h2, c2, o2) =>
+    h1 == h2 and c2 < o2
+
+// Checkboxen und Beschreibungen
+showBullishKicker = input(true, title="Bullish Kicker anzeigen")
+showBullishEngulfing = input(true, title="Bullish Engulfing anzeigen")
+showBullishHarami = input(true, title="Bullish Harami anzeigen")
+showBullishPiercingLine = input(true, title="Bullish Piercing Line anzeigen")
+showBullishTweezerBottom = input(true, title="Bullish Tweezer Bottom anzeigen")
+
+showBearishKicker = input(true, title="Bearish Kicker anzeigen")
+showBearishEngulfing = input(true, title="Bearish Engulfing anzeigen")
+showBearishHarami = input(true, title="Bearish Harami anzeigen")
+showBearishDarkCloudCover = input(true, title="Bearish Dark Cloud Cover anzeigen")
+showBearishTweezerTop = input(true, title="Bearish Tweezer Top anzeigen")
+
+// Beschreibungs-Labels
+var label bullishKickerLabel = na
+var label bullishEngulfingLabel = na
+var label bullishHaramiLabel = na
+var label bullishPiercingLineLabel = na
+var label bullishTweezerBottomLabel = na
+
+var label bearishKickerLabel = na
+var label bearishEngulfingLabel = na
+var label bearishHaramiLabel = na
+var label bearishDarkCloudCoverLabel = na
+var label bearishTweezerTopLabel = na
+
+// Initialisierung der Labels
+if bar_index == 0
+    bullishKickerLabel := label.new(bar_index, high, text="Bullish Kicker", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_up, color=color.green, textcolor=color.black, size=size.tiny)
+    bullishEngulfingLabel := label.new(bar_index, high, text="Bullish Engulfing", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_up, color=color.green, textcolor=color.black, size=size.tiny)
+    bullishHaramiLabel := label.new(bar_index, high, text="Bullish Harami", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_up, color=color.green, textcolor=color.black, size=size.tiny)
+    bullishPiercingLineLabel := label.new(bar_index, high, text="Bullish Piercing Line", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_up, color=color.green, textcolor=color.black, size=size.tiny)
+    bullishTweezerBottomLabel := label.new(bar_index, high, text="Bullish Tweezer Bottom", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_up, color=color.green, textcolor=color.black, size=size.tiny)
+
+    bearishKickerLabel := label.new(bar_index, low, text="Bearish Kicker", xloc=xloc.bar_index, yloc=yloc.belowbar, style=label.style_label_down, color=color.red, textcolor=color.black, size=size.tiny)
+    bearishEngulfingLabel := label.new(bar_index, low, text="Bearish Engulfing", xloc=xloc.bar_index, yloc=yloc.belowbar, style=label.style_label_down, color=color.red, textcolor=color.black, size=size.tiny)
+    bearishHaramiLabel := label.new(bar_index, low, text="Bearish Harami", xloc=xloc.bar_index, yloc=yloc.belowbar, style=label.style_label_down, color=color.red, textcolor=color.black, size=size.tiny)
+    bearishDarkCloudCoverLabel := label.new(bar_index, low, text="Bearish Dark Cloud Cover", xloc=xloc.bar_index, yloc=yloc.belowbar, style=label.style_label_down, color=color.red, textcolor=color.black, size=size.tiny)
+    bearishTweezerTopLabel := label.new(bar_index, low, text="Bearish Tweezer Top", xloc=xloc.bar_index, yloc=yloc.belowbar, style=label.style_label_down, color=color.red, textcolor=color.black, size=size.tiny)
+
+// Berechnung der Muster
+bullishKicker = isBullishKicker(open[1], close[1], open, close)
+bullishEngulfing = isBullishEngulfing(open[1], close[1], open, close)
+bullishHarami = isBullishHarami(open[1], close[1], open, close)
+bullishPiercingLine = isBullishPiercingLine(open[1], close[1], low[1], open, close)
+bullishTweezerBottom = isBullishTweezerBottom(low[1], low, close, open)
+
+bearishKicker = isBearishKicker(open[1], close[1], open, close)
+bearishEngulfing = isBearishEngulfing(open[1], close[1], open, close)
+bearishHarami = isBearishHarami(open[1], close[1], open, close)
+bearishDarkCloudCover = isBearishDarkCloudCover(open[1], close[1], high[1], open, close)
+bearishTweezerTop = isBearishTweezerTop(high[1], high, close, open)
+
+// Signale auf dem Chart anzeigen, wenn die entsprechenden Checkboxen aktiviert sind
+if showBullishKicker and bullishKicker
+    label.set_text(bullishKickerLabel, "Bullish Kicker")
+
+if showBullishEngulfing and bullishEngulfing
+    label.set_text(bullishEngulfingLabel, "Bullish Engulfing")
+
+if showBullishHarami and bullishHarami
+    label.set_text(bullishHaramiLabel, "Bullish Harami")
+
+if showBullishPiercingLine and bullishPiercingLine
+    label.set_text(bullishPiercingLineLabel, "Bullish Piercing Line")
+
+if showBullishTweezerBottom and bullishTweezerBottom
+    label.set_text(bullishTweezerBottomLabel, "Bullish Tweezer Bottom")
+
+if showBearishKicker and bearishKicker
+    label.set_text(bearishKickerLabel, "Bearish Kicker")
+
+if showBearishEngulfing and bearishEngulfing
+    label.set_text(bearishEngulfingLabel, "Bearish Engulfing")
+
+if showBearishHarami and bearishHarami
+    label.set_text(bearishHaramiLabel, "Bearish Harami")
+
+if showBearishDarkCloudCover and bearishDarkCloudCover
+    label.set_text(bearishDarkCloudCoverLabel, "Bearish Dark Cloud Cover")
+
+if showBearishTweezerTop and bearishTweezerTop
+    label.set_text(bearishTweezerTopLabel, "Bearish Tweezer Top")
+
+// Plots für Alarme
+plotshape(series=showBullishKicker and bullishKicker, location=location.belowbar, color=color.green, style=shape.labelup, text="BK", title="Bullish Kicker", textcolor=color.black, size=size.tiny)
+plotshape(series=showBullishEngulfing and bullishEngulfing, location=location.belowbar, color=color.green, style=shape.labelup, text="BE", title="Bullish Engulfing", textcolor=color.black, size=size.tiny)
+plotshape(series=showBullishHarami and bullishHarami, location=location.belowbar, color=color.green, style=shape.labelup, text="BH", title="Bullish Harami", textcolor=color.black, size=size.tiny)
+plotshape(series=showBullishPiercingLine and bullishPiercingLine, location=location.belowbar, color=color.green, style=shape.labelup, text="BPL", title="Bullish Piercing Line", textcolor=color.black, size=size.tiny)
+plotshape(series=showBullishTweezerBottom and bullishTweezerBottom, location=location.belowbar, color=color.green, style=shape.labelup, text="BTB", title="Bullish Tweezer Bottom", textcolor=color.black, size=size.tiny)
+
+plotshape(series=showBearishKicker and bearishKicker, location=location.abovebar, color=color.red, style=shape.labeldown, text="BK", title="Bearish Kicker", textcolor=color.black, size=size.tiny)
+plotshape(series=showBearishEngulfing and bearishEngulfing, location=location.abovebar, color=color.red, style=shape.labeldown, text="BE", title="Bearish Engulfing", textcolor=color.black, size=size.tiny)
+plotshape(series=showBearishHarami and bearishHarami, location=location.abovebar, color=color.red, style=shape.labeldown, text="BH", title="Bearish Harami", textcolor=color.black, size=size.tiny)
+plotshape(series=showBearishDarkCloudCover and bearishDarkCloudCover, location=location.abovebar, color=color.red, style=shape.labeldown, text="BDCC", title="Bearish Dark Cloud Cover", textcolor=color.black, size=size.tiny)
+plotshape(series=showBearishTweezerTop and bearishTweezerTop, location=location.abovebar, color=color.red, style=shape.labeldown, text="BTT", title="Bearish Tweezer Top", textcolor=color.black, size=size.tiny)
+
+// Alarmbedingungen
+alertcondition(showBullishKicker and bullishKicker, title="Bullish Kicker Alarm", message="Bullish Kicker erkannt")
+alertcondition(showBullishEngulfing and bullishEngulfing, title="Bullish Engulfing Alarm", message="Bullish Engulfing erkannt")
+alertcondition(showBullishHarami and bullishHarami, title="Bullish Harami Alarm", message="Bullish Harami erkannt")
+alertcondition(showBullishPiercingLine and bullishPiercingLine, title="Bullish Piercing Line Alarm", message="Bullish Piercing Line erkannt")
+alertcondition(showBullishTweezerBottom and bullishTweezerBottom, title="Bullish Tweezer Bottom Alarm", message="Bullish Tweezer Bottom erkannt")
+
+alertcondition(showBearishKicker and bearishKicker, title="Bearish Kicker Alarm", message="Bearish Kicker erkannt")
+alertcondition(showBearishEngulfing and bearishEngulfing, title="Bearish Engulfing Alarm", message="Bearish Engulfing erkannt")
+alertcondition(showBearishHarami and bearishHarami, title="Bearish Harami Alarm", message="Bearish Harami erkannt")
+alertcondition(showBearishDarkCloudCover and bearishDarkCloudCover, title="Bearish Dark Cloud Cover Alarm", message="Bearish Dark Cloud Cover erkannt")
+alertcondition(showBearishTweezerTop and bearishTweezerTop, title="Bearish Tweezer Top Alarm", message="Bearish Tweezer Top erkannt")
+
+// Alarmbedingung für alle Muster unabhängig davon, welches erkannt wird
+alertcondition(showBullishKicker and bullishKicker or showBullishEngulfing and bullishEngulfing or showBullishHarami and bullishHarami or showBullishPiercingLine and bullishPiercingLine or showBullishTweezerBottom and bullishTweezerBottom or showBearishKicker and bearishKicker or showBearishEngulfing and bearishEngulfing or showBearishHarami and bearishHarami or showBearishDarkCloudCover and bearishDarkCloudCover or showBearishTweezerTop and bearishTweezerTop, title="Pattern Alarm", message="Ein Candle-Muster wurde erkannt")

@@ -1,0 +1,25 @@
+//@version=5
+indicator(title="-VrilyaSS-Stochastic+3X-BANDS-", shorttitle="-VrilyaSS-Stochastic+3X-BANDS-", format=format.price, precision=2, timeframe="", timeframe_gaps=true)
+periodK = input.int(21, title="%K Length-5-(38)-default-14", minval=1)
+smoothK = input.int(5, title="%K Smoothing-3-(4)-default-1", minval=1)
+periodD = input.int(5, title="%D Smoothing-2-(5)-default-3", minval=1)
+k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
+d = ta.sma(k, periodD)
+plot(k, title="%K-Color-16-Solid-Line-2-100%-", linewidth = 2, color=#00bcd4)
+plot(d, title="%D-Color-11-Solid-Line-3-100%-", linewidth = 3, color=#f23645)
+
+h0 = hline(99, "-UPPER TOP-Band---TOP--(99)--90--(90--89,11)---Color-11-Solid Line-3-100%-",linestyle = hline.style_solid, linewidth = 3,  color=color.new(color.red, 0))
+hline(89, "-UPPER TOP-Band---MIDDLE--(89)--80--(79--78,6)---Color-1-Solid-Line-2-100%-",linestyle = hline.style_solid, linewidth = 2, color=color.new(color.white, 0))
+h1 = hline(79, "-UPPER TOP-Band---BOTTOM--(79)--70--(70--bzw-70,20-The Middle of 61,8 and 78,6)---Color-16-Solid-Line-2-100%-",linestyle = hline.style_solid, linewidth = 2, color=color.new(color.aqua, 0)) 
+fill(h0, h1, color=color.new(color.red, 85), title="-Background-UPPER TOP-Band---Color-11-15%-")
+
+h0_2 = hline(56, "-MIDDLE NEUTRAL-Band---TOP--(56)--(62--61,8)---Color-11-Solid-Line-1-100%-",linestyle = hline.style_solid, linewidth = 1, color=color.new(color.red, 0))
+hline(50, "-MIDDLE NEUTRAL-Band---MIDDLE--(50)--(50--50,0)---Color-1-Solid-Line-3-100%-",linestyle = hline.style_solid, linewidth = 3, color=color.new(color.white, 0))
+h1_2 = hline(44, "-MIDDLE NEUTRAL-Band---BOTTOM--(44)--(38--38,2)---Color-14-Solid-Line-1-100%-",linestyle = hline.style_solid, linewidth = 1, color=color.new(color.green, 0))
+fill(h0_2, h1_2, color=color.new(color.gray, 85), title="-Background-MIDDLE NEUTRAL-Band---NTZ-MIDDLE-BAND-NoTradeZone-BAND---MIDDLE NEUTRAL CONSOLIDATION---AVOID THE MOST TIMES AND ONLY USE IT SOMETIMES FOR SUPPORT AND-OR BREAKTROUGH AS A CONFIRMATION-THE MOST TIMES THIS IS A ABSOLUTE NO-TRADE-ZONE AND SHOULD BE AVOIDED TO TRADE-Band---USE IT AS A BREAK-OUTS-LEVEL AND FOR BOUNCES AS A LEVEL FOR SUPPORT, AND-OR AS A BREAK-DOWN-LEVEL AND RESISTANCES LEVEL FOR REJECTIONS---Color-5-15%-")
+
+h0_3 = hline(21, "-LOWER BOTTOM-Band---TOP--(21)--30---Color-16-Solid-Line-2-100%-",linestyle = hline.style_solid, linewidth = 2, color=color.new(color.aqua, 0))
+hline(11, "-LOWER BOTTOM-Band---MIDDLE--(11)--20---Color-1-Solid-Line-2-100%-",linestyle = hline.style_solid, linewidth = 2, color=color.new(color.white, 0))
+h1_3 = hline(1, "-LOWER BOTTOM-Band---BOTTOM--(1)--10---Color-14-Solid-Line-3-100%-",linestyle = hline.style_solid, linewidth = 3, color=color.new(color.green, 0))
+fill(h0_3, h1_3, color=color.new(color.green, 85), title="-Background-LOWER BOTTOM-Band---Color-14-15%-")
+

@@ -1,0 +1,131 @@
+//@version=5
+indicator(title="-VrilyaSS-TSA TDI-TraderJe-Version#1-Condition+Divergences-tiny-", shorttitle="-VrilyaSS-TSA TDI-TraderJe-Version#1-Condition+Divergences-tiny-", format=format.price, precision=2)
+
+// TDI
+rsi = ta.rsi(close, 8)
+ma = ta.sma(rsi, 34)
+offs = 1.6185 * ta.stdev(rsi, 34)
+up = ma + offs
+dn = ma - offs
+mid = (up + dn) / 2
+fastMA = ta.sma(rsi, 2)
+
+hline(79, "-OverBought-default-Color-gray-5-100%-Line Width-1-dashed Line-75-", color=color.gray, linestyle=hline.style_dashed, editable=true)
+hline(21, "-OverSold-default-Color-gray-5-100%-Line Width-1-dashed Line-25-", color=color.gray, linestyle=hline.style_dashed, editable=true)
+
+hline(89, "-Upper-Horizontal Line-default-Color-gray-5-100%-Line Width-1-dashed Line-80-", color=color.gray, linestyle=hline.style_dashed, editable=true)
+hline(50, "-Middle-Horizontal Line-default-Color-gray-5-100%-Line Width-1-dashed Line-50-", color=color.white, linestyle=hline.style_dashed, linewidth=2, editable=true)
+hline(11, "-Lower-Horizontal Line-default-Color-gray-5-100%-Line Width-1-dashed Line-20-", color=color.gray, linestyle=hline.style_dashed, editable=true)
+
+upl = plot(up, "-Upper Band-", color=color.new(color.red, 0), linewidth=3)
+dnl = plot(dn, "-Lower Band-", color=color.new(color.green, 0), linewidth=3)
+midl = plot(mid, "-Middle of Bands-", color=color.new(color.white, 0), linewidth=2)
+
+plot(fastMA, "-Fast MA-", color=color.new(color.yellow, 0), linewidth=2)
+
+// Kauf- und Verkaufssignalaktivierung
+activate_buy_signal = input(true, title="Aktiviere Kauf-Signal-1-=buyCondition = ta.crossover(fastMA, mid) and fastMA[1] < mid[1] // Fast MA crosses above mid from below")
+activate_sell_signal = input(true, title="Aktiviere Verkauf-Signal-1-=sellCondition = ta.crossunder(fastMA, mid) and fastMA[1] > mid[1] // Fast MA crosses below mid from above")
+
+// Kauf- und Verkaufssignale
+buyCondition = ta.crossover(fastMA, mid) and fastMA[1] < mid[1] // Fast MA crosses above mid from below
+sellCondition = ta.crossunder(fastMA, mid) and fastMA[1] > mid[1] // Fast MA crosses below mid from above
+
+// Signalbedingungen
+buy_signal = activate_buy_signal and buyCondition
+sell_signal = activate_sell_signal and sellCondition
+
+// Kauf- und Verkaufssignal Labels
+if (buy_signal)
+    label.new(bar_index, mid, text="BUY", style=label.style_label_up, color=color.green, textcolor=color.white, yloc=yloc.price, size=size.small)
+if (sell_signal)
+    label.new(bar_index, mid, text="SELL", style=label.style_label_down, color=color.red, textcolor=color.white, yloc=yloc.price, size=size.small)
+
+// Kauf- und Verkaufssignal Alarme
+alertcondition(buy_signal, title="Buy Alert", message="Buy Signal on {{ticker}}")
+alertcondition(sell_signal, title="Sell Alert", message="Sell Signal on {{ticker}}")
+
+// Alarmbedingungen
+finUp = fastMA > 75 and fastMA > up
+finDn = fastMA < 25 and fastMA < dn
+alert = finUp or finDn
+
+if alert
+    alert('{"content":"' + syminfo.ticker + ' ' + timeframe.period + ' Sharkfin"}', alert.freq_once_per_bar_close)
+
+// Divergenz-Erkennungslogik
+lbR = input.int(title="-Pivot Lookback Right-5-", defval=5, display=display.data_window)
+lbL = input.int(title="-Pivot Lookback Left-5-", defval=5, display=display.data_window)
+rangeUpper = input.int(title="-Max of Lookback Range-60-", defval=60, display=display.data_window)
+rangeLower = input.int(title="-Min of Lookback Range-5-", defval=5, display=display.data_window)
+plotBull = input.bool(title="-Plot Bullish-true-", defval=true, display=display.data_window)
+plotHiddenBull = input.bool(title="-Plot Hidden-Bullish-true-", defval=true, display=display.data_window)
+plotBear = input.bool(title="-Plot Bearish-true-", defval=true, display=display.data_window)
+plotHiddenBear = input.bool(title="-Plot Hidden-Bearish-true-", defval=true, display=display.data_window)
+
+bullColor = input.color(title="-Regular-Bullish-Label-Color-", defval=color.green, group="Regular Bullish", inline="color")
+bullTextColor = input.color(title="-Regular-Bullish-Label-Text-Color-", defval=color.white, group="Regular Bullish", inline="textColor")
+
+hiddenBullColor = input.color(title="-Hidden-Bullish-Label-Color-", defval=color.new(color.green, 50), group="Hidden Bullish", inline="color")
+hiddenBullTextColor = input.color(title="-Hidden-Bullish-Label-Text-Color-", defval=color.white, group="Hidden Bullish", inline="textColor")
+
+bearColor = input.color(title="-Regular-Bearish-Label-Color-", defval=color.red, group="Regular Bearish", inline="color")
+bearTextColor = input.color(title="-Regular-Bearish-Label-Text-Color-", defval=color.white, group="Regular Bearish", inline="textColor")
+
+hiddenBearColor = input.color(title="-Hidden-Bearish-Label-Color-", defval=color.new(color.red, 50), group="Hidden Bearish", inline="color")
+hiddenBearTextColor = input.color(title="-Hidden-Bearish-Label-Text-Color-", defval=color.white, group="Hidden Bearish", inline="textColor")
+
+noneColor = color.new(color.white, 100)
+
+// Pivots erkennen
+plFound = na(ta.pivotlow(fastMA, lbL, lbR)) ? false : true
+phFound = na(ta.pivothigh(fastMA, lbL, lbR)) ? false : true
+_inRange(cond) =>
+    bars = ta.barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+
+// Reguläre Bullish-Divergenz
+oscHL = fastMA[lbR] > ta.valuewhen(plFound, fastMA[lbR], 1) and _inRange(plFound[1])
+priceLL = low[lbR] < ta.valuewhen(plFound, low[lbR], 1)
+bullCondAlert = priceLL and oscHL and plFound
+bullCond = plotBull and bullCondAlert
+
+plot(plFound ? fastMA[lbR] : na, offset=-lbR, title="-Regular Bullish-", linewidth=2, color=(bullCond ? bullColor : noneColor), display=display.pane)
+
+plotshape(bullCond ? fastMA[lbR] : na, offset=-lbR, title="-Regular Bullish-Label-", text=" Bull ", style=shape.labelup, location=location.absolute, color=bullColor, textcolor=bullTextColor)
+
+// Versteckte Bullish-Divergenz
+oscLL = fastMA[lbR] < ta.valuewhen(plFound, fastMA[lbR], 1) and _inRange(plFound[1])
+priceHL = low[lbR] > ta.valuewhen(plFound, low[lbR], 1)
+hiddenBullCondAlert = priceHL and oscLL and plFound
+hiddenBullCond = plotHiddenBull and hiddenBullCondAlert
+
+plot(plFound ? fastMA[lbR] : na, offset=-lbR, title="-Hidden Bullish-", linewidth=2, color=(hiddenBullCond ? hiddenBullColor : noneColor), display=display.pane)
+
+plotshape(hiddenBullCond ? fastMA[lbR] : na, offset=-lbR, title="-Hidden Bullish-Label-", text=" H Bull ", style=shape.labelup, location=location.absolute, color=hiddenBullColor, textcolor=hiddenBullTextColor)
+
+// Reguläre Bearish-Divergenz
+oscLH = fastMA[lbR] < ta.valuewhen(phFound, fastMA[lbR], 1) and _inRange(phFound[1])
+priceHH = high[lbR] > ta.valuewhen(phFound, high[lbR], 1)
+bearCondAlert = priceHH and oscLH and phFound
+bearCond = plotBear and bearCondAlert
+
+plot(phFound ? fastMA[lbR] : na, offset=-lbR, title="-Regular Bearish-", linewidth=2, color=(bearCond ? bearColor : noneColor), display=display.pane)
+
+plotshape(bearCond ? fastMA[lbR] : na, offset=-lbR, title="-Regular Bearish-Label-", text=" Bear ", style=shape.labeldown, location=location.absolute, color=bearColor, textcolor=bearTextColor)
+
+// Versteckte Bearish-Divergenz
+oscHH = fastMA[lbR] > ta.valuewhen(phFound, fastMA[lbR], 1) and _inRange(phFound[1])
+priceLH = high[lbR] < ta.valuewhen(phFound, high[lbR], 1)
+hiddenBearCondAlert = priceLH and oscHH and phFound
+hiddenBearCond = plotHiddenBear and hiddenBearCondAlert
+
+plot(phFound ? fastMA[lbR] : na, offset=-lbR, title="-Hidden Bearish-", linewidth=2, color=(hiddenBearCond ? hiddenBearColor : noneColor), display=display.pane)
+
+plotshape(hiddenBearCond ? fastMA[lbR] : na, offset=-lbR, title="-Hidden Bearish-Label-", text=" H Bear ", style=shape.labeldown, location=location.absolute, color=hiddenBearColor, textcolor=hiddenBearTextColor)
+
+// Alarme für Divergenzen
+alertcondition(bullCondAlert, title="Regular Bull Alert", message="Regular Bullish Divergence on {{ticker}}")
+alertcondition(hiddenBullCondAlert, title="Hidden Bull Alert", message="Hidden Bullish Divergence on {{ticker}}")
+alertcondition(bearCondAlert, title="Regular Bear Alert", message="Regular Bearish Divergence on {{ticker}}")
+alertcondition(hiddenBearCondAlert, title="Hidden Bear Alert", message="Hidden Bearish Divergence on {{ticker}}")

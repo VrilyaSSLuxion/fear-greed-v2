@@ -1,0 +1,51 @@
+//@version=5
+indicator("-Quick Trade Indicator-(QTI)-Fibonacci-1-", shorttitle="-Quick Trade Indicator-(QTI)-Fibonacci-1-", overlay=true)
+
+// Inputparameter
+fibonacciPeriod = input.string("Monthly", title="-Fibonacci-Period-Daily-", options=["Daily", "Weekly", "Monthly"])
+fibonacci_src = input.source(close, title="-Fibonacci-Source-close-")
+
+// Funktion zur Berechnung der Fibonacci-Niveaus basierend auf der Periode
+fibonacci(p, pPeriod) =>
+    var float _high = na
+    var float _low = na
+    
+    if pPeriod == "Daily"
+        _high := ta.highest(p, 1)
+        _low := ta.lowest(p, 1)
+    else if pPeriod == "Weekly"
+        _high := ta.highest(p, 5)
+        _low := ta.lowest(p, 5)
+    else if pPeriod == "Monthly"
+        _high := ta.highest(p, 22)
+        _low := ta.lowest(p, 22)
+
+    _range = _high - _low
+    _fib_0 = _high
+    _fib_0_236 = _high - 0.236 * _range
+    _fib_0_382 = _high - 0.382 * _range
+    _fib_0_5 = _high - 0.5 * _range
+    _fib_0_618 = _high - 0.618 * _range
+    _fib_0_786 = _high - 0.786 * _range
+    _fib_1 = _low
+    [_fib_0, _fib_0_236, _fib_0_382, _fib_0_5, _fib_0_618, _fib_0_786, _fib_1]
+
+// Berechnung der Fibonacci-Niveaus
+[fib_0, fib_0_236, fib_0_382, fib_0_5, fib_0_618, fib_0_786, fib_1] = fibonacci(fibonacci_src, fibonacciPeriod)
+
+// Bedingungen für Long- und Short-Signale
+buy_condition = close > fib_0_618 and ta.crossover(close, fib_0_618)
+sell_condition = close < fib_0_5 and ta.crossunder(close, fib_0_5)
+
+// Plot der Fibonacci-Niveaus
+plot(fib_0, title="-Fib-0%-", color=color.red, linewidth=3)
+plot(fib_0_236, title="-Fib-23.6%-", color=color.white, linewidth=1)
+plot(fib_0_382, title="-Fib-38.2%-", color=color.orange, linewidth=1)
+plot(fib_0_5, title="-Fib-50%-", color=color.white, linewidth=1)
+plot(fib_0_618, title="-Fib-61.8%-", color=color.green, linewidth=2)
+plot(fib_0_786, title="-Fib-78.6%-", color=color.aqua, linewidth=2)
+plot(fib_1, title="-Fib-100%-", color=color.green, linewidth=3)
+
+// Plot Buy and Sell signals
+plotshape(series=buy_condition, title="-Buy-Signal-", location=location.belowbar, color=color.green, text="BUY", style=shape.labelup, textcolor=color.black, size=size.tiny)
+plotshape(series=sell_condition, title="-Sell-Signal-", location=location.abovebar, color=color.red, text="SELL", style=shape.labeldown, textcolor=color.black, size=size.tiny)

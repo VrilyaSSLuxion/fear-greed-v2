@@ -1,0 +1,25 @@
+//@version=5
+indicator("RSI Bounce Strategy", overlay=true)
+
+// Input parameters
+rsiLength = input(14, title="RSI Length")
+stochK = input(14, title="%K Length")
+stochD = input(3, title="%D Smoothing")
+
+// Calculate RSI
+rsi = ta.rsi(close, rsiLength)
+
+// Calculate Stochastic Oscillator
+k = ta.sma(ta.stoch(close, high, low, stochK), stochD)
+d = ta.sma(k, stochD)
+
+// Determine strategy conditions
+longSignal = ta.crossover(k, d) and rsi > 50
+shortSignal = ta.crossunder(k, d) and rsi < 50
+
+// Plotting signals and indicators
+plotshape(longSignal, location.belowbar, color=color.green, style=shape.triangleup, size=size.small, title="Long Signal")
+plotshape(shortSignal, location.abovebar, color=color.red, style=shape.triangledown, size=size.small, title="Short Signal")
+plot(rsi, title="RSI", color=color.blue)
+plot(k, title="%K", color=color.orange)
+plot(d, title="%D", color=color.red)

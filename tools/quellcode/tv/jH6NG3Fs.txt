@@ -1,0 +1,140 @@
+//@version=5
+indicator(title='-VrilyaSS-HTF Buy/Sell Signals-SnowyXBT-', shorttitle='-VrilyaSS-HTF Buy/Sell Signals-SnowyXBT-', overlay=true)
+
+// Initialize OscHelper variable
+var int OscHelper = na
+
+// Calculate Heikin-Ashi values
+ha_open = request.security(syminfo.tickerid, 'D', open)
+ha_high = request.security(syminfo.tickerid, 'D', high)
+ha_low = request.security(syminfo.tickerid, 'D', low)
+ha_close = request.security(syminfo.tickerid, 'D', close)
+
+// Conditions for Heikin Ashi trend
+heikUpColor() => ha_close > ha_open
+heikDownColor() => ha_close <= ha_open
+
+// Initialize variables
+var float o = na
+var float c = na
+var float src = na
+var float price = na
+
+// Update variables with Heikin Ashi values
+if not na(ha_open)
+    o := ha_open
+    c := ha_close
+    src := ha_close
+    price := ha_close
+
+// Calculation of RSI and other indicators
+up1 = ta.rma(math.max(ta.change(src), 0), 9)
+down1 = ta.rma(-math.min(ta.change(src), 0), 9)
+rsi = down1 == 0 ? 100 : up1 == 0 ? 0 : 100 - (100 / (1 + up1 / down1))
+
+K = ta.sma(ta.stoch(c, ha_high, ha_low, 14), 3)
+D = ta.sma(K, 3)
+
+ilong = 9
+isig = 3
+
+bcwsma(s, l, m) =>
+    var float _bcwsma = na
+    _bcwsma := (m * s + (l - m) * nz(_bcwsma[1])) / l
+    _bcwsma
+
+h = ta.highest(ha_high, ilong)
+l = ta.lowest(ha_low, ilong)
+RSV = 100 * ((c - l) / (h - l))
+pK = bcwsma(RSV, isig, 1)
+pD = bcwsma(pK, isig, 1)
+pJ = 3 * pK - 2 * pD
+KD = (pK + pD) / 2
+
+EMA5 = ta.ema(price, 5)
+EMA7 = ta.ema(price, 7)
+EMA10 = ta.ema(price, 10)
+EMA14 = ta.ema(price, 14)
+VOLEMA = ta.sma(volume, 20)
+
+conversionPeriods = 9
+basePeriods = 26
+laggingSpan2Periods = 52
+displacement = 26
+
+donchian(len) => ta.sma(ta.lowest(len), len)  // Use ta.sma instead of ta.avg for Donchian channel calculation
+resolve(src, default) => na(src) ? default : src
+
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+
+// Calculate lead lines without ta.offset
+leadLine1 = (conversionLine + baseLine) / 2
+leadLine2 = donchian(laggingSpan2Periods)
+
+tk_cross_bull = ta.crossover(conversionLine, baseLine)
+tk_cross_bear = ta.crossunder(conversionLine, baseLine)
+
+cross_y = (conversionLine[1] * (baseLine - baseLine[1]) - baseLine[1] * (conversionLine - conversionLine[1])) / ((baseLine - baseLine[1]) - (conversionLine - conversionLine[1]))
+
+tk_cross_below_kumo = cross_y <= leadLine2[1] and cross_y <= leadLine1[1] and cross_y <= leadLine2
+tk_cross_above_kumo = cross_y >= leadLine2[1] and cross_y >= leadLine1[1] and cross_y >= leadLine2
+tk_cross_inside_kumo = not (tk_cross_below_kumo or tk_cross_above_kumo)
+
+pk_cross_bull = ta.crossover(ha_close, baseLine)
+pk_cross_bear = ta.crossunder(ha_close, baseLine)
+
+cross_pk_y = (ha_close[1] * (baseLine - baseLine[1]) - baseLine[1] * (ha_close - ha_close[1])) / ((baseLine - baseLine[1]) - (ha_close - ha_close[1]))
+
+pk_cross_below_kumo = cross_pk_y <= leadLine2[1] and cross_pk_y <= leadLine1[1] and cross_pk_y <= leadLine2
+pk_cross_above_kumo = cross_pk_y >= leadLine2[1] and cross_pk_y >= leadLine1[1] and cross_pk_y >= leadLine2
+pk_cross_inside_kumo = not (pk_cross_below_kumo or pk_cross_above_kumo)
+
+kumo_bull = (ta.crossover(ha_close, leadLine1) and leadLine1 > leadLine2) or (ta.crossover(ha_close, leadLine2) and leadLine2 > leadLine1)
+kumo_bear = (ta.crossunder(ha_close, leadLine2) and leadLine1 > leadLine2) or (ta.crossunder(ha_close, leadLine1) and leadLine2 > leadLine1)
+
+price_below_kumo = ha_close < leadLine2 and ha_close < leadLine1
+price_above_kumo = ha_close > leadLine2 and ha_close > leadLine1
+price_inside_kumo = not (price_below_kumo or price_above_kumo)
+
+no_dp_leadLine1 = (conversionLine + baseLine) / 2
+no_dp_leadLine2 = donchian(laggingSpan2Periods)
+
+lead_line_cross_bull = ta.crossover(no_dp_leadLine1, no_dp_leadLine2)
+lead_line_cross_bear = ta.crossunder(no_dp_leadLine1, no_dp_leadLine2)
+
+past_price = ha_close[displacement]
+lag_line_bull_cross = ha_close > past_price
+lag_line_bear_cross = ha_close < past_price
+
+past_price_below_kumo = past_price < leadLine2 and past_price < leadLine1
+past_price_above_kumo = past_price > leadLine2 and past_price > leadLine1
+past_price_inside_kumo = (leadLine2 < past_price and past_price < leadLine1) and (leadLine1 < past_price and past_price < leadLine2)
+
+Buy1 = (tk_cross_below_kumo or tk_cross_inside_kumo or tk_cross_above_kumo) and ta.rising(pJ[1], 1) and heikUpColor()
+Buy2 = (pk_cross_below_kumo or pk_cross_inside_kumo or pk_cross_above_kumo) and ta.rising(pJ[1], 1) and heikUpColor()
+Buy3 = (past_price_below_kumo or past_price_above_kumo or past_price_inside_kumo) and ta.rising(pJ[1], 1) and heikUpColor()
+
+Sell1 = (tk_cross_below_kumo or tk_cross_inside_kumo or tk_cross_above_kumo) and ta.falling(pJ[1], 1) and heikDownColor()
+Sell2 = (pk_cross_below_kumo or pk_cross_inside_kumo or pk_cross_above_kumo) and ta.falling(pJ[1], 1) and heikDownColor()
+Sell3 = (past_price_below_kumo or past_price_above_kumo or past_price_inside_kumo) and ta.falling(pJ[1], 1) and heikDownColor()
+
+OscHelper := Buy1 or Buy2 or Buy3 ? 1 : Sell1 or Sell2 or Sell3 ? 0 : OscHelper[1]
+
+plotshape(Buy1 and OscHelper[1]==0, color=color.new(color.green, 0), style=shape.triangleup, location=location.belowbar, size=size.tiny, text='B', textcolor=color.new(color.green, 0), title='Buy Alert')
+plotshape(Buy2 and OscHelper[1]==0, color=color.new(color.green, 0), style=shape.triangleup, location=location.belowbar, size=size.tiny, text='B', textcolor=color.new(color.green, 0), title='Buy Alert')
+plotshape(Buy3 and OscHelper[1]==0, color=color.new(color.green, 0), style=shape.triangleup, location=location.belowbar, size=size.tiny, text='B', textcolor=color.new(color.green, 0), title='Buy Alert')
+
+plotshape(Sell1 and OscHelper[1]==1, color=color.new(color.red, 0), style=shape.triangledown, location=location.abovebar, size=size.tiny, text='S', textcolor=color.new(color.red, 0), title='Sell Alert')
+plotshape(Sell2 and OscHelper[1]==1, color=color.new(color.red, 0), style=shape.triangledown, location=location.abovebar, size=size.tiny, text='S', textcolor=color.new(color.red, 0), title='Sell Alert')
+plotshape(Sell3 and OscHelper[1]==1, color=color.new(color.red, 0), style=shape.triangledown, location=location.abovebar, size=size.tiny, text='S', textcolor=color.new(color.red, 0), title='Sell Alert')
+
+SenkouA = donchian(laggingSpan2Periods)
+SenkouB = (conversionLine + baseLine) / 2
+
+plot(conversionLine, color=color.new(color.blue, 0), title="")
+plot(baseLine, color=color.new(color.blue, 0), title="")
+plot(ha_close, color=color.new(color.blue, 0), title="", offset=-displacement)
+
+plot(SenkouA[displacement], color=color.new(color.blue, 0), title="")
+plot(SenkouB, color=color.new(color.blue, 0), title="")

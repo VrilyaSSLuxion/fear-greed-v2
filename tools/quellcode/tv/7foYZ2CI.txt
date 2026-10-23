@@ -1,0 +1,34 @@
+//@version=5
+indicator("-VrilyaSS-Ichimoku Kinko Hyo Buy/Sell Signals-11072024-", overlay=true)
+
+// Ichimoku Kinko Hyo Einstellungen
+lengthTenkan = input.int(9, title="Tenkan-Sen Length")
+lengthKijun = input.int(26, title="Kijun-Sen Length")
+lengthSenkouB = input.int(52, title="Senkou Span B Length")
+displacement = input.int(26, title="Displacement")
+
+// Berechnungen für Ichimoku Kinko Hyo
+tenkan = ta.sma(ta.highest(high, lengthTenkan) + ta.lowest(low, lengthTenkan), 2)
+kijun = ta.sma(ta.highest(high, lengthKijun) + ta.lowest(low, lengthKijun), 2)
+senkouA = ta.sma(tenkan + kijun, 2)
+senkouB = ta.sma(ta.highest(high, lengthSenkouB) + ta.lowest(low, lengthSenkouB), 2)
+chikou = close
+
+// Zeichnen der Linien
+plot(tenkan, color=color.red, title="Tenkan-Sen")
+plot(kijun, color=color.blue, title="Kijun-Sen")
+plot(senkouA, color=color.green, title="Senkou Span A")
+plot(senkouB, color=color.purple, title="Senkou Span B")
+plot(chikou[displacement], offset=-displacement, color=color.orange, title="Chikou Span")
+
+// Wolke (Kumo) zeichnen
+p1 = plot(senkouA, title="Senkou Span A", color=color.green, linewidth=1)
+p2 = plot(senkouB, title="Senkou Span B", color=color.red, linewidth=1)
+fill(p1, p2, color = senkouA > senkouB ? color.new(color.green, 90) : color.new(color.red, 90))
+
+// Kauf- und Verkaufssignale
+buySignal = ta.crossover(tenkan, kijun) and close < math.max(senkouA, senkouB)
+sellSignal = ta.crossunder(tenkan, kijun) and close < math.min(senkouA, senkouB)
+
+plotshape(series=buySignal, location=location.belowbar, color=color.green, textcolor = color.white, style=shape.labelup, text="BUY", title="Buy Signal")
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, textcolor = color.white, style=shape.labeldown, text="SELL", title="Sell Signal")

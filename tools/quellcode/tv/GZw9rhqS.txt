@@ -1,0 +1,36 @@
+//@version=5
+indicator("Stochastic & RSI Buy/Sell Signals", overlay=true)
+
+// Parameter
+k_length = input(14, title="Stochastic K Length")
+d_smooth = input(3, title="Stochastic D Smoothing")
+rsi_length = input(14, title="RSI Length")
+
+// Optionen zum Anzeigen der Indikatoren
+show_stochastic = input(true, title="Show Stochastic Oscillator")
+show_rsi = input(true, title="Show RSI")
+
+// Stochastic Oscillator
+k = ta.sma(ta.stoch(close, high, low, k_length), 1)
+d = ta.sma(k, d_smooth)
+
+// RSI
+rsi = ta.rsi(close, rsi_length)
+
+// Bedingungen für Kaufsignal
+buy_condition = ta.crossover(k, d) and ta.crossover(rsi, 50)
+
+// Bedingungen für Verkaufssignal
+sell_condition = ta.crossunder(k, d) and ta.crossunder(rsi, 50)
+
+// Plot Signale
+plotshape(series=buy_condition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sell_condition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Plot K und D für Debugging, falls show_stochastic aktiviert ist
+plot(show_stochastic ? k : na, title="Stochastic %K", color=color.blue, linewidth=1, transp=80)
+plot(show_stochastic ? d : na, title="Stochastic %D", color=color.orange, linewidth=1, transp=80)
+
+// Plot RSI für Debugging, falls show_rsi aktiviert ist
+hline(50, "50 Level", color=color.gray)
+plot(show_rsi ? rsi : na, title="RSI", color=color.purple, linewidth=1, transp=80)

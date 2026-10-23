@@ -1,0 +1,40 @@
+//@version=5
+indicator("Fast Trades-Heikin-Ashi+CCI-Indicator-", overlay=true)
+
+// Input settings
+cciLength = input.int(14, title="CCI Length")
+cciSource = input.source(ohlc4, title="CCI Source")
+cciOverbought = input.int(100, title="CCI Overbought Level")
+cciOversold = input.int(-100, title="CCI Oversold Level")
+
+// Heikin-Ashi Calculations
+haClose = (open + high + low + close) / 4
+var float haOpen = na
+if na(haOpen[1])
+    haOpen := (open + close) / 2
+else
+    haOpen := (haOpen[1] + haClose[1]) / 2
+haHigh = math.max(high, math.max(haClose, haOpen))
+haLow = math.min(low, math.min(haClose, haOpen))
+
+// CCI Calculation
+cci = ta.cci(cciSource, cciLength)
+
+// Buy Condition
+buyCondition = ta.crossover(cci, cciOversold) and haClose > haOpen
+
+// Sell Condition
+sellCondition = ta.crossunder(cci, cciOverbought) and haClose < haOpen
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, location=location.belowbar, color=color.new(color.green, 0), style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, location=location.abovebar, color=color.new(color.red, 0), style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal: CCI crosses above oversold level and Heikin-Ashi candle is bullish.")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal: CCI crosses below overbought level and Heikin-Ashi candle is bearish.")
+
+// Plot CCI for reference
+plot(cci, title="CCI", color=color.yellow, linewidth=2, display=display.none)
+hline(cciOversold, "CCI Oversold Level", color=color.green, linewidth=3, linestyle=hline.style_solid, display=display.none)
+hline(cciOverbought, "CCI Overbought Level", color=color.red, linewidth=3, linestyle=hline.style_solid, display=display.none)

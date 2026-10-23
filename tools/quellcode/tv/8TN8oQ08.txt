@@ -1,0 +1,79 @@
+//@version=6
+indicator("Multi-Timeframe Buy/Sell Indicator [v6]", overlay=true)
+
+// Inputs für verschiedene Timeframes
+timeframe_15s = input.bool(false, title="15 Sekunden")
+timeframe_1m = input.bool(false, title="1 Minute")
+timeframe_3m = input.bool(true, title="3 Minuten")
+timeframe_5m = input.bool(false, title="5 Minuten")
+timeframe_15m = input.bool(false, title="15 Minuten")
+timeframe_30m = input.bool(false, title="30 Minuten")
+timeframe_1h = input.bool(false, title="1 Stunde")
+timeframe_4h = input.bool(false, title="4 Stunden")
+timeframe_8h = input.bool(false, title="8 Stunden")
+timeframe_1d = input.bool(false, title="1 Tag")
+
+// Funktion zur Erzeugung von Buy/Sell-Signalen
+get_signal(sma_fast_period, sma_slow_period) =>
+    fast_sma = ta.sma(close, sma_fast_period)
+    slow_sma = ta.sma(close, sma_slow_period)
+    buy_signal = ta.crossover(fast_sma, slow_sma)
+    sell_signal = ta.crossunder(fast_sma, slow_sma)
+    [buy_signal, sell_signal]
+
+// Logik für jeden Timeframe
+[buy_15s, sell_15s] = get_signal(5, 10)          // 15 Sekunden
+[buy_1m, sell_1m] = get_signal(10, 20)           // 1 Minute
+[buy_3m, sell_3m] = get_signal(14, 28)           // 3 Minuten
+[buy_5m, sell_5m] = get_signal(20, 40)           // 5 Minuten
+[buy_15m, sell_15m] = get_signal(30, 60)         // 15 Minuten
+[buy_30m, sell_30m] = get_signal(50, 100)        // 30 Minuten
+[buy_1h, sell_1h] = get_signal(100, 200)         // 1 Stunde
+[buy_4h, sell_4h] = get_signal(200, 400)         // 4 Stunden
+[buy_8h, sell_8h] = get_signal(400, 800)         // 8 Stunden
+[buy_1d, sell_1d] = get_signal(800, 1600)        // 1 Tag
+
+// Kombinierte Signale basierend auf aktivierten Timeframes
+buy_signal = 
+     (timeframe_15s and buy_15s) or
+     (timeframe_1m and buy_1m) or
+     (timeframe_3m and buy_3m) or
+     (timeframe_5m and buy_5m) or
+     (timeframe_15m and buy_15m) or
+     (timeframe_30m and buy_30m) or
+     (timeframe_1h and buy_1h) or
+     (timeframe_4h and buy_4h) or
+     (timeframe_8h and buy_8h) or
+     (timeframe_1d and buy_1d)
+
+sell_signal = 
+     (timeframe_15s and sell_15s) or
+     (timeframe_1m and sell_1m) or
+     (timeframe_3m and sell_3m) or
+     (timeframe_5m and sell_5m) or
+     (timeframe_15m and sell_15m) or
+     (timeframe_30m and sell_30m) or
+     (timeframe_1h and sell_1h) or
+     (timeframe_4h and sell_4h) or
+     (timeframe_8h and sell_8h) or
+     (timeframe_1d and sell_1d)
+
+// Labels für Buy/Sell-Signale
+if buy_signal
+    label.new(bar_index, low, text="B", color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_up, yloc=yloc.belowbar)
+    alert("Buy Signal auf aktiviertem Timeframe", alert.freq_once_per_bar_close)
+
+if sell_signal
+    label.new(bar_index, high, text="S", color=color.new(color.red, 0), textcolor=color.white, style=label.style_label_down, yloc=yloc.abovebar)
+    alert("Sell Signal auf aktiviertem Timeframe", alert.freq_once_per_bar_close)
+
+// Boxen für Buy/Sell-Signale
+if buy_signal
+    box.new(bar_index, high, bar_index + 10, low, border_color=color.new(color.green, 0), bgcolor=color.new(color.green, 90))
+
+if sell_signal
+    box.new(bar_index, high, bar_index + 10, low, border_color=color.new(color.red, 0), bgcolor=color.new(color.red, 90))
+
+// Kombinierter Alarm
+if buy_signal or sell_signal
+    alert("Kombinierter Buy/Sell Signal auf aktiviertem Timeframe", alert.freq_once_per_bar_close)

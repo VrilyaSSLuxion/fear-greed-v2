@@ -1,0 +1,99 @@
+//@version=5
+indicator(title='-VrilyaSS-KnowledgeJoe_MacD_Binary', shorttitle='-VrilyaSS-KnowledgeJoe_MacD_Binary', overlay=false)
+
+//Input Your Custome Signal_key//
+Signal_Key = input.string("")
+
+// Input Source
+source = close
+
+// Resolution Settings
+useCurrentRes = input(true, title='Use Current Chart Resolution?')
+resCustom = input.timeframe(title='Use Different Timeframe? Uncheck Box Above', defval='60')
+res = useCurrentRes ? timeframe.period : resCustom
+
+// MACD Settings for Moderate MACD
+fastLength = input.int(12, minval=1, title='Moderate MACD Fast Length')
+slowLength = input.int(26, minval=1, title='Moderate MACD Slow Length')
+signalLength = input.int(9, minval=1, title='Moderate MACD Signal Length')
+
+// Fast MACD Settings
+fastFastLength = input.int(5, minval=1, title='Fast MACD Fast Length')
+fastSlowLength = input.int(13, minval=1, title='Fast MACD Slow Length')
+fastSignalLength = input.int(4, minval=1, title='Fast MACD Signal Length')
+
+// Slow MACD Settings
+slowFastLength = input.int(19, minval=1, title='Slow MACD Fast Length')
+slowSlowLength = input.int(39, minval=1, title='Slow MACD Slow Length')
+slowSignalLength = input.int(9, minval=1, title='Slow MACD Signal Length')
+
+// MACD Calculation
+calc_macd(src, fast, slow, sig) =>
+    fastMA = ta.ema(src, fast)
+    slowMA = ta.ema(src, slow)
+    macd = fastMA - slowMA
+    signal = ta.sma(macd, sig)
+    [macd, signal]
+
+// Calculations for each MACD
+[moderateMacd, moderateSignal] = calc_macd(source, fastLength, slowLength, signalLength)
+[fastMacd, fastSignal] = calc_macd(source, fastFastLength, fastSlowLength, fastSignalLength)
+[slowMacd, slowSignal] = calc_macd(source, slowFastLength, slowSlowLength, slowSignalLength)
+
+// Security Calls for Different Timeframes
+outModerateMacD = request.security(syminfo.tickerid, res, moderateMacd)
+outModerateSignal = request.security(syminfo.tickerid, res, moderateSignal)
+
+outFastMacD = request.security(syminfo.tickerid, res, fastMacd)
+outFastSignal = request.security(syminfo.tickerid, res, fastSignal)
+
+outSlowMacD = request.security(syminfo.tickerid, res, slowMacd)
+outSlowSignal = request.security(syminfo.tickerid, res, slowSignal)
+
+// Color Conditions
+macdAboveSignal(macd, signal) =>
+    macd >= signal
+
+// Current and Previous States for Color Conditions
+moderateAbove = macdAboveSignal(outModerateMacD, outModerateSignal)
+fastAbove = macdAboveSignal(outFastMacD, outFastSignal)
+slowAbove = macdAboveSignal(outSlowMacD, outSlowSignal)
+
+fastAbovePrev = macdAboveSignal(outFastMacD[1], outFastSignal[1])
+
+// Buy and Sell Signal Logic
+buySignal = fastAbove and not fastAbovePrev and moderateAbove and slowAbove
+sellSignal = not fastAbove and fastAbovePrev and not moderateAbove and not slowAbove
+
+// Background Color Highlighting for Signals
+bgcolor(buySignal ? color.green : na, transp=90)
+bgcolor(sellSignal ? color.red : na, transp=90)
+
+// Plot MACDs and Signals on a new pane
+plot(outModerateMacD, title='Moderate MACD', color=color.blue, linewidth=2)
+plot(outModerateSignal, title='Moderate Signal Line', color=color.orange, linewidth=2)
+
+plot(outFastMacD, title='Fast MACD', color=color.purple, linewidth=2)
+plot(outFastSignal, title='Fast Signal Line', color=color.purple, linewidth=2)
+
+plot(outSlowMacD, title='Slow MACD', color=color.fuchsia, linewidth=2)
+plot(outSlowSignal, title='Slow Signal Line', color=color.fuchsia, linewidth=2)
+
+hline(0, title='Zero Line', color=color.gray, linestyle=hline.style_solid)
+
+
+if buySignal
+    msg_longCondition = '{'
+             + '"side":"call", '
+             + '"symbol":"' + syminfo.ticker + '", ' 
+             + '"key":"' + Signal_Key + '" '
+             + '}'
+    alert(msg_longCondition, alert.freq_once_per_bar_close)
+    
+if sellSignal
+    msg_shortCondition = '{'
+             + '"side":"put", ' 
+             + '"symbol":"' + syminfo.ticker + '", ' 
+             + '"key":"' + Signal_Key + '" '
+             + '}'
+    alert(msg_shortCondition, alert.freq_once_per_bar_close)

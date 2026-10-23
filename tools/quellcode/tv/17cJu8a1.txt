@@ -1,0 +1,21 @@
+//@version=5
+indicator("RSI Bounce Buy/Sell Signals", overlay=true)
+
+// Input parameters for RSI
+rsi_source = input.source(close, title="RSI Source")
+rsi_length = input.int(14, title="RSI Length")
+
+// Calculate RSI
+rsi = ta.rsi(rsi_source, rsi_length)
+
+// Define the bounce conditions
+bounce_up_condition = ta.crossover(rsi, 50) and ta.valuewhen(ta.crossunder(rsi, 50), rsi, 0) < 50 and rsi > 50
+bounce_down_condition = ta.crossunder(rsi, 50) and ta.valuewhen(ta.crossover(rsi, 50), rsi, 0) > 50 and rsi < 50
+
+// Plot Buy and Sell Signals
+plotshape(series=bounce_up_condition, location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy", title="Buy Signal", size=size.small)
+plotshape(series=bounce_down_condition, location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell", title="Sell Signal", size=size.small)
+
+// Alert Conditions
+alertcondition(bounce_up_condition, title="Buy Signal Alert", message="RSI Bounce Buy Signal")
+alertcondition(bounce_down_condition, title="Sell Signal Alert", message="RSI Bounce Sell Signal")

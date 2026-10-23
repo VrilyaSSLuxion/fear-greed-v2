@@ -1,0 +1,29 @@
+//@version=4
+strategy("RSI und Stochastic Kauf- und Verkaufssignale", overlay=true)
+
+// RSI
+rsi_length = input(14, title="RSI Periode")
+rsi_source = close
+rsi = rsi(rsi_source, rsi_length)
+
+// Stochastic
+k_period = input(14, title="Stochastic K Periode")
+d_period = input(3, title="Stochastic D Periode")
+smooth_k = input(3, title="Stochastic K Glättung")
+k = sma(stoch(close, high, low, k_period), smooth_k)
+d = sma(k, d_period)
+
+// Bedingungen für Kauf
+rsi_cross_up = crossover(rsi, 50)
+stochastic_upward = k > d
+stochastic_cross_down = crossover(k, d)
+
+// Bedingungen für Verkauf
+rsi_cross_down = crossunder(rsi, 50)
+stochastic_cross_over_80 = crossover(k, 80)
+
+if (rsi_cross_up and stochastic_upward)
+    strategy.entry("Buy", strategy.long)
+
+if (rsi_cross_down and stochastic_cross_over_80 and not stochastic_cross_down)
+    strategy.close("Buy")

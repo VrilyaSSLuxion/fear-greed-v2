@@ -1,0 +1,43 @@
+//@version=5
+indicator("-VrilyaSS-Volume Delta Alerts with Custom MACD Filter-", overlay=true, format=format.volume)
+
+// Inputs
+Signal_Key = input.string("", title="Signal Key")
+fastLength = input.int(12, title="MACD Fast Length")
+slowLength = input.int(26, title="MACD Slow Length")
+signalSmoothing = input.int(9, title="MACD Signal Smoothing")
+volumeDeltaThreshold = input.float(0, title="Volume Delta Threshold")
+
+// Calculate volume delta
+volumeDelta = volume - volume[1]
+
+// MACD Calculation with custom inputs
+[macdLine, signalLine, _] = ta.macd(close, fastLength, slowLength, signalSmoothing)
+
+// Generate buy and sell signals based on volume delta (with threshold) and MACD filter
+buySignal = volumeDelta > volumeDeltaThreshold and macdLine > signalLine
+sellSignal = volumeDelta < -volumeDeltaThreshold and macdLine < signalLine
+
+// Plot buy and sell signals for visualization
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", size=size.small)
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", size=size.small)
+
+// Create alerts
+alertcondition(condition=buySignal, title="Buy Alert", message="Volume Delta is positive and above threshold, and MACD is bullish. Consider a BUY action.")
+alertcondition(condition=sellSignal, title="Sell Alert", message="Volume Delta is negative and below threshold, and MACD is bearish. Consider a SELL action.")
+
+if buySignal
+    msg_longCondition = '{'
+             + '"side":"call", '
+             + '"symbol":"' + syminfo.ticker + '", ' 
+             + '"key":"' + Signal_Key + '" '
+             + '}'
+    alert(msg_longCondition, alert.freq_once_per_bar_close)
+    
+if sellSignal
+    msg_shortCondition = '{'
+             + '"side":"put", ' 
+             + '"symbol":"' + syminfo.ticker + '", ' 
+             + '"key":"' + Signal_Key + '" '
+             + '}'
+    alert(msg_shortCondition, alert.freq_once_per_bar_close)

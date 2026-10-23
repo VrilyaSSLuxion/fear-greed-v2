@@ -1,0 +1,32 @@
+//@version=5
+indicator("Custom Volume Delta Indicator", overlay=true)
+
+// Benutzerdefinierte Eingabe für die Analyseperiode
+analysisLength = input.int(14, minval=1, title="Analyseperiode (Kerzen)")
+
+// Berechnung des Volume Delta
+upVol = volume * (close > open ? 1 : 0)
+downVol = volume * (close < open ? 1 : 0)
+delta = upVol - downVol
+
+// Berechnung des kumulierten Volume Delta über die Analyseperiode
+cumulativeDelta = ta.cum(delta)
+deltaMA = ta.sma(cumulativeDelta, analysisLength)
+
+// Kaufsignal, wenn das Volume Delta den gleitenden Durchschnitt von unten nach oben kreuzt
+buySignal = ta.crossover(cumulativeDelta, deltaMA)
+
+// Verkaufssignal, wenn das Volume Delta den gleitenden Durchschnitt von oben nach unten kreuzt
+sellSignal = ta.crossunder(cumulativeDelta, deltaMA)
+
+// Signale plotten
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", size=size.small, textcolor=color.black)
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", size=size.small, textcolor=color.black)
+
+// Optional: Anzeige des Volume Delta als Linie
+plot(cumulativeDelta, color=color.blue, title="Cumulative Volume Delta")
+plot(deltaMA, color=color.orange, title="Volume Delta Moving Average")
+
+// Alarme für Buy- und Sell-Signale
+alertcondition(buySignal, title="Buy Signal", message="Kaufsignal: Volume Delta kreuzt den gleitenden Durchschnitt nach oben")
+alertcondition(sellSignal, title="Sell Signal", message="Verkaufssignal: Volume Delta kreuzt den gleitenden Durchschnitt nach unten")

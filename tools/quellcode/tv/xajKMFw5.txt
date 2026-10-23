@@ -1,0 +1,84 @@
+//@version=5
+indicator("Buy Low Sell High with Candlestick Patterns", overlay=true)
+
+// Parameter für die Anzahl der Kerzen, auf denen die extremen Werte basieren
+length = input.int(14, title="Lookback Period", minval=1)
+
+// Berechnung der niedrigsten und höchsten Kurse der letzten `length` Kerzen
+lowestLow = ta.lowest(low, length)
+highestHigh = ta.highest(high, length)
+
+// Kauf- und Verkaufssignale basierend auf Low und High
+buySignal = low == lowestLow
+sellSignal = high == highestHigh
+
+// Funktion zum Erkennen der Candlestick-Muster
+isBullish(o, c) =>
+    c > o
+
+isBearish(o, c) =>
+    c < o
+
+midpoint(price1, price2) =>
+    (price1 + price2) / 2
+
+isDowntrend() =>
+    close[1] < close[2] and close[2] < close[3]
+
+isUptrend() =>
+    close[1] > close[2] and close[2] > close[3]
+
+// Bullish Patterns
+bullishHammer = (low - math.min(open, close) > 2 * (math.max(open, close) - high)) and isDowntrend()
+bullishInvertedHammer = (high - math.max(open, close) > 2 * (math.min(open, close) - low)) and isDowntrend()
+bullishPiercing = (isBearish(close[1], open[1]) and isBullish(open, close) and open < close[1] and close > midpoint(open[1], close[1])) and isDowntrend()
+bullishHarami = (isBearish(close[1], open[1]) and isBullish(open, close) and open > close[1] and close < open[1]) and isDowntrend()
+bullishKicking = (isBearish(close[1], open[1]) and isBullish(open, close) and low > high[1]) and isDowntrend()
+bullishEngulfing = (isBearish(close[1], open[1]) and isBullish(open, close) and open < close[1] and close > open[1]) and isDowntrend()
+bullishMorningStar = (isBearish(close[2], open[2]) and (open[1] < close[2] and close[1] > open[2]) and isBullish(open, close) and close > midpoint(open[2], close[2])) and isDowntrend()
+bullishBeltHold = (isBullish(open, close) and low == open and close > midpoint(high, low)) and isDowntrend()
+bullishThreeWhiteSoldiers = (isBullish(open[2], close[2]) and isBullish(open[1], close[1]) and isBullish(open, close) and close[1] > close[2] and close > close[1]) and isDowntrend()
+
+// Bearish Patterns
+bearishHangingMan = (high - math.max(open, close) > 2 * (math.min(open, close) - low)) and isUptrend()
+bearishShootingStar = (high - close > 2 * (open - low)) and isUptrend()
+bearishBeltHold = (isBearish(open, close) and high == open and close < midpoint(high, low)) and isUptrend()
+bearishHarami = (isBullish(close[1], open[1]) and isBearish(open, close) and open < close[1] and close > open[1]) and isUptrend()
+bearishKicking = (isBullish(close[1], open[1]) and isBearish(open, close) and high < low[1]) and isUptrend()
+bearishEngulfing = (isBullish(close[1], open[1]) and isBearish(open, close) and open > close[1] and close < open[1]) and isUptrend()
+bearishEveningStar = (isBullish(close[2], open[2]) and (open[1] > close[2] and close[1] < open[2]) and isBearish(open, close) and close < midpoint(open[2], close[2])) and isUptrend()
+bearishDarkCloud = (isBullish(close[1], open[1]) and isBearish(open, close) and open > close[1] and close < midpoint(open[1], close[1])) and isUptrend()
+bearishThreeBlackCrows = (isBearish(open[2], close[2]) and isBearish(open[1], close[1]) and isBearish(open, close) and close[1] < close[2] and close < close[1]) and isUptrend()
+
+// Kombinieren der Kauf- und Verkaufssignale mit Candlestick-Mustern
+buyCondition = buySignal and (bullishHammer or bullishInvertedHammer or bullishPiercing or bullishHarami or bullishKicking or bullishEngulfing or bullishMorningStar or bullishBeltHold or bullishThreeWhiteSoldiers)
+sellCondition = sellSignal and (bearishHangingMan or bearishShootingStar or bearishBeltHold or bearishHarami or bearishKicking or bearishEngulfing or bearishEveningStar or bearishDarkCloud or bearishThreeBlackCrows)
+
+// Plotte die Kauf- und Verkaufssignale auf dem Chart
+plotshape(series=buyCondition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", textcolor=color.white, size=size.small)
+plotshape(series=sellCondition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.white, size=size.small)
+
+// Alarme
+alertcondition(buyCondition, title="Buy Signal Alert", message="Buy signal generated: Price is at the lowest of the lookback period and a bullish candlestick pattern is detected.")
+alertcondition(sellCondition, title="Sell Signal Alert", message="Sell signal generated: Price is at the highest of the lookback period and a bearish candlestick pattern is detected.")
+
+// Einzelne Alarme für die Candlestick-Muster
+alertcondition(bullishHammer, title="Bullish Hammer Alert", message="Bullish Hammer pattern detected.")
+alertcondition(bullishInvertedHammer, title="Bullish Inverted Hammer Alert", message="Bullish Inverted Hammer pattern detected.")
+alertcondition(bullishPiercing, title="Bullish Piercing Alert", message="Bullish Piercing pattern detected.")
+alertcondition(bullishHarami, title="Bullish Harami Alert", message="Bullish Harami pattern detected.")
+alertcondition(bullishKicking, title="Bullish Kicking Alert", message="Bullish Kicking pattern detected.")
+alertcondition(bullishEngulfing, title="Bullish Engulfing Alert", message="Bullish Engulfing pattern detected.")
+alertcondition(bullishMorningStar, title="Bullish Morning Star Alert", message="Bullish Morning Star pattern detected.")
+alertcondition(bullishBeltHold, title="Bullish Belt Hold Alert", message="Bullish Belt Hold pattern detected.")
+alertcondition(bullishThreeWhiteSoldiers, title="Bullish Three White Soldiers Alert", message="Bullish Three White Soldiers pattern detected.")
+
+alertcondition(bearishHangingMan, title="Bearish Hanging Man Alert", message="Bearish Hanging Man pattern detected.")
+alertcondition(bearishShootingStar, title="Bearish Shooting Star Alert", message="Bearish Shooting Star pattern detected.")
+alertcondition(bearishBeltHold, title="Bearish Belt Hold Alert", message="Bearish Belt Hold pattern detected.")
+alertcondition(bearishHarami, title="Bearish Harami Alert", message="Bearish Harami pattern detected.")
+alertcondition(bearishKicking, title="Bearish Kicking Alert", message="Bearish Kicking pattern detected.")
+alertcondition(bearishEngulfing, title="Bearish Engulfing Alert", message="Bearish Engulfing pattern detected.")
+alertcondition(bearishEveningStar, title="Bearish Evening Star Alert", message="Bearish Evening Star pattern detected.")
+alertcondition(bearishDarkCloud, title="Bearish Dark Cloud Alert", message="Bearish Dark Cloud pattern detected.")
+alertcondition(bearishThreeBlackCrows, title="Bearish Three Black Crows Alert", message="Bearish Three Black Crows pattern detected.")

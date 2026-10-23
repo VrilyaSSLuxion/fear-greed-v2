@@ -1,0 +1,102 @@
+//@version=6
+indicator('Daily Open / Prev Open / Prev Close (Advanced)', overlay = true)
+
+// INPUTS
+tz = input.string('UTC+0', 'Daily Timezone')
+sessionInput = input.session('0930-1600', 'Session')
+useSessionOnly = input.bool(true, 'Session only')
+
+vOpenColor = input.color(color.green, 'V Open')
+vCloseColor = input.color(color.red, 'V Close')
+vPrevOpenColor = input.color(color.orange, 'V Prev Open')
+
+hOpenColor = input.color(color.green, 'H Open')
+hCloseColor = input.color(color.red, 'H Prev Close')
+hPrevOpenColor = input.color(color.orange, 'H Prev Open')
+
+vWidth = input.int(2, 'V Width')
+hWidth = input.int(2, 'H Width')
+
+vStyleInput = input.string('solid', options = ['solid', 'dotted', 'dashed'])
+hStyleInput = input.string('solid', options = ['solid', 'dotted', 'dashed'])
+
+showLabels = input.bool(true, 'Labels')
+
+// STYLE (ONE LINE ONLY)
+f_style(s) =>
+    s == 'solid' ? line.style_solid : s == 'dotted' ? line.style_dotted : line.style_dashed
+f_size(s) =>
+    s == 'tiny' ? size.tiny : s == 'small' ? size.small : s == 'normal' ? size.normal : size.large
+
+// TIME
+inSession = not na(time(timeframe.period, sessionInput))
+sessionOk = useSessionOnly ? inSession : true
+
+dailyTime = time('D', tz)
+prevDailyTime = time('D', tz)[1]
+
+isNewDay = ta.change(dailyTime) != 0
+showLines = timeframe.isintraday
+
+// SECURITY (GLOBAL!)
+openPrice = request.security(syminfo.tickerid, 'D', open)
+prevClose = request.security(syminfo.tickerid, 'D', close[1])
+prevOpenPrice = request.security(syminfo.tickerid, 'D', open[1])
+
+// VARS
+var line vOpen = na
+var line vClose = na
+var line vPrevOpen = na
+var line hOpen = na
+var line hClose = na
+var line hPrevOpen = na
+
+var label lOpen = na
+var label lClose = na
+var label lPrevOpen = na
+
+// RESET
+if not showLines or not sessionOk
+    if not na(vOpen)
+        line.delete(vOpen)
+    if not na(vClose)
+        line.delete(vClose)
+    if not na(vPrevOpen)
+        line.delete(vPrevOpen)
+    if not na(hOpen)
+        line.delete(hOpen)
+    if not na(hClose)
+        line.delete(hClose)
+    if not na(hPrevOpen)
+        line.delete(hPrevOpen)
+    if not na(lOpen)
+        label.delete(lOpen)
+    if not na(lClose)
+        label.delete(lClose)
+    if not na(lPrevOpen)
+        label.delete(lPrevOpen)
+
+// CREATE
+if showLines and isNewDay and sessionOk
+    dayMs = 86400000
+
+    openTs = dailyTime
+    closeTs = dailyTime + dayMs
+    prevOpenTs = prevDailyTime
+
+    vStyle = f_style(vStyleInput)
+    hStyle = f_style(hStyleInput)
+
+    vOpen := line.new(openTs, low, openTs, high, xloc = xloc.bar_time, extend = extend.both, color = vOpenColor, width = vWidth, style = vStyle)
+    vClose := line.new(closeTs, low, closeTs, high, xloc = xloc.bar_time, extend = extend.both, color = vCloseColor, width = vWidth, style = vStyle)
+    vPrevOpen := line.new(prevOpenTs, low, prevOpenTs, high, xloc = xloc.bar_time, extend = extend.both, color = vPrevOpenColor, width = vWidth, style = vStyle)
+
+    hOpen := line.new(bar_index, openPrice, bar_index + 1, openPrice, extend = extend.right, color = hOpenColor, width = hWidth, style = hStyle)
+    hClose := line.new(bar_index, prevClose, bar_index + 1, prevClose, extend = extend.right, color = hCloseColor, width = hWidth, style = hStyle)
+    hPrevOpen := line.new(bar_index, prevOpenPrice, bar_index + 1, prevOpenPrice, extend = extend.right, color = hPrevOpenColor, width = hWidth, style = hStyle)
+
+    if showLabels
+        lOpen := label.new(bar_index, openPrice, 'Open: ' + str.tostring(openPrice))
+        lClose := label.new(bar_index, prevClose, 'Prev Close: ' + str.tostring(prevClose))
+        lPrevOpen := label.new(bar_index, prevOpenPrice, 'Prev Open: ' + str.tostring(prevOpenPrice))
+        lPrevOpen

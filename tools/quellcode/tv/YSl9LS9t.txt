@@ -1,0 +1,93 @@
+//@version=5
+indicator(title="UT Bot Alerts with Fibonacci Golden Pocket", shorttitle="UT Bot Fibonacci GP", overlay=true)
+
+// Inputs
+a = input(1, title="Key Value. 'This changes the sensitivity'")
+c = input.int(10, title="ATR Period")
+h = input.bool(false, title="Signals from Heikin Ashi Candles")
+fibonacciPeriod = input.string("Daily", title="Fibonacci Period", options=["Daily", "Weekly", "Monthly"])
+fibonacci_src = input.source(close, title="Fibonacci Source")
+
+// ATR-based calculations
+xATR = ta.atr(c)
+nLoss = a * xATR
+
+ha_close = request.security(syminfo.tickerid, timeframe.period, (open + high + low + close) / 4)
+
+src = h ? ha_close : close
+
+var float xATRTrailingStop = na
+xATRTrailingStop := if src > nz(xATRTrailingStop[1], 0) and src[1] > nz(xATRTrailingStop[1], 0)
+    math.max(nz(xATRTrailingStop[1]), src - nLoss)
+else
+    if src < nz(xATRTrailingStop[1], 0) and src[1] < nz(xATRTrailingStop[1], 0)
+        math.min(nz(xATRTrailingStop[1]), src + nLoss)
+    else
+        if src > nz(xATRTrailingStop[1], 0)
+            src - nLoss
+        else
+            src + nLoss
+
+var int pos = na
+pos := if src[1] < nz(xATRTrailingStop[1], 0) and src > nz(xATRTrailingStop[1], 0)
+    1
+else
+    if src[1] > nz(xATRTrailingStop[1], 0) and src < nz(xATRTrailingStop[1], 0)
+        -1
+    else
+        nz(pos[1], 0)
+
+xcolor = pos == -1 ? color.red : pos == 1 ? color.green : color.blue
+
+ema = ta.ema(src, 1)
+above = ta.crossover(ema, xATRTrailingStop)
+below = ta.crossunder(xATRTrailingStop, ema)
+
+buy = src > xATRTrailingStop and above
+sell = src < xATRTrailingStop and below
+
+barbuy = src > xATRTrailingStop
+barsell = src < xATRTrailingStop
+
+plotshape(buy, title="Buy", text='Buy', style=shape.labelup, location=location.belowbar, color=color.green, textcolor=color.white, size=size.tiny)
+plotshape(sell, title="Sell", text='Sell', style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.white, size=size.tiny)
+
+barcolor(barbuy ? color.green : na)
+barcolor(barsell ? color.red : na)
+
+alertcondition(buy, "UT Long", "UT Long")
+alertcondition(sell, "UT Short", "UT Short")
+
+// Funktion zur Berechnung der Fibonacci-Niveaus basierend auf der Periode
+fibonacci(p, pPeriod) =>
+    var float _high = na
+    var float _low = na
+    
+    if pPeriod == "Daily"
+        _high := ta.highest(p, 1)
+        _low := ta.lowest(p, 1)
+    else if pPeriod == "Weekly"
+        _high := ta.highest(p, 5)
+        _low := ta.lowest(p, 5)
+    else if pPeriod == "Monthly"
+        _high := ta.highest(p, 22)
+        _low := ta.lowest(p, 22)
+
+    _range = _high - _low
+    _fib_0_618 = _high - 0.618 * _range
+    _fib_0_786 = _high - 0.786 * _range
+    [_fib_0_618, _fib_0_786]
+
+// Berechnung der Fibonacci-Niveaus
+[fib_0_618, fib_0_786] = fibonacci(fibonacci_src, fibonacciPeriod)
+
+// Plot der Fibonacci-Niveaus
+plot(fib_0_618, title="Fib 61.8%", color=color.blue, linewidth=1)
+plot(fib_0_786, title="Fib 78.6%", color=color.purple, linewidth=1)
+
+// Bedingungen für Fibonacci Golden Pocket
+golden_pocket_buy = ta.crossover(src, fib_0_618) and src < fib_0_786
+golden_pocket_sell = ta.crossunder(src, fib_0_786) and src > fib_0_618
+
+plotshape(series=golden_pocket_buy, title="Golden Pocket Buy", location=location.belowbar, color=color.green, style=shape.triangleup, text="GP Buy")
+plotshape(series=golden_pocket_sell, title="Golden Pocket Sell", location=location.abovebar, color=color.red, style=shape.triangledown, text="GP Sell")

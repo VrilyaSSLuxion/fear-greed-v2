@@ -1,0 +1,41 @@
+//@version=5
+indicator("-VrilyaSS-3-Minute Trade Indicator-Aroon-11072024-", overlay=true)
+
+// Eingabefelder für Indikator-Einstellungen
+lengthAroon = input.int(14, title="Aroon Length")
+thresholdAroon = input.int(70, title="Aroon Threshold")
+
+lengthRSI = input.int(14, title="RSI Length")
+overboughtRSI = input.int(70, title="RSI Overbought Level")
+oversoldRSI = input.int(30, title="RSI Oversold Level")
+
+shortMACD = input.int(12, title="MACD Short Length")
+longMACD = input.int(26, title="MACD Long Length")
+signalMACD = input.int(9, title="MACD Signal Length")
+
+// Berechnungen für Aroon
+aroonUp = ta.highestbars(high, lengthAroon)
+aroonDown = ta.highestbars(low, lengthAroon)
+aroonOscillator = aroonUp - aroonDown
+
+// Berechnungen für RSI
+rsi = ta.rsi(close, lengthRSI)
+
+// Berechnungen für MACD
+[macdLine, signalLine, _] = ta.macd(close, shortMACD, longMACD, signalMACD)
+
+// Kauf- und Verkaufssignale
+buySignal = ta.crossover(aroonOscillator, thresholdAroon) and rsi < oversoldRSI and macdLine > signalLine
+sellSignal = ta.crossunder(aroonOscillator, -thresholdAroon) and rsi > overboughtRSI and macdLine < signalLine
+
+// Plotten der Signallinien
+plot(aroonOscillator, color=color.blue, title="Aroon Oscillator")
+hline(thresholdAroon, "Upper Threshold", color=color.red)
+hline(-thresholdAroon, "Lower Threshold", color=color.green)
+
+// Kauf- und Verkaufssignale anzeigen
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, title="Buy Signal")
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, title="Sell Signal")
+
+// Hintergrundfarbe für Kauf- und Verkaufssignale
+bgcolor(buySignal ? color.new(color.green, 70) : sellSignal ? color.new(color.red, 70) : na, title="Trade Background")

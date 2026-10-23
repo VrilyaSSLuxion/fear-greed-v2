@@ -1,0 +1,97 @@
+//@version=5
+indicator("-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-+MACD-", overlay=true)
+
+// Helper function to identify bullish/bearish candles
+isBullish(o, c) =>
+    c > o
+
+isBearish(o, c) =>
+    c < o
+
+// Helper function to find the midpoint of two prices
+midpoint(price1, price2) =>
+    (price1 + price2) / 2
+
+// Function to check for a downtrend
+isDowntrend() =>
+    close[1] < close[2] and close[2] < close[3]
+
+// Function to check for an uptrend
+isUptrend() =>
+    close[1] > close[2] and close[2] > close[3]
+
+// Calculate MACD
+macdLength = input.int(12, title="MACD Fast Length")
+signalLength = input.int(26, title="MACD Slow Length")
+macdSignalLength = input.int(9, title="MACD Signal Length")
+[macdLine, macdSignal, _] = ta.macd(close, macdLength, signalLength, macdSignalLength)
+macdHist = macdLine - macdSignal
+
+// MACD Confirmation
+macdBullish = macdHist > 0
+macdBearish = macdHist < 0
+
+// Bullish Patterns with MACD Confirmation
+bullishHammer = (low - math.min(open, close) > 2 * (math.max(open, close) - high)) and isDowntrend() and macdBullish
+bullishInvertedHammer = (high - math.max(open, close) > 2 * (math.min(open, close) - low)) and isDowntrend() and macdBullish
+bullishPiercing = (isBearish(close[1], open[1]) and isBullish(open, close) and open < close[1] and close > midpoint(open[1], close[1])) and isDowntrend() and macdBullish
+bullishHarami = (isBearish(close[1], open[1]) and isBullish(open, close) and open > close[1] and close < open[1]) and isDowntrend() and macdBullish
+bullishKicking = (isBearish(close[1], open[1]) and isBullish(open, close) and low > high[1]) and isDowntrend() and macdBullish
+bullishEngulfing = (isBearish(close[1], open[1]) and isBullish(open, close) and open < close[1] and close > open[1]) and isDowntrend() and macdBullish
+bullishMorningStar = (isBearish(close[2], open[2]) and (open[1] < close[2] and close[1] > open[2]) and isBullish(open, close) and close > midpoint(open[2], close[2])) and isDowntrend() and macdBullish
+bullishBeltHold = (isBullish(open, close) and low == open and close > midpoint(high, low)) and isDowntrend() and macdBullish
+bullishThreeWhiteSoldiers = (isBullish(open[2], close[2]) and isBullish(open[1], close[1]) and isBullish(open, close) and close[1] > close[2] and close > close[1]) and isDowntrend() and macdBullish
+
+// Bearish Patterns with MACD Confirmation
+bearishHangingMan = (high - math.max(open, close) > 2 * (math.min(open, close) - low)) and isUptrend() and macdBearish
+bearishShootingStar = (high - close > 2 * (open - low)) and isUptrend() and macdBearish
+bearishBeltHold = (isBearish(open, close) and high == open and close < midpoint(high, low)) and isUptrend() and macdBearish
+bearishHarami = (isBullish(close[1], open[1]) and isBearish(open, close) and open < close[1] and close > open[1]) and isUptrend() and macdBearish
+bearishKicking = (isBullish(close[1], open[1]) and isBearish(open, close) and high < low[1]) and isUptrend() and macdBearish
+bearishEngulfing = (isBullish(close[1], open[1]) and isBearish(open, close) and open > close[1] and close < open[1]) and isUptrend() and macdBearish
+bearishEveningStar = (isBullish(close[2], open[2]) and (open[1] > close[2] and close[1] < open[2]) and isBearish(open, close) and close < midpoint(open[2], close[2])) and isUptrend() and macdBearish
+bearishDarkCloud = (isBullish(close[1], open[1]) and isBearish(open, close) and open > close[1] and close < midpoint(open[1], close[1])) and isUptrend() and macdBearish
+bearishThreeBlackCrows = (isBearish(open[2], close[2]) and isBearish(open[1], close[1]) and isBearish(open, close) and close[1] < close[2] and close < close[1]) and isUptrend() and macdBearish
+
+// Plot Bullish Patterns
+plotshape(series=bullishHammer, title="Bullish Hammer-H-", location=location.belowbar, color=color.green, style=shape.labelup, text="H", textcolor=color.black, size=size.small)
+plotshape(series=bullishInvertedHammer, title="Bullish Inverted Hammer-IH-", location=location.belowbar, color=color.green, style=shape.labelup, text="IH", textcolor=color.black, size=size.small)
+plotshape(series=bullishPiercing, title="Bullish Piercing Line-PL-", location=location.belowbar, color=color.green, style=shape.labelup, text="PL", textcolor=color.black, size=size.small)
+plotshape(series=bullishHarami, title="Bullish Harami-H-", location=location.belowbar, color=color.green, style=shape.labelup, text="H", textcolor=color.black, size=size.small)
+plotshape(series=bullishKicking, title="Bullish Kicking-K-", location=location.belowbar, color=color.green, style=shape.labelup, text="K", textcolor=color.black, size=size.small)
+plotshape(series=bullishEngulfing, title="Bullish Engulfing-E-", location=location.belowbar, color=color.green, style=shape.labelup, text="E", textcolor=color.black, size=size.small)
+plotshape(series=bullishMorningStar, title="Bullish Morning Star-MS-", location=location.belowbar, color=color.green, style=shape.labelup, text="MS", textcolor=color.black, size=size.small)
+plotshape(series=bullishBeltHold, title="Bullish Belt Hold-BH-", location=location.belowbar, color=color.green, style=shape.labelup, text="BH", textcolor=color.black, size=size.small)
+plotshape(series=bullishThreeWhiteSoldiers, title="Bullish Three White Soldiers-3WS-", location=location.belowbar, color=color.green, style=shape.labelup, text="3WS", textcolor=color.black, size=size.small)
+
+// Plot Bearish Patterns
+plotshape(series=bearishHangingMan, title="Bearish Hanging Man-HM-", location=location.abovebar, color=color.red, style=shape.labeldown, text="HM", textcolor=color.black, size=size.small)
+plotshape(series=bearishShootingStar, title="Bearish Shooting Star-SS-", location=location.abovebar, color=color.red, style=shape.labeldown, text="SS", textcolor=color.black, size=size.small)
+plotshape(series=bearishBeltHold, title="Bearish Belt Hold-BH-", location=location.abovebar, color=color.red, style=shape.labeldown, text="BH", textcolor=color.black, size=size.small)
+plotshape(series=bearishHarami, title="Bearish Harami-H-", location=location.abovebar, color=color.red, style=shape.labeldown, text="H", textcolor=color.black, size=size.small)
+plotshape(series=bearishKicking, title="Bearish Kicking-K-", location=location.abovebar, color=color.red, style=shape.labeldown, text="K", textcolor=color.black, size=size.small)
+plotshape(series=bearishEngulfing, title="Bearish Engulfing-E-", location=location.abovebar, color=color.red, style=shape.labeldown, text="E", textcolor=color.black, size=size.small)
+plotshape(series=bearishEveningStar, title="Bearish Evening Star-ES-", location=location.abovebar, color=color.red, style=shape.labeldown, text="ES", textcolor=color.black, size=size.small)
+plotshape(series=bearishDarkCloud, title="Bearish Dark Cloud-DC-", location=location.abovebar, color=color.red, style=shape.labeldown, text="DC", textcolor=color.black, size=size.small)
+plotshape(series=bearishThreeBlackCrows, title="Bearish Three Black Crows-3BC-", location=location.abovebar, color=color.red, style=shape.labeldown, text="3BC", textcolor=color.black, size=size.small)
+
+// Alerts
+alertcondition(bullishHammer, title="Bullish Hammer Alert", message="Bullish Hammer pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bullishInvertedHammer, title="Bullish Inverted Hammer Alert", message="Bullish Inverted Hammer pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bullishPiercing, title="Bullish Piercing Alert", message="Bullish Piercing pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bullishHarami, title="Bullish Harami Alert", message="Bullish Harami pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bullishKicking, title="Bullish Kicking Alert", message="Bullish Kicking pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bullishEngulfing, title="Bullish Engulfing Alert", message="Bullish Engulfing pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bullishMorningStar, title="Bullish Morning Star Alert", message="Bullish Morning Star pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bullishBeltHold, title="Bullish Belt Hold Alert", message="Bullish Belt Hold pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bullishThreeWhiteSoldiers, title="Bullish Three White Soldiers Alert", message="Bullish Three White Soldiers pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+
+alertcondition(bearishHangingMan, title="Bearish Hanging Man Alert", message="Bearish Hanging Man pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bearishShootingStar, title="Bearish Shooting Star Alert", message="Bearish Shooting Star pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bearishBeltHold, title="Bearish Belt Hold Alert", message="Bearish Belt Hold pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bearishHarami, title="Bearish Harami Alert", message="Bearish Harami pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bearishKicking, title="Bearish Kicking Alert", message="Bearish Kicking pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bearishEngulfing, title="Bearish Engulfing Alert", message="Bearish Engulfing pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bearishEveningStar, title="Bearish Evening Star Alert", message="Bearish Evening Star pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bearishDarkCloud, title="Bearish Dark Cloud Alert", message="Bearish Dark Cloud pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")
+alertcondition(bearishThreeBlackCrows, title="Bearish Three Black Crows Alert", message="Bearish Three Black Crows pattern detected with MACD confirmation-VrilyaSS-Day Trader-Candlestick Chart Signals-X18-")

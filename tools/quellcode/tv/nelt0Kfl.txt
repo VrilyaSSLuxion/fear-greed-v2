@@ -1,0 +1,28 @@
+//@version=5
+indicator("Buy Low Sell High Indicator with 50-SMA-Filter-", overlay=true)
+
+// Parameter für die Anzahl der Kerzen, auf denen die extremen Werte basieren
+length = input.int(14, title="Lookback Period", minval=1)
+smaLength = input.int(50, title="SMA Length", minval=1)  // Länge des gleitenden Durchschnitts
+
+// Berechnung der niedrigsten und höchsten Kurse der letzten `length` Kerzen
+lowestLow = ta.lowest(low, length)
+highestHigh = ta.highest(high, length)
+
+// Berechnung des gleitenden Durchschnitts
+sma = ta.sma(close, smaLength)
+
+// Kauf- und Verkaufssignale
+buySignal = low == lowestLow and close > sma  // Kaufsignal, wenn der Schlusskurs über dem SMA liegt
+sellSignal = high == highestHigh and close < sma  // Verkaufssignal, wenn der Schlusskurs unter dem SMA liegt
+
+// Plotte die Kauf- und Verkaufssignale auf dem Chart
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", textcolor=color.white, size=size.small)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.white, size=size.small)
+
+// Plotte den gleitenden Durchschnitt auf dem Chart
+plot(sma, title="SMA", color=color.white, linewidth=2)
+
+// Alarme
+alertcondition(buySignal, title="Buy Signal Alert", message="Buy signal generated: Price is at the lowest of the last period and above the SMA.")
+alertcondition(sellSignal, title="Sell Signal Alert", message="Sell signal generated: Price is at the highest of the last period and below the SMA.")

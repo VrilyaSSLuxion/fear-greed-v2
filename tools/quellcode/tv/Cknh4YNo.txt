@@ -1,0 +1,34 @@
+//@version=5
+indicator("RSI & Stochastic Buy/Sell Indicator", overlay=true)
+
+// RSI settings
+rsiLength = input.int(14, title="RSI Length")
+rsiSource = input.source(ohlc4, title="RSI Source")
+rsiBuyLine = input.int(48, title="RSI Buy Line", minval=0, maxval=100)
+rsiSellLine = input.int(49, title="RSI Sell Line", minval=0, maxval=100)
+rsi = ta.rsi(rsiSource, rsiLength)
+
+// Stochastic settings
+kLength = input.int(14, title="Stochastic K Length")
+kSmoothing = input.int(3, title="Stochastic K Smoothing")
+dSmoothing = input.int(3, title="Stochastic D Smoothing")
+stochBuyLine = input.int(25, title="Stochastic Buy Line", minval=0, maxval=100)
+stochSellLine = input.int(75, title="Stochastic Sell Line", minval=0, maxval=100)
+stochK = ta.sma(ta.stoch(close, high, low, kLength), kSmoothing)
+stochD = ta.sma(stochK, dSmoothing)
+
+// RSI Crosses
+rsiCrossAboveBuyLine = ta.crossover(rsi, rsiBuyLine)
+rsiCrossBelowSellLine = ta.crossunder(rsi, rsiSellLine)
+
+// Conditions for buy and sell signals
+buyCondition = rsiCrossAboveBuyLine and stochK < stochBuyLine
+sellCondition = rsiCrossBelowSellLine and stochK > stochSellLine
+
+// Plot buy and sell signals
+plotshape(series=buyCondition, location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal: RSI and Stochastic conditions met.")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal: RSI and Stochastic conditions met.")

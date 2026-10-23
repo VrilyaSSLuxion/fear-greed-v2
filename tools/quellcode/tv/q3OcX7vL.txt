@@ -1,0 +1,52 @@
+//@version=5
+indicator("-Quick Trade Indicator-(QTI)-(Supertrend+Bollinger Bands)-", shorttitle="-Quick Trade Indicator-(QTI)-(Supertrend+Bollinger Bands)-", overlay=true)
+
+// Inputparameter für Supertrend
+atr_period = input.int(10, title="-ATR-Period-10-")
+factor = input.float(3.0, title="-ATR-Factor-3.0-")
+
+// Inputparameter für Bollinger Bands
+bb_period = input.int(20, title="-Bollinger Bands-Period-20-")
+bb_mult = input.float(2.0, title="-Bollinger Bands-Multiplier-2.0-")
+bb_source = input.source(ohlc4, title="-Bollinger Bands-Source-close-")
+
+// Inputparameter für Supertrend Quelle
+supertrend_source = input.source(ohlc4, title="-Supertrend-Source-close-")
+
+// Berechnung des ATR
+atr = ta.atr(atr_period)
+
+// Berechnung des Supertrend
+var float supertrend = na
+trendUp = supertrend_source[1] - factor * atr[1]
+trendDown = supertrend_source[1] + factor * atr[1]
+if (na(supertrend[1]))
+    supertrend := supertrend_source
+else
+    if (supertrend_source > supertrend[1])
+        supertrend := math.max(trendUp, supertrend[1])
+    else
+        supertrend := math.min(trendDown, supertrend[1])
+
+// Festlegen der Farbe des Supertrend basierend auf dem Trend
+supertrend_color = supertrend_source > supertrend ? color.green : color.red
+
+// Berechnung der Bollinger Bands
+basis = ta.sma(bb_source, bb_period)
+dev = bb_mult * ta.stdev(bb_source, bb_period)
+upper_bb = basis + dev
+lower_bb = basis - dev
+
+// Signale
+buy_signal = supertrend_source > supertrend and supertrend_source < lower_bb
+sell_signal = supertrend_source < supertrend and supertrend_source > upper_bb
+
+// Plots
+plot(supertrend, color=supertrend_color, title="-Supertrend-", linewidth=4)
+plot(upper_bb, color=color.green, title="-Upper-Bollinger Band-", linewidth=3)
+plot(basis, color=color.white, title="-Middle-Bollinger Band-", linewidth=2)
+plot(lower_bb, color=color.red, title="-Lower-Bollinger Band-", linewidth=3)
+
+// Buy und Sell Markierungen
+plotshape(series=buy_signal, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

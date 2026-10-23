@@ -1,0 +1,26 @@
+//@version=5
+indicator(title="-VrilyaSS-Gaussian Channel", shorttitle="GC", overlay=true)
+
+// Eingaben für die Berechnung
+length = input.int(20, title="Kanal Länge", minval=1)
+deviation = input.float(1.5, title="Standardabweichung", minval=0.1)
+
+// Berechnung des Mittelwerts und der Standardabweichung
+sma = ta.sma(close, length)
+stddev = ta.stdev(close, length)
+
+// Berechnung des oberen und unteren Kanals
+upper_channel = sma + deviation * stddev
+lower_channel = sma - deviation * stddev
+
+// Plotten des Channels
+plot(upper_channel, color=color.red, title="Oberer Kanal", linewidth=2)
+plot(lower_channel, color=color.green, title="Unterer Kanal", linewidth=2)
+
+// Signal für den Einstieg: Kauf, wenn der Preis den unteren Kanal durchbricht; Verkauf, wenn der Preis den oberen Kanal durchbricht
+buy_signal = ta.crossover(close, lower_channel)
+sell_signal = ta.crossunder(close, upper_channel)
+
+// Kauf- und Verkaufssignale plotten
+plotshape(series=buy_signal, title="Kauf Signal", location=location.belowbar, color=color.green, textcolor = color.black, text="Buy", style=shape.labelup)
+plotshape(series=sell_signal, title="Verkauf Signal", location=location.abovebar, color=color.red, textcolor = color.black, text="Sell", style=shape.labeldown)

@@ -1,0 +1,37 @@
+//@version=5
+indicator(title="RSI with Stochastic Buy/Sell Signals", shorttitle="RSI-Stochastic Signals", overlay=false)
+
+// Eingabe für die RSI-Quelle
+rsi_source = input.source(close, title="RSI Source")
+
+// RSI-Parameter
+rsi_length = input.int(14, title="RSI Length")
+overbought_level = input.int(79, title="Overbought Level")
+oversold_level = input.int(21, title="Oversold Level")
+
+// RSI-Berechnung
+rsi = ta.rsi(rsi_source, rsi_length)
+
+// Stochastic-Parameter
+k_length = input.int(14, title="K Length")
+k_smooth = input.int(3, title="K Smoothing")
+d_smooth = input.int(3, title="D Smoothing")
+stoch_buy_level = input.int(21, title="Stochastic Buy Level")
+stoch_sell_level = input.int(70, title="Stochastic Sell Level")
+
+// Stochastic-Berechnung
+k = ta.stoch(rsi_source, high, low, k_length)
+d = ta.sma(k, k_smooth)
+stochastic_cross_up = ta.crossover(k, d)
+stochastic_cross_down = ta.crossunder(k, d)
+
+// Kauf- und Verkaufssignale
+buy_signal = rsi <= oversold_level and stochastic_cross_up and k < stoch_buy_level
+sell_signal = rsi >= overbought_level and stochastic_cross_down and k > stoch_sell_level
+ 
+// Plot der Signale
+plotshape(series=buy_signal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sell_signal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Plot des RSI standardmäßig deaktivieren
+plot(rsi, title="RSI", color=color.yellow, display=display.none)

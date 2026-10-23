@@ -1,0 +1,38 @@
+//@version=5
+indicator(title="-VrilyaSS-OsMA Buy/Sell Signals-13072024-+Stoch-", shorttitle="-VrilyaSS-OsMA Buy/Sell Signals-13072024-+Stoch-", overlay=true)
+
+// MACD Settings
+fastLength = input.int(12, title="MACD Fast Length")
+slowLength = input.int(26, title="MACD Slow Length")
+signalSmoothing = input.int(9, title="MACD Signal Smoothing")
+
+// Stochastic Settings
+kPeriod = input.int(14, title="Stochastic K Period")
+dPeriod = input.int(3, title="Stochastic D Period")
+smoothK = input.int(3, title="Stochastic K Smoothing")
+
+// Calculate MACD
+[macdLine, signalLine, _] = ta.macd(close, fastLength, slowLength, signalSmoothing)
+
+// Calculate OsMA
+osma = macdLine - signalLine
+
+// Calculate Stochastic Oscillator
+highestHigh = ta.highest(high, kPeriod)
+lowestLow = ta.lowest(low, kPeriod)
+stochK = 100 * (close - lowestLow) / (highestHigh - lowestLow)
+stochD = ta.sma(stochK, dPeriod)
+
+// Determine Buy and Sell Signals based on Stochastic and OsMA
+sellSignal = ta.crossunder(osma, 0) and stochK < stochD
+buySignal = ta.crossover(osma, 0) and stochK > stochD
+
+// Plot Signals
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell")
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy")
+
+// Optionally enable to plot OsMA
+// plot(osma, title="OsMA", color=color.blue)
+
+// Optionally enable to plot zero line for reference
+// hline(0, "Zero Line", color=color.gray)

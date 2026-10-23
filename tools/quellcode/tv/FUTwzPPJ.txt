@@ -1,0 +1,23 @@
+//@version=5
+indicator(title="Quick Momentum Indicator", shorttitle="QMI", overlay=true)
+
+// Inputparameter
+momentum_period = input.int(14, title="Momentum Period", minval=1)
+
+// Berechnung des Momentum
+momentum = close - close[momentum_period]
+
+// Bestimmen von Hoch- und Tiefpunkten
+is_high = ta.highest(high, momentum_period) == high
+is_low = ta.lowest(low, momentum_period) == low
+
+// Kauf- und Verkaufssignale nur an Hoch- und Tiefpunkten
+buy_signal = momentum > 0 and is_low
+sell_signal = momentum < 0 and is_high
+
+// Plots für Kauf- und Verkaufssignale
+plotshape(series=buy_signal, title="Buy Signal", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="Sell Signal", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// Linie für den Momentum-Indikator
+plot(momentum, title="Momentum", color=color.blue, linewidth=2)

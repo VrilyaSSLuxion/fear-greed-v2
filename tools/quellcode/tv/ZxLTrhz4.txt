@@ -1,0 +1,63 @@
+//@version=5
+indicator("Binary_Blast_v3 Improved with RSI Filter", overlay=true)
+
+// Eingabeparameter für die Berechnungen
+length = input.int(3, title="Spike Calculation Length")
+buy_threshold = input.int(20, title="Buy Threshold")
+sell_threshold = input.int(80, title="Sell Threshold")
+rsi_length = input.int(14, title="RSI Length")
+rsi_buy_level = input.int(21, title="RSI Buy Level")
+rsi_sell_level = input.int(79, title="RSI Sell Level")
+
+// Berechnungen für den Spike
+x1 = ((close + low) * (open + high)) / 2
+y1 = ((close + high) * (open + low)) / 2
+spike = (x1 / y1)
+
+// Berechnungen für den Kerzenkörper
+body1 = math.abs(close[1] - open[1])
+body2 = math.abs(close - open)
+
+// RSI-Berechnung
+rsi = ta.rsi(close, rsi_length)
+
+// Bedingungen für Kauf- und Verkaufssignale
+x_condition = (spike[3] > 1 and spike[2] <= 1 and (close - open) < 0 and rsi > rsi_sell_level)
+y_condition = (spike[3] < 1 and spike[2] >= 1 and (close - open) > 0 and rsi < rsi_buy_level)
+
+// Variablen zur Verfolgung der Signale
+var bool buy_signal = false
+var bool sell_signal = false
+
+// Kauf- und Verkaufslogik
+if (x_condition)
+    sell_signal := true
+if (y_condition)
+    buy_signal := true
+
+// Reset der Signale nach einer Kerze
+if (sell_signal[1])
+    sell_signal := false
+if (buy_signal[1])
+    buy_signal := false
+
+// Plot der Signale
+plotchar(sell_signal, text="Put", char="", color=color.red, location=location.abovebar)
+plotchar(buy_signal, text="Call", char="", color=color.green, location=location.belowbar)
+
+plotshape(sell_signal, style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small)
+plotshape(buy_signal, style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small)
+
+// Plot des RSI
+plot(rsi, title="RSI", color=color.yellow)
+hline(rsi_buy_level, "RSI Buy Level", color=color.green)
+hline(rsi_sell_level, "RSI Sell Level", color=color.red)
+
+// Zusätzliche Informationen auf dem Chart
+hline(1, "Spike Level 1", color=color.gray)
+hline(0.5, "Spike Level 0.5", color=color.gray)
+plot(spike, title="Spike", color=color.blue, linewidth=2)
+
+// Kommentare zu den Bedingungen
+bgcolor(sell_signal ? color.new(color.red, 90) : na, title="Put Background")
+bgcolor(buy_signal ? color.new(color.green, 90) : na, title="Call Background")

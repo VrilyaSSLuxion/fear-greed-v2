@@ -1,0 +1,27 @@
+//@version=5
+indicator(title="-VrilyaSS-OsMA Buy/Sell Signals-13072024-", shorttitle="-VrilyaSS-OsMA Buy/Sell Signals-13072024-", overlay=true)
+
+// MACD Settings
+fastLength = input.int(12, title="MACD Fast Length")
+slowLength = input.int(26, title="MACD Slow Length")
+signalSmoothing = input.int(9, title="MACD Signal Smoothing")
+
+// Calculate MACD
+[macdLine, signalLine, _] = ta.macd(close, fastLength, slowLength, signalSmoothing)
+
+// Calculate OsMA
+osma = macdLine - signalLine
+
+// Determine Buy and Sell Signals
+buySignal = ta.crossover(osma, 0)
+sellSignal = ta.crossunder(osma, 0)
+
+// Plot Signals
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, textcolor = color.black, style=shape.labelup, text="BUY")
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, textcolor = color.black, style=shape.labeldown, text="SELL")
+
+// Optionally enable to plot OsMA
+// plot(osma, title="OsMA", color=color.blue)
+
+// Optionally enable to plot zero line for reference
+// hline(0, "Zero Line", color=color.gray)

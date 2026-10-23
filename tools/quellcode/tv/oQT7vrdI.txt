@@ -1,0 +1,833 @@
+//@version=6
+indicator("Peak Decoder Combi", overlay=false, precision=4, max_lines_count=500, max_labels_count=500)
+
+//============================================
+// 1. PEAK DECODER INSTANZEN (3 Stück)
+//============================================
+//--- INSTANZ 1 (Orange - Passiv - H4) ---
+showInstance1 = input.bool(true, "Instanz 1 Aktiv", group="INSTANZ 1")
+tf1          = input.timeframe("240", "Zeitrahmen", group="INSTANZ 1", options=["1","5","15","30","60","240","D","W","M"])
+mode1        = input.string("Passiv", "Modus", group="INSTANZ 1", options=["Passiv", "Normal", "Aggressiv"])
+color1       = input.color(color.orange, "Farbe", group="INSTANZ 1")
+width1       = input.int(2, "Dicke", minval=1, maxval=5, group="INSTANZ 1")
+alertLong1   = input.float(-89.0, "Long-Level", step=0.5, group="INSTANZ 1")
+alertShort1  = input.float(-11.0, "Short-Level", step=0.5, group="INSTANZ 1")
+
+//--- INSTANZ 2 (Hellblau - Normal - 30M) ---
+showInstance2 = input.bool(true, "Instanz 2 Aktiv", group="INSTANZ 2")
+tf2          = input.timeframe("30", "Zeitrahmen", group="INSTANZ 2", options=["1","5","15","30","60","240","D","W","M"])
+mode2        = input.string("Normal", "Modus", group="INSTANZ 2", options=["Passiv", "Normal", "Aggressiv"])
+color2       = input.color(#4FC3F7, "Farbe", group="INSTANZ 2")
+width2       = input.int(2, "Dicke", minval=1, maxval=5, group="INSTANZ 2")
+alertLong2   = input.float(-89.0, "Long-Level", step=0.5, group="INSTANZ 2")
+alertShort2  = input.float(-11.0, "Short-Level", step=0.5, group="INSTANZ 2")
+
+//--- INSTANZ 3 (Rot - Aggressiv - 15M) ---
+showInstance3 = input.bool(false, "Instanz 3 Aktiv", group="INSTANZ 3")
+tf3          = input.timeframe("15", "Zeitrahmen", group="INSTANZ 3", options=["1","5","15","30","60","240","D","W","M"])
+mode3        = input.string("Aggressiv", "Modus", group="INSTANZ 3", options=["Passiv", "Normal", "Aggressiv"])
+color3       = input.color(color.red, "Farbe", group="INSTANZ 3")
+width3       = input.int(2, "Dicke", minval=1, maxval=5, group="INSTANZ 3")
+alertLong3   = input.float(-89.0, "Long-Level", step=0.5, group="INSTANZ 3")
+alertShort3  = input.float(-11.0, "Short-Level", step=0.5, group="INSTANZ 3")
+
+//============================================
+// 2. ZONEN-LINIEN (im Oszillator-Fenster)
+//============================================
+showZones    = input.bool(true, "Zonen-Linien anzeigen", group="ZONEN")
+upperLine    = input.float(-11.0, "Obere Zone (Short)", step=0.5, group="ZONEN")
+upperColor   = input.color(color.red, "Obere Farbe", group="ZONEN")
+upperWidth   = input.int(2, "Obere Dicke", minval=1, maxval=5, group="ZONEN")
+upperStyleIn = input.string("SOLID", "Obere Linientyp", options=["SOLID","DASHED","DOTTED"], group="ZONEN")
+lowerLine    = input.float(-89.0, "Untere Zone (Long)", step=0.5, group="ZONEN")
+lowerColor   = input.color(color.green, "Untere Farbe", group="ZONEN")
+lowerWidth   = input.int(2, "Untere Dicke", minval=1, maxval=5, group="ZONEN")
+lowerStyleIn = input.string("SOLID", "Untere Linientyp", options=["SOLID","DASHED","DOTTED"], group="ZONEN")
+
+//============================================
+// 3. SIGNAL-QUELLE (was macht das Skript "scharf"?)
+//============================================
+GRP_S = "SIGNAL-QUELLE"
+armOnSignal  = input.bool(true,  "Auslöser: Peak-Signal", group=GRP_S, tooltip="Klassisch: Oszillator verlässt die Zone + Sequenz-Logik.")
+armOnExtreme = input.bool(true,  "Auslöser: Extrem-Level ⚡", group=GRP_S, tooltip="Jedes Erreichen des Long-/Short-Levels macht scharf.")
+armInZone    = input.bool(false, "Auslöser: Oszillator betritt Zone", group=GRP_S, tooltip="Sobald der Oszillator die Zone betritt, wird scharf geschaltet.")
+
+rescanMode      = input.bool(true,  "Folge-Fraktale erkennen", group=GRP_S, tooltip="Nach dem Scharfschalten wird auch jedes weitere höhere (Short) bzw. tiefere (Long) Fraktal markiert.")
+markEveryFract  = input.bool(false, "Jedes Fraktal markieren (nicht nur höher/tiefer)", group=GRP_S)
+armHoldBars     = input.int(0, "Scharf-Dauer begrenzen (0 = unbegrenzt)", minval=0, maxval=200, group=GRP_S, tooltip="ACHTUNG: Ein zu kleiner Wert entschärft das Skript, bevor sich das Fraktal bilden kann. Bei Problemen auf 0 stellen.")
+
+rescanArrow = input.bool(true,  "Folge-Fraktale: Pfeil zeichnen", group=GRP_S)
+rescanLines = input.bool(true,  "Folge-Fraktale: Linien zeichnen", group=GRP_S)
+rescanTint  = input.bool(false, "Folge-Fraktale: eigene Label-Farbe", group=GRP_S)
+rescanColL  = input.color(#00E676, "Folge Long Farbe", group=GRP_S)
+rescanColS  = input.color(#FF6D00, "Folge Short Farbe", group=GRP_S)
+
+//============================================
+// 3b. SIGNAL-FILTER
+//============================================
+GRP_F = "SIGNAL-FILTER"
+onlyImprove  = input.bool(false, "Nur Verbesserungen markieren", group=GRP_F, tooltip="Short nur, wenn das Hoch ÜBER allen bisherigen Hochs der Sequenz liegt. Long nur, wenn das Tief UNTER allen bisherigen Tiefs liegt.")
+replaceWorse = input.bool(false, "Schlechteres Signal ersetzen", group=GRP_F, tooltip="Kommt in derselben Sequenz ein extremeres Fraktal, wird das vorherige Set gelöscht. Zusammen mit 'Nur Verbesserungen' bleibt nur das EXTREMSTE Signal stehen.")
+minGapBars   = input.int(0, "Mindestabstand in Kerzen (0 = aus)", minval=0, maxval=200, group=GRP_F)
+
+//============================================
+// 3c. LIVE-EXTREM (unbestätigte Fraktale)
+//============================================
+GRP_V = "LIVE-EXTREM"
+liveMode    = input.bool(true, "Live-Extrem markieren (ohne Bestätigung)", group=GRP_V, tooltip="Ein echtes Fraktal braucht eine Bestätigungskerze rechts daneben.\nDieser Modus markiert bereits das laufende Tief/Hoch nach dem Scharfschalten – auch auf der aktuellen Kerze – und verschiebt die Markierung, solange es tiefer/höher geht.\nWird daraus ein bestätigtes Fraktal, übernimmt die normale Markierung.")
+liveArrow   = input.bool(true, "Live: Pfeil zeichnen", group=GRP_V)
+liveLinesOn = input.bool(true, "Live: Fraktal-Linien zeichnen", group=GRP_V)
+liveTpOn    = input.bool(true, "Live: TP/SL Level zeichnen", group=GRP_V)
+liveDim     = input.int(35, "Live: Transparenz der Linien", minval=0, maxval=90, group=GRP_V, tooltip="Hebt unbestätigte Markierungen optisch von bestätigten ab.")
+liveColL    = input.color(#69F0AE, "Live Long Pfeilfarbe", group=GRP_V)
+liveColS    = input.color(#FF8A65, "Live Short Pfeilfarbe", group=GRP_V)
+
+//============================================
+// 4. PFEILE / LABELS – AN/AUS
+//============================================
+showExtremArrow = input.bool(true, "Extrem-Level Label anzeigen", group="PFEILE")
+showEntryArrow  = input.bool(true, "Einstiegs-Label anzeigen", group="PFEILE")
+showAllFractals = input.bool(false, "Alle Fraktale markieren (ohne Filter)", group="PFEILE")
+
+//============================================
+// 4b. LABEL STIL
+//============================================
+GRP_L = "LABEL STIL"
+
+//--- Extrem OBEN (Short-Level) ---
+extremAutoText = input.bool(true, "Extrem: Level-Wert automatisch einsetzen", group=GRP_L, tooltip="Baut den Text aus dem tatsächlichen Level der auslösenden Instanz, z.B. ⚡-11⚡. Ausschalten, um die Textfelder frei zu nutzen.")
+extremTextUp   = input.string("⚡-11⚡", "Extrem OBEN: Text", group=GRP_L)
+extremColorUp  = input.color(color.red, "Extrem OBEN: Textfarbe", group=GRP_L)
+extremSizeUp   = input.string("small", "Extrem OBEN: Größe", options=["tiny","small","normal","large","huge"], group=GRP_L)
+extremStyleUp  = input.string("Label Down", "Extrem OBEN: Stil", options=["Label Up","Label Down","Label Left","Label Right","Label Center","Pfeil Up","Pfeil Down","Dreieck Up","Dreieck Down","Kreis","Kreuz","Diamant","Flagge","Quadrat","Nur Text"], group=GRP_L)
+extremBgUp     = input.color(color.red, "Extrem OBEN: Hintergrundfarbe", group=GRP_L)
+extremTranspUp = input.int(100, "Extrem OBEN: Hintergrund-Transparenz", minval=0, maxval=100, group=GRP_L)
+
+//--- Extrem UNTEN (Long-Level) ---
+extremTextDn   = input.string("⚡-89⚡", "Extrem UNTEN: Text", group=GRP_L)
+extremColorDn  = input.color(color.green, "Extrem UNTEN: Textfarbe", group=GRP_L)
+extremSizeDn   = input.string("small", "Extrem UNTEN: Größe", options=["tiny","small","normal","large","huge"], group=GRP_L)
+extremStyleDn  = input.string("Label Up", "Extrem UNTEN: Stil", options=["Label Up","Label Down","Label Left","Label Right","Label Center","Pfeil Up","Pfeil Down","Dreieck Up","Dreieck Down","Kreis","Kreuz","Diamant","Flagge","Quadrat","Nur Text"], group=GRP_L)
+extremBgDn     = input.color(color.green, "Extrem UNTEN: Hintergrundfarbe", group=GRP_L)
+extremTranspDn = input.int(100, "Extrem UNTEN: Hintergrund-Transparenz", minval=0, maxval=100, group=GRP_L)
+
+//--- Long Einstieg Label ---
+longText       = input.string("▲", "Long: Text/Symbol", group=GRP_L)
+longEntryColor = input.color(color.green, "Long: Textfarbe", group=GRP_L)
+longSize       = input.string("large", "Long: Größe", options=["tiny","small","normal","large","huge"], group=GRP_L)
+longStyle      = input.string("Label Up", "Long: Stil", options=["Label Up","Label Down","Label Left","Label Right","Label Center","Pfeil Up","Pfeil Down","Dreieck Up","Dreieck Down","Kreis","Kreuz","Diamant","Flagge","Quadrat","Nur Text"], group=GRP_L)
+longBgColor    = input.color(color.green, "Long: Hintergrundfarbe", group=GRP_L)
+longBgTransp   = input.int(100, "Long: Hintergrund-Transparenz", minval=0, maxval=100, group=GRP_L)
+
+//--- Short Einstieg Label ---
+shortText       = input.string("▼", "Short: Text/Symbol", group=GRP_L)
+shortEntryColor = input.color(color.red, "Short: Textfarbe", group=GRP_L)
+shortSize       = input.string("large", "Short: Größe", options=["tiny","small","normal","large","huge"], group=GRP_L)
+shortStyle      = input.string("Label Down", "Short: Stil", options=["Label Up","Label Down","Label Left","Label Right","Label Center","Pfeil Up","Pfeil Down","Dreieck Up","Dreieck Down","Kreis","Kreuz","Diamant","Flagge","Quadrat","Nur Text"], group=GRP_L)
+shortBgColor    = input.color(color.red, "Short: Hintergrundfarbe", group=GRP_L)
+shortBgTransp   = input.int(100, "Short: Hintergrund-Transparenz", minval=0, maxval=100, group=GRP_L)
+
+//--- Umrechnungs-Helfer ---
+toSize(string s) =>
+    switch s
+        "tiny"   => size.tiny
+        "small"  => size.small
+        "normal" => size.normal
+        "large"  => size.large
+        "huge"   => size.huge
+        => size.normal
+
+toLabelStyle(string s) =>
+    switch s
+        "Label Up"     => label.style_label_up
+        "Label Down"   => label.style_label_down
+        "Label Left"   => label.style_label_left
+        "Label Right"  => label.style_label_right
+        "Label Center" => label.style_label_center
+        "Pfeil Up"     => label.style_arrowup
+        "Pfeil Down"   => label.style_arrowdown
+        "Dreieck Up"   => label.style_triangleup
+        "Dreieck Down" => label.style_triangledown
+        "Kreis"        => label.style_circle
+        "Kreuz"        => label.style_cross
+        "Diamant"      => label.style_diamond
+        "Flagge"       => label.style_flag
+        "Quadrat"      => label.style_square
+        "Nur Text"     => label.style_none
+        => label.style_none
+
+toLineStyle(string s) =>
+    switch s
+        "DASHED" => line.style_dashed
+        "DOTTED" => line.style_dotted
+        => line.style_solid
+
+//============================================
+// 5. FRAKTAL-LINIEN (Entry & SL)
+//============================================
+showFractalLines = input.bool(true, "Fraktal-Linien aktivieren", group="FRAKTAL LINIEN")
+fractalLineCount = input.int(10, "Linien für die letzten X Fraktale (0=alle)", minval=0, maxval=100, group="FRAKTAL LINIEN", tooltip="Wie weit die Linien in die Vergangenheit reichen. TradingView erlaubt max. 500 Linien insgesamt.")
+longHighColor    = input.color(color.white, "Long Obere Linie (Entry)", group="FRAKTAL LINIEN")
+longLowColor     = input.color(color.red, "Long Untere Linie (SL)", group="FRAKTAL LINIEN")
+shortHighColor   = input.color(color.red, "Short Obere Linie (SL)", group="FRAKTAL LINIEN")
+shortLowColor    = input.color(color.white, "Short Untere Linie (Entry)", group="FRAKTAL LINIEN")
+lineStyleIn      = input.string("SOLID", "Linientyp", group="FRAKTAL LINIEN", options=["SOLID", "DASHED", "DOTTED"])
+lineWidth        = input.int(2, "Linienstärke", minval=1, maxval=5, group="FRAKTAL LINIEN")
+
+extendMode = input.string("Live", "Verlängerungs-Modus", group="FRAKTAL LINIEN", options=["Live", "Live + X Bars", "Bis nächstes Fraktal", "Feste Bars"])
+extendBars = input.int(3, "X Bars nach rechts", minval=1, maxval=500, group="FRAKTAL LINIEN")
+
+//============================================
+// 6. TP/SL LEVEL-LINIEN (R-Multiples)
+//============================================
+GRP_T = "TP/SL LEVEL"
+
+tpMaster     = input.bool(true, "TP/SL Level aktivieren", group=GRP_T, tooltip="1R = Abstand Fraktal-Hoch zu Fraktal-Tief.\nLong: Entry = Hoch, SL = Tief.\nShort: Entry = Tief, SL = Hoch.")
+tpShowLabels = input.bool(true, "Level beschriften", group=GRP_T)
+tpLabelSize  = input.string("normal", "Beschriftung Größe", options=["tiny","small","normal","large","huge"], group=GRP_T)
+
+onN20 = input.bool(false, "-2.0 R  ", inline="n2", group=GRP_T)
+cN20  = input.color(color.maroon, "", inline="n2", group=GRP_T)
+wN20  = input.int(1, "", minval=1, maxval=5, inline="n2", group=GRP_T)
+sN20  = input.string("DASHED", "", options=["SOLID","DASHED","DOTTED"], inline="n2", group=GRP_T)
+
+onN15 = input.bool(false, "-1.5 R  ", inline="n1", group=GRP_T)
+cN15  = input.color(#B71C1C, "", inline="n1", group=GRP_T)
+wN15  = input.int(1, "", minval=1, maxval=5, inline="n1", group=GRP_T)
+sN15  = input.string("DOTTED", "", options=["SOLID","DASHED","DOTTED"], inline="n1", group=GRP_T)
+
+onM   = input.bool(false, "SL-Mitte", inline="m", group=GRP_T)
+cM    = input.color(color.red, "", inline="m", group=GRP_T)
+wM    = input.int(1, "", minval=1, maxval=5, inline="m", group=GRP_T)
+sM    = input.string("DASHED", "", options=["SOLID","DASHED","DOTTED"], inline="m", group=GRP_T)
+
+on05  = input.bool(false, "0.5 R  ", inline="a", group=GRP_T)
+c05   = input.color(color.green, "", inline="a", group=GRP_T)
+w05   = input.int(1, "", minval=1, maxval=5, inline="a", group=GRP_T)
+s05   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="a", group=GRP_T)
+
+on10  = input.bool(true,  "1.0 R  ", inline="b", group=GRP_T)
+c10   = input.color(color.green, "", inline="b", group=GRP_T)
+w10   = input.int(1, "", minval=1, maxval=5, inline="b", group=GRP_T)
+s10   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="b", group=GRP_T)
+
+on15  = input.bool(false, "1.5 R  ", inline="c", group=GRP_T)
+c15   = input.color(color.green, "", inline="c", group=GRP_T)
+w15   = input.int(1, "", minval=1, maxval=5, inline="c", group=GRP_T)
+s15   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="c", group=GRP_T)
+
+on20  = input.bool(true,  "2.0 R  ", inline="d", group=GRP_T)
+c20   = input.color(color.white, "", inline="d", group=GRP_T)
+w20   = input.int(1, "", minval=1, maxval=5, inline="d", group=GRP_T)
+s20   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="d", group=GRP_T)
+
+on25  = input.bool(false, "2.5 R  ", inline="e", group=GRP_T)
+c25   = input.color(#1B5E20, "", inline="e", group=GRP_T)
+w25   = input.int(1, "", minval=1, maxval=5, inline="e", group=GRP_T)
+s25   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="e", group=GRP_T)
+
+on30  = input.bool(true,  "3.0 R  ", inline="f", group=GRP_T)
+c30   = input.color(color.green, "", inline="f", group=GRP_T)
+w30   = input.int(1, "", minval=1, maxval=5, inline="f", group=GRP_T)
+s30   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="f", group=GRP_T)
+
+on35  = input.bool(false, "3.5 R  ", inline="g", group=GRP_T)
+c35   = input.color(#1B5E20, "", inline="g", group=GRP_T)
+w35   = input.int(1, "", minval=1, maxval=5, inline="g", group=GRP_T)
+s35   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="g", group=GRP_T)
+
+on40  = input.bool(true,  "4.0 R  ", inline="h", group=GRP_T)
+c40   = input.color(color.yellow, "", inline="h", group=GRP_T)
+w40   = input.int(1, "", minval=1, maxval=5, inline="h", group=GRP_T)
+s40   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="h", group=GRP_T)
+
+on45  = input.bool(false, "4.5 R  ", inline="i", group=GRP_T)
+c45   = input.color(#1B5E20, "", inline="i", group=GRP_T)
+w45   = input.int(1, "", minval=1, maxval=5, inline="i", group=GRP_T)
+s45   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="i", group=GRP_T)
+
+on50  = input.bool(true,  "5.0 R  ", inline="j", group=GRP_T)
+c50   = input.color(color.aqua, "", inline="j", group=GRP_T)
+w50   = input.int(1, "", minval=1, maxval=5, inline="j", group=GRP_T)
+s50   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="j", group=GRP_T)
+
+on55  = input.bool(false, "5.5 R  ", inline="k", group=GRP_T)
+c55   = input.color(#1B5E20, "", inline="k", group=GRP_T)
+w55   = input.int(1, "", minval=1, maxval=5, inline="k", group=GRP_T)
+s55   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="k", group=GRP_T)
+
+on60  = input.bool(true,  "6.0 R  ", inline="l", group=GRP_T)
+c60   = input.color(#00BCD4, "", inline="l", group=GRP_T)
+w60   = input.int(1, "", minval=1, maxval=5, inline="l", group=GRP_T)
+s60   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="l", group=GRP_T)
+
+on65  = input.bool(false, "6.5 R  ", inline="o", group=GRP_T)
+c65   = input.color(#1B5E20, "", inline="o", group=GRP_T)
+w65   = input.int(1, "", minval=1, maxval=5, inline="o", group=GRP_T)
+s65   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="o", group=GRP_T)
+
+on70  = input.bool(true,  "7.0 R  ", inline="p", group=GRP_T)
+c70   = input.color(#FF9800, "", inline="p", group=GRP_T)
+w70   = input.int(1, "", minval=1, maxval=5, inline="p", group=GRP_T)
+s70   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="p", group=GRP_T)
+
+on75  = input.bool(false, "7.5 R  ", inline="q", group=GRP_T)
+c75   = input.color(#1B5E20, "", inline="q", group=GRP_T)
+w75   = input.int(1, "", minval=1, maxval=5, inline="q", group=GRP_T)
+s75   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="q", group=GRP_T)
+
+on80  = input.bool(true,  "8.0 R  ", inline="r", group=GRP_T)
+c80   = input.color(#E91E63, "", inline="r", group=GRP_T)
+w80   = input.int(1, "", minval=1, maxval=5, inline="r", group=GRP_T)
+s80   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="r", group=GRP_T)
+
+on85  = input.bool(false, "8.5 R  ", inline="t", group=GRP_T)
+c85   = input.color(#1B5E20, "", inline="t", group=GRP_T)
+w85   = input.int(1, "", minval=1, maxval=5, inline="t", group=GRP_T)
+s85   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="t", group=GRP_T)
+
+on90  = input.bool(true,  "9.0 R  ", inline="u", group=GRP_T)
+c90   = input.color(#9C27B0, "", inline="u", group=GRP_T)
+w90   = input.int(1, "", minval=1, maxval=5, inline="u", group=GRP_T)
+s90   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="u", group=GRP_T)
+
+on95  = input.bool(false, "9.5 R  ", inline="v", group=GRP_T)
+c95   = input.color(#1B5E20, "", inline="v", group=GRP_T)
+w95   = input.int(1, "", minval=1, maxval=5, inline="v", group=GRP_T)
+s95   = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="v", group=GRP_T)
+
+on100 = input.bool(true,  "10 R  ", inline="w", group=GRP_T)
+c100  = input.color(color.white, "", inline="w", group=GRP_T)
+w100  = input.int(1, "", minval=1, maxval=5, inline="w", group=GRP_T)
+s100  = input.string("SOLID", "", options=["SOLID","DASHED","DOTTED"], inline="w", group=GRP_T)
+
+lvMult = array.from(-2.0, -1.5, -0.5, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0)
+lvOn   = array.from(onN20, onN15, onM, on05, on10, on15, on20, on25, on30, on35, on40, on45, on50, on55, on60, on65, on70, on75, on80, on85, on90, on95, on100)
+lvCol  = array.from(cN20,  cN15,  cM,  c05,  c10,  c15,  c20,  c25,  c30,  c35,  c40,  c45,  c50,  c55,  c60,  c65,  c70,  c75,  c80,  c85,  c90,  c95,  c100)
+lvWid  = array.from(wN20,  wN15,  wM,  w05,  w10,  w15,  w20,  w25,  w30,  w35,  w40,  w45,  w50,  w55,  w60,  w65,  w70,  w75,  w80,  w85,  w90,  w95,  w100)
+lvSty  = array.from(sN20,  sN15,  sM,  s05,  s10,  s15,  s20,  s25,  s30,  s35,  s40,  s45,  s50,  s55,  s60,  s65,  s70,  s75,  s80,  s85,  s90,  s95,  s100)
+lvName = array.from("-2R", "-1.5R", "SL-Mitte", "0.5R", "1R", "1.5R", "2R", "2.5R", "3R", "3.5R", "4R", "4.5R", "5R", "5.5R", "6R", "6.5R", "7R", "7.5R", "8R", "8.5R", "9R", "9.5R", "10R")
+
+//============================================
+// 7. WAIT FOR TIMEFRAME CLOSE
+//============================================
+waitForClose = input.bool(false, "Auf Zeitrahmenschließung warten", group="BERECHNUNG")
+
+//============================================
+// 8. DASHBOARD EINSTELLUNGEN
+//============================================
+showDashboard  = input.bool(true, "Dashboard anzeigen", group="DASHBOARD")
+dashPos        = input.string("Oben Rechts", "Position", options=["Oben Rechts","Oben Links","Oben Mitte","Unten Rechts","Unten Links","Mitte Rechts","Mitte Links"], group="DASHBOARD")
+dashBg         = input.color(color.new(color.black, 0), "Hintergrundfarbe", group="DASHBOARD")
+dashTextColor  = input.color(color.white, "Textfarbe", group="DASHBOARD")
+dashTitleColor = input.color(color.yellow, "Titelfarbe", group="DASHBOARD")
+dashSizeIn     = input.string("small", "Schriftgröße", options=["tiny","small","normal","large","huge"], group="DASHBOARD")
+dashTitleSize  = input.string("normal", "Titel-Schriftgröße", options=["tiny","small","normal","large","huge"], group="DASHBOARD")
+
+dashSize  = toSize(dashSizeIn)
+titleSize = toSize(dashTitleSize)
+
+dashPosition = switch dashPos
+    "Oben Rechts"  => position.top_right
+    "Oben Links"   => position.top_left
+    "Oben Mitte"   => position.top_center
+    "Unten Rechts" => position.bottom_right
+    "Unten Links"  => position.bottom_left
+    "Mitte Rechts" => position.middle_right
+    "Mitte Links"  => position.middle_left
+    => position.top_right
+
+//============================================
+// 9. PEAK DECODER BERECHNUNG
+//============================================
+len1 = mode1 == "Aggressiv" ? 4 : mode1 == "Passiv" ? 22 : 10
+len2 = mode2 == "Aggressiv" ? 4 : mode2 == "Passiv" ? 22 : 10
+len3 = mode3 == "Aggressiv" ? 4 : mode3 == "Passiv" ? 22 : 10
+
+oscRaw(simple int length, simple bool wait) =>
+    float hh = ta.highest(high, length)
+    float ll = ta.lowest(low, length)
+    float d  = hh - ll
+    float v  = d > 0 ? (close - ll) / d * 100 - 100 : -50.0
+    wait ? v[1] : v
+
+calcOscillator(simple string tf, simple int len, simple bool wait) =>
+    request.security(syminfo.tickerid, tf, oscRaw(len, wait), lookahead=barmerge.lookahead_off)
+
+osc1 = calcOscillator(tf1, len1, waitForClose)
+osc2 = calcOscillator(tf2, len2, waitForClose)
+osc3 = calcOscillator(tf3, len3, waitForClose)
+
+//============================================
+// 10. SIGNAL-ERKENNUNG
+//============================================
+detectSignals(float osc, float upper, float lower) =>
+    var int   nextSig = 0
+    var float seqTop  = -105.0
+    var float seqBot  = 5.0
+    var float peakTop = na
+    var float peakBot = na
+    var bool  inTop   = false
+    var bool  inBot   = false
+    bool trigTop = false
+    bool trigBot = false
+
+    if not na(osc)
+        if osc > upper
+            if not inTop
+                inTop   := true
+                peakTop := osc
+            else if osc > peakTop
+                peakTop := osc
+        else if inTop
+            if not na(peakTop) and peakTop > upper
+                if nextSig == 0 or nextSig == 1 or (nextSig == -1 and peakTop > seqTop)
+                    trigTop := true
+                    seqTop  := peakTop
+                    nextSig := -1
+            inTop   := false
+            peakTop := na
+
+        if osc < lower
+            if not inBot
+                inBot   := true
+                peakBot := osc
+            else if osc < peakBot
+                peakBot := osc
+        else if inBot
+            if not na(peakBot) and peakBot < lower
+                if nextSig == 0 or nextSig == -1 or (nextSig == 1 and peakBot < seqBot)
+                    trigBot := true
+                    seqBot  := peakBot
+                    nextSig := 1
+            inBot   := false
+            peakBot := na
+    [trigTop, trigBot]
+
+[triggerTop1, triggerBot1] = detectSignals(osc1, upperLine, lowerLine)
+[triggerTop2, triggerBot2] = detectSignals(osc2, upperLine, lowerLine)
+[triggerTop3, triggerBot3] = detectSignals(osc3, upperLine, lowerLine)
+
+sigLong  = (showInstance1 and triggerBot1) or (showInstance2 and triggerBot2) or (showInstance3 and triggerBot3)
+sigShort = (showInstance1 and triggerTop1) or (showInstance2 and triggerTop2) or (showInstance3 and triggerTop3)
+
+//============================================
+// 11. EXTREM-LEVEL
+//============================================
+ex1Long  = showInstance1 and ta.crossunder(osc1, alertLong1)
+ex1Short = showInstance1 and ta.crossover(osc1,  alertShort1)
+ex2Long  = showInstance2 and ta.crossunder(osc2, alertLong2)
+ex2Short = showInstance2 and ta.crossover(osc2,  alertShort2)
+ex3Long  = showInstance3 and ta.crossunder(osc3, alertLong3)
+ex3Short = showInstance3 and ta.crossover(osc3,  alertShort3)
+
+anyExLong  = ex1Long  or ex2Long  or ex3Long
+anyExShort = ex1Short or ex2Short or ex3Short
+
+// Level der auslösenden Instanz (für automatischen Text)
+exLvlLong  = ex1Long  ? alertLong1  : ex2Long  ? alertLong2  : alertLong3
+exLvlShort = ex1Short ? alertShort1 : ex2Short ? alertShort2 : alertShort3
+
+//============================================
+// 12. ZONEN-STATUS
+//============================================
+inLongZone  = (showInstance1 and osc1 < lowerLine) or (showInstance2 and osc2 < lowerLine) or (showInstance3 and osc3 < lowerLine)
+inShortZone = (showInstance1 and osc1 > upperLine) or (showInstance2 and osc2 > upperLine) or (showInstance3 and osc3 > upperLine)
+
+enterLongZone  = inLongZone  and not inLongZone[1]
+enterShortZone = inShortZone and not inShortZone[1]
+
+//============================================
+// 13. SCHARF-LOGIK
+//============================================
+armLongEvt  = (armOnSignal and sigLong)  or (armOnExtreme and anyExLong)  or (armInZone and enterLongZone)
+armShortEvt = (armOnSignal and sigShort) or (armOnExtreme and anyExShort) or (armInZone and enterShortZone)
+
+var int   armDir = 0
+var float armRef = na
+var int   armBar = na
+var int   seqId  = 0
+
+if armLongEvt
+    if armDir != 1
+        seqId += 1
+        armRef := na
+    else if not onlyImprove
+        armRef := na
+    armDir := 1
+    armBar := bar_index
+
+if armShortEvt
+    if armDir != -1
+        seqId += 1
+        armRef := na
+    else if not onlyImprove
+        armRef := na
+    armDir := -1
+    armBar := bar_index
+
+if armHoldBars > 0 and armDir != 0 and not na(armBar) and bar_index - armBar > armHoldBars
+    armDir := 0
+    armRef := na
+
+//============================================
+// 14. FRAKTAL-ERKENNUNG + FILTER
+//============================================
+isFractalLow  = low[1]  < low[2]  and low[1]  < low[0]
+isFractalHigh = high[1] > high[2] and high[1] > high[0]
+
+improveLong  = na(armRef) or low[1]  < armRef
+improveShort = na(armRef) or high[1] > armRef
+
+strictLong  = not onlyImprove or improveLong
+strictShort = not onlyImprove or improveShort
+
+betterLong  = (markEveryFract and not onlyImprove) or improveLong
+betterShort = (markEveryFract and not onlyImprove) or improveShort
+
+var int lastMarkBar = na
+gapOK = minGapBars == 0 or na(lastMarkBar) or (bar_index - lastMarkBar) >= minGapBars
+
+baseLong  = ((armLongEvt  and armOnSignal and sigLong)  or showAllFractals) and isFractalLow  and strictLong
+baseShort = ((armShortEvt and armOnSignal and sigShort) or showAllFractals) and isFractalHigh and strictShort
+
+followLong  = rescanMode and armDir ==  1 and isFractalLow  and betterLong
+followShort = rescanMode and armDir == -1 and isFractalHigh and betterShort
+
+makeLong  = (baseLong  or followLong)  and gapOK
+makeShort = (baseShort or followShort) and gapOK
+
+if makeLong
+    armRef      := na(armRef) ? low[1]  : math.min(armRef, low[1])
+    armDir      := 1
+    lastMarkBar := bar_index
+if makeShort
+    armRef      := na(armRef) ? high[1] : math.max(armRef, high[1])
+    armDir      := -1
+    lastMarkBar := bar_index
+
+isFollow = (followLong or followShort) and not (baseLong or baseShort)
+
+//============================================
+// 15. OSZILLATOR-FENSTER
+//============================================
+plot(showInstance1 ? osc1 : na, "Instanz1", color1, linewidth=width1)
+plot(showInstance2 ? osc2 : na, "Instanz2", color2, linewidth=width2)
+plot(showInstance3 ? osc3 : na, "Instanz3", color3, linewidth=width3)
+
+hline(upperLine, "Obere Zone", color=showZones ? upperColor : color.new(color.gray, 100), linestyle=upperStyleIn == "DASHED" ? hline.style_dashed : upperStyleIn == "DOTTED" ? hline.style_dotted : hline.style_solid, linewidth=upperWidth)
+hline(lowerLine, "Untere Zone", color=showZones ? lowerColor : color.new(color.gray, 100), linestyle=lowerStyleIn == "DASHED" ? hline.style_dashed : lowerStyleIn == "DOTTED" ? hline.style_dotted : hline.style_solid, linewidth=lowerWidth)
+hline(0,    "Mitte", color.gray, hline.style_dashed)
+hline(-100, "Unten", color.gray, hline.style_dashed)
+
+//============================================
+// 16. EXTREM-LABELS (oben/unten getrennt)
+//============================================
+if showExtremArrow and anyExLong
+    string t = extremAutoText ? "⚡" + str.tostring(exLvlLong, "#.##") + "⚡" : extremTextDn
+    label.new(bar_index, low, t, color=color.new(extremBgDn, extremTranspDn), style=toLabelStyle(extremStyleDn), size=toSize(extremSizeDn), textcolor=extremColorDn, force_overlay=true)
+
+if showExtremArrow and anyExShort
+    string t = extremAutoText ? "⚡" + str.tostring(exLvlShort, "#.##") + "⚡" : extremTextUp
+    label.new(bar_index, high, t, color=color.new(extremBgUp, extremTranspUp), style=toLabelStyle(extremStyleUp), size=toSize(extremSizeUp), textcolor=extremColorUp, force_overlay=true)
+
+//============================================
+// 17. SET-VERWALTUNG (bestätigte Fraktale)
+//============================================
+var line[]  allLines  = array.new_line()
+var label[] allLabels = array.new_label()
+var label[] allArrows = array.new_label()
+var int[]   setLines  = array.new_int()
+var int[]   setLbls   = array.new_int()
+var int[]   setArrows = array.new_int()
+var int[]   setSeq    = array.new_int()
+var int     fractalCount = 0
+var int     confirmedBar = na
+
+string lineStyleStr = toLineStyle(lineStyleIn)
+bool drawLines = showFractalLines and (not isFollow or rescanLines)
+bool drawArrow = showEntryArrow  and (not isFollow or rescanArrow)
+
+if makeLong or makeShort
+    fractalCount += 1
+    confirmedBar := bar_index[1]
+
+    int   anchor = bar_index[1]
+    float fHigh  = high[1]
+    float fLow   = low[1]
+    float risk   = fHigh - fLow
+    float entry  = makeLong ? fHigh : fLow
+    int   dir    = makeLong ? 1 : -1
+
+    // --- "Schlechteres Signal ersetzen" ---
+    if replaceWorse and array.size(setSeq) > 0 and array.get(setSeq, array.size(setSeq) - 1) == seqId
+        int delL = array.pop(setLines)
+        int delB = array.pop(setLbls)
+        int delA = array.pop(setArrows)
+        array.pop(setSeq)
+        if delL > 0
+            for k = 1 to delL
+                if array.size(allLines) > 0
+                    line.delete(array.pop(allLines))
+        if delB > 0
+            for k = 1 to delB
+                if array.size(allLabels) > 0
+                    label.delete(array.pop(allLabels))
+        if delA > 0
+            for k = 1 to delA
+                if array.size(allArrows) > 0
+                    label.delete(array.pop(allArrows))
+
+    // --- "Bis nächstes Fraktal": vorheriges Set einfrieren ---
+    if extendMode == "Bis nächstes Fraktal" and array.size(setLines) > 0
+        int lastL = array.get(setLines, array.size(setLines) - 1)
+        int lastB = array.get(setLbls,  array.size(setLbls)  - 1)
+        int totL  = array.size(allLines)
+        int totB  = array.size(allLabels)
+        if lastL > 0
+            for k = totL - lastL to totL - 1
+                line.set_x2(array.get(allLines, k), anchor)
+        if lastB > 0
+            for k = totB - lastB to totB - 1
+                label.set_x(array.get(allLabels, k), anchor)
+
+    int endBar = switch extendMode
+        "Feste Bars"    => anchor + extendBars
+        "Live + X Bars" => bar_index + extendBars
+        => bar_index
+
+    int drawnL = 0
+    int drawnB = 0
+    int drawnA = 0
+
+    if drawArrow
+        if makeLong
+            array.push(allArrows, label.new(anchor, fLow, longText, color=color.new(longBgColor, longBgTransp), style=toLabelStyle(longStyle), size=toSize(longSize), textcolor=(isFollow and rescanTint) ? rescanColL : longEntryColor, force_overlay=true))
+        else
+            array.push(allArrows, label.new(anchor, fHigh, shortText, color=color.new(shortBgColor, shortBgTransp), style=toLabelStyle(shortStyle), size=toSize(shortSize), textcolor=(isFollow and rescanTint) ? rescanColS : shortEntryColor, force_overlay=true))
+        drawnA += 1
+
+    if drawLines
+        color hiC = makeLong ? longHighColor : shortHighColor
+        color loC = makeLong ? longLowColor  : shortLowColor
+        array.push(allLines, line.new(anchor, fHigh, endBar, fHigh, color=hiC, width=lineWidth, style=lineStyleStr, force_overlay=true))
+        array.push(allLines, line.new(anchor, fLow,  endBar, fLow,  color=loC, width=lineWidth, style=lineStyleStr, force_overlay=true))
+        drawnL += 2
+        if tpShowLabels
+            array.push(allLabels, label.new(endBar, fHigh, makeLong ? "Entry" : "SL", color=color.new(color.black, 100), textcolor=hiC, style=label.style_label_left, size=toSize(tpLabelSize), force_overlay=true))
+            array.push(allLabels, label.new(endBar, fLow,  makeLong ? "SL" : "Entry", color=color.new(color.black, 100), textcolor=loC, style=label.style_label_left, size=toSize(tpLabelSize), force_overlay=true))
+            drawnB += 2
+
+    if tpMaster and risk > 0 and (not isFollow or rescanLines)
+        for i = 0 to array.size(lvMult) - 1
+            if array.get(lvOn, i)
+                float lvl = entry + dir * array.get(lvMult, i) * risk
+                color lc  = array.get(lvCol, i)
+                array.push(allLines, line.new(anchor, lvl, endBar, lvl, color=lc, width=array.get(lvWid, i), style=toLineStyle(array.get(lvSty, i)), force_overlay=true))
+                drawnL += 1
+                if tpShowLabels
+                    array.push(allLabels, label.new(endBar, lvl, array.get(lvName, i), color=color.new(color.black, 100), textcolor=lc, style=label.style_label_left, size=toSize(tpLabelSize), force_overlay=true))
+                    drawnB += 1
+
+    if drawnL > 0 or drawnA > 0
+        array.push(setLines,  drawnL)
+        array.push(setLbls,   drawnB)
+        array.push(setArrows, drawnA)
+        array.push(setSeq,    seqId)
+        int maxSets = fractalLineCount > 0 ? fractalLineCount : 100
+        while array.size(setLines) > maxSets
+            int oldL = array.shift(setLines)
+            int oldB = array.shift(setLbls)
+            int oldA = array.shift(setArrows)
+            array.shift(setSeq)
+            if oldL > 0
+                for k = 1 to oldL
+                    if array.size(allLines) > 0
+                        line.delete(array.shift(allLines))
+            if oldB > 0
+                for k = 1 to oldB
+                    if array.size(allLabels) > 0
+                        label.delete(array.shift(allLabels))
+            if oldA > 0
+                for k = 1 to oldA
+                    if array.size(allArrows) > 0
+                        label.delete(array.shift(allArrows))
+
+//============================================
+// 18. LIVE-EXTREM (unbestätigte Markierung)
+//============================================
+var line[]  liveLines = array.new_line()
+var label[] liveLbls  = array.new_label()
+var float   liveExt   = na
+var int     liveBar   = na
+var float   liveH     = na
+var float   liveL     = na
+var int     liveDir   = 0
+
+clearLive() =>
+    while array.size(liveLines) > 0
+        line.delete(array.pop(liveLines))
+    while array.size(liveLbls) > 0
+        label.delete(array.pop(liveLbls))
+    0
+
+if liveMode
+    bool redraw = false
+
+    // Richtungswechsel oder entschärft -> zurücksetzen
+    if armDir != liveDir
+        clearLive()
+        liveExt := na
+        liveBar := na
+        liveDir := armDir
+
+    if armDir == 1
+        if na(liveExt) or low < liveExt
+            liveExt := low
+            liveBar := bar_index
+            liveH   := high
+            liveL   := low
+            redraw  := true
+    else if armDir == -1
+        if na(liveExt) or high > liveExt
+            liveExt := high
+            liveBar := bar_index
+            liveH   := high
+            liveL   := low
+            redraw  := true
+
+    // Wurde daraus ein bestätigtes Fraktal? Dann Live-Markierung entfernen
+    if not na(confirmedBar) and confirmedBar == liveBar
+        clearLive()
+        redraw := false
+
+    if redraw and armDir != 0
+        clearLive()
+        float risk  = liveH - liveL
+        float entry = armDir == 1 ? liveH : liveL
+
+        if liveArrow
+            if armDir == 1
+                array.push(liveLbls, label.new(liveBar, liveL, longText, color=color.new(longBgColor, longBgTransp), style=toLabelStyle(longStyle), size=toSize(longSize), textcolor=liveColL, force_overlay=true))
+            else
+                array.push(liveLbls, label.new(liveBar, liveH, shortText, color=color.new(shortBgColor, shortBgTransp), style=toLabelStyle(shortStyle), size=toSize(shortSize), textcolor=liveColS, force_overlay=true))
+
+        if liveLinesOn
+            color hiC = color.new(armDir == 1 ? longHighColor : shortHighColor, liveDim)
+            color loC = color.new(armDir == 1 ? longLowColor  : shortLowColor,  liveDim)
+            array.push(liveLines, line.new(liveBar, liveH, bar_index, liveH, color=hiC, width=lineWidth, style=lineStyleStr, force_overlay=true))
+            array.push(liveLines, line.new(liveBar, liveL, bar_index, liveL, color=loC, width=lineWidth, style=lineStyleStr, force_overlay=true))
+
+        if liveTpOn and tpMaster and risk > 0
+            for i = 0 to array.size(lvMult) - 1
+                if array.get(lvOn, i)
+                    float lvl = entry + armDir * array.get(lvMult, i) * risk
+                    array.push(liveLines, line.new(liveBar, lvl, bar_index, lvl, color=color.new(array.get(lvCol, i), liveDim), width=array.get(lvWid, i), style=toLineStyle(array.get(lvSty, i)), force_overlay=true))
+
+//============================================
+// 19. LIVE-NACHFÜHRUNG (letzte Bar)
+//============================================
+if barstate.islast
+    if extendMode == "Live" or extendMode == "Live + X Bars"
+        int tgt = extendMode == "Live" ? bar_index : bar_index + extendBars
+        if array.size(allLines) > 0
+            for i = 0 to array.size(allLines) - 1
+                line.set_x2(array.get(allLines, i), tgt)
+        if array.size(allLabels) > 0
+            for i = 0 to array.size(allLabels) - 1
+                label.set_x(array.get(allLabels, i), tgt)
+    else if extendMode == "Bis nächstes Fraktal" and array.size(setLines) > 0
+        int lastL = array.get(setLines, array.size(setLines) - 1)
+        int lastB = array.get(setLbls,  array.size(setLbls)  - 1)
+        int totL  = array.size(allLines)
+        int totB  = array.size(allLabels)
+        if lastL > 0
+            for i = totL - lastL to totL - 1
+                line.set_x2(array.get(allLines, i), bar_index)
+        if lastB > 0
+            for i = totB - lastB to totB - 1
+                label.set_x(array.get(allLabels, i), bar_index)
+
+    // Live-Linien immer bis zur aktuellen Kerze
+    if array.size(liveLines) > 0
+        for i = 0 to array.size(liveLines) - 1
+            line.set_x2(array.get(liveLines, i), bar_index)
+
+//============================================
+// 20. DASHBOARD
+//============================================
+var table dash = table.new(dashPosition, 2, 14, bgcolor=dashBg, border_color=color.gray, border_width=1)
+
+if showDashboard and barstate.islast
+    table.cell(dash, 0, 0, "PEAK DECODER", text_color=dashTitleColor, text_size=titleSize, bgcolor=dashBg)
+    table.cell(dash, 1, 0, "", text_color=dashTitleColor, text_size=titleSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 1, "I1: " + mode1 + " " + tf1, text_color=color1, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 1, showInstance1 ? str.tostring(osc1, "#.##") : "OFF", text_color=color1, text_size=dashSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 2, "I2: " + mode2 + " " + tf2, text_color=color2, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 2, showInstance2 ? str.tostring(osc2, "#.##") : "OFF", text_color=color2, text_size=dashSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 3, "I3: " + mode3 + " " + tf3, text_color=color3, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 3, showInstance3 ? str.tostring(osc3, "#.##") : "OFF", text_color=color3, text_size=dashSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 4, "Obere Zone", text_color=upperColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 4, str.tostring(upperLine), text_color=upperColor, text_size=dashSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 5, "Untere Zone", text_color=lowerColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 5, str.tostring(lowerLine), text_color=lowerColor, text_size=dashSize, bgcolor=dashBg)
+
+    string src = (armOnSignal ? "S" : "") + (armOnExtreme ? "E" : "") + (armInZone ? "Z" : "")
+    table.cell(dash, 0, 6, "Auslöser", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 6, src == "" ? "KEINER!" : src, text_color=src == "" ? color.red : dashTextColor, text_size=dashSize, bgcolor=dashBg)
+
+    string flt = (onlyImprove ? "Verb." : "") + (onlyImprove and replaceWorse ? "+" : "") + (replaceWorse ? "Ersetz." : "")
+    table.cell(dash, 0, 7, "Filter", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 7, flt == "" ? "aus" : flt, text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 8, "Status", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 8, armDir == 1 ? "SCHARF ▲" : armDir == -1 ? "SCHARF ▼" : "bereit", text_color=armDir == 1 ? longEntryColor : armDir == -1 ? shortEntryColor : dashTextColor, text_size=dashSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 9, "Live-Extrem", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 9, liveMode ? (na(liveExt) ? "–" : str.tostring(liveExt, format.mintick)) : "OFF", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 10, "Fraktal Linien", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 10, showFractalLines ? "ON (" + str.tostring(fractalLineCount) + ")" : "OFF", text_color=showFractalLines ? dashTextColor : color.red, text_size=dashSize, bgcolor=dashBg)
+
+    int lvActive = 0
+    for i = 0 to array.size(lvOn) - 1
+        if array.get(lvOn, i)
+            lvActive += 1
+    table.cell(dash, 0, 11, "TP/SL Level", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 11, tpMaster ? str.tostring(lvActive) + " aktiv" : "OFF", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+
+    int totLines = array.size(allLines) + array.size(liveLines)
+    table.cell(dash, 0, 12, "Linien / Sets", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 12, str.tostring(totLines) + " / " + str.tostring(array.size(setLines)), text_color=totLines > 450 ? color.red : dashTextColor, text_size=dashSize, bgcolor=dashBg)
+
+    table.cell(dash, 0, 13, "Fraktale", text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+    table.cell(dash, 1, 13, str.tostring(fractalCount), text_color=dashTextColor, text_size=dashSize, bgcolor=dashBg)
+
+//============================================
+// 21. ALERTS
+//============================================
+alertcondition(ex1Long,  title="Instanz1 Long",  message="Peak Decoder I1: Long-Level erreicht!")
+alertcondition(ex1Short, title="Instanz1 Short", message="Peak Decoder I1: Short-Level erreicht!")
+alertcondition(ex2Long,  title="Instanz2 Long",  message="Peak Decoder I2: Long-Level erreicht!")
+alertcondition(ex2Short, title="Instanz2 Short", message="Peak Decoder I2: Short-Level erreicht!")
+alertcondition(ex3Long,  title="Instanz3 Long",  message="Peak Decoder I3: Long-Level erreicht!")
+alertcondition(ex3Short, title="Instanz3 Short", message="Peak Decoder I3: Short-Level erreicht!")
+
+alertcondition(anyExLong,  title="Extrem UNTEN (alle)", message="Peak Decoder: Unteres Extrem-Level erreicht!")
+alertcondition(anyExShort, title="Extrem OBEN (alle)",  message="Peak Decoder: Oberes Extrem-Level erreicht!")
+
+alertcondition(isFractalLow,  title="Fraktal Long",  message="Peak Decoder: Long-Fraktal erkannt!")
+alertcondition(isFractalHigh, title="Fraktal Short", message="Peak Decoder: Short-Fraktal erkannt!")
+
+alertcondition(makeLong,  title="Long Einstieg",  message="Peak Decoder: Long Einstieg (Details siehe Chart)")
+alertcondition(makeShort, title="Short Einstieg", message="Peak Decoder: Short Einstieg (Details siehe Chart)")
+
+if makeLong
+    alert("Peak Decoder: LONG " + (isFollow ? "Update" : "Einstieg") + " bei " + str.tostring(high[1], format.mintick) + " | SL: " + str.tostring(low[1], format.mintick), alert.freq_once_per_bar_close)
+if makeShort
+    alert("Peak Decoder: SHORT " + (isFollow ? "Update" : "Einstieg") + " bei " + str.tostring(low[1], format.mintick) + " | SL: " + str.tostring(high[1], format.mintick), alert.freq_once_per_bar_close)

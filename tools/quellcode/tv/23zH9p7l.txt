@@ -1,0 +1,46 @@
+//@version=5
+indicator("-VrilyaSS-2-Minute Trade Signals-11072024-", overlay=true)
+
+// DeMarker calculation function
+deMarkerPeriod = input.int(14, title="DeMarker Period", minval=1)
+deMarkerOverbought = input.float(0.7, title="DeMarker Overbought Level", minval=0, maxval=1)
+deMarkerOversold = input.float(0.3, title="DeMarker Oversold Level", minval=0, maxval=1)
+
+up = close - low
+down = high - close
+deMax = ta.sma(ta.max(na(up) ? 0 : up), deMarkerPeriod)
+deMin = ta.sma(ta.max(na(down) ? 0 : down), deMarkerPeriod)
+deMarker = deMax / (deMax + deMin)
+
+// Moving Average settings
+maLength = input.int(50, title="Moving Average Length", minval=1)
+ma = ta.sma(close, maLength)
+
+// RSI settings
+rsiPeriod = input.int(14, title="RSI Period", minval=1)
+rsiOverbought = input.int(70, title="RSI Overbought Level", minval=50, maxval=100)
+rsiOversold = input.int(30, title="RSI Oversold Level", minval=0, maxval=50)
+
+// RSI calculation
+rsi = ta.rsi(close, rsiPeriod)
+
+// Buy and Sell conditions
+buyCondition = (deMarker < deMarkerOversold and ta.crossover(rsi, rsiOversold)) or ta.crossover(close, ma)
+sellCondition = (deMarker > deMarkerOverbought and ta.crossunder(rsi, rsiOverbought)) or ta.crossunder(close, ma)
+
+// Plot Buy and Sell signals with tiny labels
+plotshape(series=buyCondition, title="Buy Signal", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy", size=size.small)
+plotshape(series=sellCondition, title="Sell Signal", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell", size=size.small)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Alert", message="Buy Signal Detected")
+alertcondition(sellCondition, title="Sell Alert", message="Sell Signal Detected")
+
+// Optional: Plots with default visibility off
+plot(deMarker, title="DeMarker", color=color.blue, display=display.none)
+hline(deMarkerOverbought, "Overbought", color=color.red, display=display.none)
+hline(deMarkerOversold, "Oversold", color=color.green, display=display.none)
+plot(ma, title="Moving Average", color=color.white, linewidth=2, display=display.none)
+plot(rsi, title="RSI", color=color.purple, display=display.none)
+hline(rsiOverbought, "RSI Overbought", color=color.red, display=display.none)
+hline(rsiOversold, "RSI Oversold", color=color.green, display=display.none)

@@ -1,0 +1,30 @@
+//@version=5
+indicator("-VrilyaSS-RSI & Engulfing Candle-Buy+Sell-", overlay=true)
+
+// RSI settings
+rsiLength = input.int(14, title="RSI Length")
+rsiSource = input.source(ohlc4, title="RSI Source")
+rsiBuyLine = input.int(50, title="RSI Buy Line", minval=0, maxval=100)
+rsiSellLine = input.int(63, title="RSI Sell Line", minval=0, maxval=100)
+rsi = ta.rsi(rsiSource, rsiLength)
+
+// Engulfing Candles
+bullishEngulfing = (close > open and close[1] < open[1] and close > open[1] and open < close[1])
+bearishEngulfing = (close < open and close[1] > open[1] and close < open[1] and open > close[1])
+
+// Buy and Sell Conditions
+buyCondition = (rsi < rsiBuyLine and bullishEngulfing)
+sellCondition = (rsi > rsiSellLine and bearishEngulfing)
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal: RSI under 50 and Bullish Engulfing Candle.")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal: RSI over 63 and Bearish Engulfing Candle.")
+
+// Plot RSI for reference with default visibility off
+plot(rsi, title="RSI", color=color.yellow, linewidth=2, display=display.none)
+hline(rsiBuyLine, "RSI Buy Line", color=color.green, linewidth=3, linestyle=hline.style_solid, display=display.none)
+hline(rsiSellLine, "RSI Sell Line", color=color.red, linewidth=3, linestyle=hline.style_solid, display=display.none)

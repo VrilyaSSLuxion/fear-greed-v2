@@ -1,0 +1,73 @@
+//@version=5
+indicator("-VrilyaSS-Comprehensive-B/S-SMA-9+SMA-21-+RSI+BoBa+MACD-", overlay=true)
+
+// Inputs für Moving Averages
+smaShortLength = input.int(9, title="Short SMA Length")
+smaLongLength = input.int(21, title="Long SMA Length")
+smaShort = ta.sma(close, smaShortLength)
+smaLong = ta.sma(close, smaLongLength)
+
+// Inputs für Bollinger Bands
+bbLength = input.int(20, title="Bollinger Bands Length")
+bbMultiplier = input.float(2.0, title="Bollinger Bands Multiplier")
+[bbBasis, bbUpper, bbLower] = ta.bb(close, bbLength, bbMultiplier)
+
+// Inputs für RSI
+rsiLength = input.int(14, title="RSI Length")
+rsiOverbought = input.int(70, title="RSI Overbought Level")
+rsiOversold = input.int(30, title="RSI Oversold Level")
+rsi = ta.rsi(close, rsiLength)
+
+// Inputs für MACD
+macdFastLength = input.int(12, title="MACD Fast Length")
+macdSlowLength = input.int(26, title="MACD Slow Length")
+macdSignalLength = input.int(9, title="MACD Signal Length")
+[macdLine, macdSignal, macdHist] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalLength)
+
+// Signale für Moving Averages
+smaCrossUp = ta.crossover(smaShort, smaLong)
+smaCrossDown = ta.crossunder(smaShort, smaLong)
+
+// Signale für Bollinger Bands
+priceAboveUpperBand = close > bbUpper
+priceBelowLowerBand = close < bbLower
+
+// Signale für RSI
+rsiOverboughtCondition = rsi > rsiOverbought
+rsiOversoldCondition = rsi < rsiOversold
+
+// Signale für MACD
+macdCrossUp = ta.crossover(macdLine, macdSignal)
+macdCrossDown = ta.crossunder(macdLine, macdSignal)
+
+// Kauf- und Verkaufssignale kombinieren
+buySignal = smaCrossUp and not priceAboveUpperBand and not rsiOverboughtCondition and macdCrossUp
+sellSignal = smaCrossDown and not priceBelowLowerBand and not rsiOversoldCondition and macdCrossDown
+
+// Plotte die Moving Averages
+plot(smaShort, color=color.orange, linewidth=2, title="Short SMA")
+plot(smaLong, color=color.blue, linewidth=3, title="Long SMA")
+
+// Plotte die Bollinger Bands
+plot(bbUpper, color=color.red, linewidth=2, title="Bollinger Upper Band")
+plot(bbBasis, color=color.gray, linewidth=2, title="Bollinger Basis")
+plot(bbLower, color=color.green, linewidth=2, title="Bollinger Lower Band")
+
+// Plotte die RSI in einem separaten Fenster
+hline(rsiOverbought, "Overbought", color=color.red, display=display.none)
+hline(rsiOversold, "Oversold", color=color.green, display=display.none)
+plot(rsi, color=color.yellow, linewidth=2, title="RSI", display=display.none)
+
+// Plotte die MACD in einem separaten Fenster
+hline(0, "Zero Line", color=color.gray, display=display.none)
+plot(macdHist, color=color.purple, title="MACD Histogram", display=display.none)
+plot(macdLine - macdSignal, color=color.blue, title="MACD Line - Signal Line", display=display.none)
+
+// Plotte Kauf- und Verkaufssignale
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="B", textcolor=color.black, size=size.small)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="S", textcolor=color.black, size=size.small)
+
+// Alarme
+alertcondition(buySignal, title="Buy Signal Alert", message="Buy signal generated based on SMA, Bollinger Bands, RSI, and MACD.")
+alertcondition(sellSignal, title="Sell Signal Alert", message="Sell signal generated based on SMA, Bollinger Bands, RSI, and MACD.")
+alertcondition(buySignal or sellSignal, title="Buy/Sell Signal Alert", message="Buy or Sell signal generated based on SMA, Bollinger Bands, RSI, and MACD.")

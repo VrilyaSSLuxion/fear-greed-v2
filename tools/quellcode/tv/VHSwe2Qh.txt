@@ -1,0 +1,38 @@
+//@version=5
+indicator("Short-Term Trade Indicator", overlay=true)
+
+// Input settings
+rsiLength = input.int(14, title="RSI Length")
+rsiSource = input.source(close, title="RSI Source")
+rsiOverbought = input.int(50, title="RSI Overbought Level", minval=50, maxval=100)
+rsiOversold = input.int(50, title="RSI Oversold Level", minval=0, maxval=50)
+shortMaLength = input.int(9, title="Short MA Length")
+longMaLength = input.int(21, title="Long MA Length")
+
+// Calculations
+rsi = ta.rsi(rsiSource, rsiLength)
+shortMa = ta.sma(close, shortMaLength)
+longMa = ta.sma(close, longMaLength)
+
+// Buy Condition
+buyCondition = ta.crossover(shortMa, longMa) and rsi < rsiOversold
+
+// Sell Condition
+sellCondition = ta.crossunder(shortMa, longMa) and rsi > rsiOverbought
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, location=location.belowbar, color=color.new(color.green, 0), style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, location=location.abovebar, color=color.new(color.red, 0), style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal: Short MA crosses above Long MA and RSI below oversold level.")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal: Short MA crosses below Long MA and RSI above overbought level.")
+
+// Plot RSI and horizontal lines for reference, default visibility off
+plot(rsi, title="RSI", color=color.yellow, linewidth=2, display=display.none)
+hline(rsiOversold, "RSI Oversold Level", color=color.green, linewidth=2, linestyle=hline.style_solid, display=display.none)
+hline(rsiOverbought, "RSI Overbought Level", color=color.red, linewidth=2, linestyle=hline.style_solid, display=display.none)
+
+// Plot MAs for reference, default visibility on
+plot(shortMa, title="Short MA", color=color.green, linewidth=2)
+plot(longMa, title="Long MA", color=color.red, linewidth=2)

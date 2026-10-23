@@ -1,0 +1,234 @@
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © EagleVSniper and scripts of LuxAlgo
+
+//@version=5
+indicator("-VrilyaSS-Predictive Channel Signals-", overlay = true)
+
+//-----------------------------------------------------------------------------}
+//Settings
+//-----------------------------------------------------------------------------{
+mult  = input.float(15, 'Factor', minval = 0, group = 'Channel')
+slope = input.float(50, title = 'Slope', minval = 0, group = 'Channel') * mult
+
+
+// MA
+type       = input.string("TEMA" ,'MA Type', group=   'MA', options =   ["SMA", "EMA", "SMMA (RMA)", "HullMA", "WMA", "VWMA", "DEMA", "TEMA", "NONE"])
+len        = input.int   (50, 'Length', group=   'MA'  )
+count      = input.int   (20, 'Previous Trend Duration', group=   'MA', tooltip = 'Reversal after x bars in the same direction')
+
+
+//Style
+colUp = input(#089981, '          ', inline = 'color', group = 'Colors')
+colMa = input(#787b86, '          ', inline = 'color', group = 'Colors')
+colDn = input(#f23645, '          ', inline = 'color', group = 'Colors')
+
+color colUp1 = color.new(colUp, 50)
+color colUp2 = color.new(colUp, 0)
+
+color avgCss = color.new(colMa, 0)
+
+color colDn1 = color.new(colDn, 0)
+color colDn2 = color.new(colDn, 50)
+
+color areaBull = color.new(colUp, 80)
+color areaBear = color.new(colDn, 80)
+
+
+// Any Alert()
+enableLowBuy   = input.bool(false, title = "Low Buy     ",  inline = 'low', group  = 'Any Alert()')
+enableMidBuy   = input.bool(false, title = "Mid Buy      ", inline = 'mid', group  = 'Any Alert()')
+enableHighBuy  = input.bool(false, title = "High Buy     ", inline = 'high', group = 'Any Alert()')
+enableLowSell  = input.bool(false, title = "Low Sell",      inline = 'low', group  = 'Any Alert()')
+enableMidSell  = input.bool(false, title = "Mid Sell",      inline = 'mid', group  = 'Any Alert()')
+enableHighSell = input.bool(false, title = "High Sell",     inline = 'high', group = 'Any Alert()')
+
+
+//-----------------------------------------------------------------------------}
+//Calculation
+//-----------------------------------------------------------------------------{
+var pc_avg = close
+var os = 1
+var hold_atr = 0.
+
+atr = nz(ta.atr(200)) * mult
+
+pc_avg := math.abs(close - pc_avg) > atr ? close : pc_avg + os * hold_atr / slope
+
+hold_atr := pc_avg == close ? atr / 2 : hold_atr
+
+os := pc_avg > pc_avg[1] ? 1 : pc_avg < pc_avg[1] ? -1 : os
+
+pc_R2 = pc_avg + hold_atr
+pc_R1 = pc_avg + hold_atr / 2
+pc_S1 = pc_avg - hold_atr / 2
+pc_S2 = pc_avg - hold_atr
+
+//-----------------------------------------------------------------------------}
+//Plot channels
+//-----------------------------------------------------------------------------{
+plot_0 = plot(close, color = na, display = display.none, editable = false)
+
+//SR PLots
+plot(pc_R2, 'Upper Resistance', close == pc_avg ? na : colDn1)
+plot(pc_R1, 'Lower Resistance', close == pc_avg ? na : colDn2)
+
+plot_avg = plot(pc_avg, 'Average', close == pc_avg ? na : avgCss)
+
+plot(pc_S1, 'Upper Support', close == pc_avg ? na : colUp1)
+plot(pc_S2, 'Lower Support', close == pc_avg ? na : colUp2)
+
+//Fill
+topcss = close > pc_avg ? areaBull : color.new(chart.bg_color, 100)
+btmcss = close < pc_avg ? areaBear : color.new(chart.bg_color, 100)
+fill(plot_0, plot_avg, pc_R2, pc_S2, topcss, btmcss)
+
+//-----------------------------------------------------------------------------}
+//Method MA
+//-----------------------------------------------------------------------------{
+method ma(string type, int length) =>
+    //
+    ema1 = ta.ema(close, length)
+    ema2 = ta.ema(ema1 , length)
+    ema3 = ta.ema(ema2 , length)
+    //
+    switch type
+        "SMA"        => ta.sma (close, length)
+        "EMA"        => ema1
+        "SMMA (RMA)" => ta.rma (close, length)
+        "HullMA"     => ta.hma (close, length)
+        "WMA"        => ta.wma (close, length)
+        "VWMA"       => ta.vwma(close, length)
+        "DEMA"       =>  2 * ema1  -      ema2
+        "TEMA"       => (3 * ema1) - (3 * ema2) + ema3
+        => na
+
+
+//-----------------------------------------------------------------------------}
+//Calculations
+//-----------------------------------------------------------------------------{
+ma    = type.ma(len)
+fl    = ta.falling(ma, count)
+rs    = ta.rising (ma, count)
+up    = fl[1] and ma > ma[1] 
+dn    = rs[1] and ma < ma[1]  
+atr2  = ta.atr(14)
+n     = bar_index
+
+// Signal presets
+
+lowSell  = ma > pc_avg and ma < pc_R1
+midSell  = ma > pc_R1 and ma < pc_R2
+highSell = ma > pc_R2
+
+lowBuy  = ma < pc_avg and ma > pc_S1
+midBuy  = ma < pc_S1 and ma > pc_S2
+highBuy = ma < pc_S2
+
+//-----------------------------------------------------------------------------}
+//Execution
+//-----------------------------------------------------------------------------{
+if dn and lowSell
+    p = array.new<chart.point>()
+    p.push(chart.point.from_index(n - 1, low [1] - atr2 / 15 )) 
+    p.push(chart.point.from_index(n + (len / 2 -1), low [1] + atr2 / 2.5)) 
+    p.push(chart.point.from_index(n +  len, low [1] + atr2 * 2)) 
+    p.push(chart.point.from_index(n + (len / 2 -1), low [1] + atr2 / 2.5)) 
+    p.push(chart.point.from_index(n - 1, low [1] + atr2 / 15)) 
+    polyline.new(p, curved = true, closed = false, line_color = colDn, fill_color = color.new(colDn, 50))
+
+if dn and midSell
+    p = array.new<chart.point>()
+    p.push(chart.point.from_index(n - 1, low [1] - atr2 / 15 )) 
+    p.push(chart.point.from_index(n + (len / 2 -1), low [1] + atr2 / 2.5)) 
+    p.push(chart.point.from_index(n +  len, low [1] + atr2 * 2  )) 
+    p.push(chart.point.from_index(n + (len / 2 -1), low [1] + atr2 / 2.5)) 
+    p.push(chart.point.from_index(n - 1, low [1] + atr2 / 15)) 
+    polyline.new(p, curved = true, closed = false, line_color = colDn, fill_color = color.new(colDn, 50))
+
+if dn and highSell
+    p = array.new<chart.point>()
+    p.push(chart.point.from_index(n - 1, low [1] - atr2 / 15 )) 
+    p.push(chart.point.from_index(n + (len / 2 -1), low [1] + atr2 / 2.5)) 
+    p.push(chart.point.from_index(n +  len, low [1] + atr2 * 2)) 
+    p.push(chart.point.from_index(n + (len / 2 -1), low [1] + atr2 / 2.5)) 
+    p.push(chart.point.from_index(n - 1, low [1] + atr2 / 15)) 
+    polyline.new(p, curved = true, closed = false, line_color = colDn, fill_color = color.new(colDn, 50))
+
+if up and lowBuy
+    p = array.new<chart.point>()
+    p.push(chart.point.from_index(n - 1, high[1] + atr2 / 15)) 
+    p.push(chart.point.from_index(n + (len / 2 -1), high[1] - atr2 / 2.5)) 
+    p.push(chart.point.from_index(n +  len, high[1] - atr2 * 2)) 
+    p.push(chart.point.from_index(n + (len / 2 -1), high[1] - atr2 / 2.5)) 
+    p.push(chart.point.from_index(n - 1, high[1] - atr2 / 15)) 
+    polyline.new(p, curved = true, closed = false, line_color = colUp, fill_color = color.new(colUp, 50))
+
+if up and midBuy
+    p = array.new<chart.point>()
+    p.push(chart.point.from_index(n - 1, high[1] + atr2 / 15)) 
+    p.push(chart.point.from_index(n + (len / 2 -1), high[1] - atr2 / 2.5)) 
+    p.push(chart.point.from_index(n +  len, high[1] - atr2 * 2)) 
+    p.push(chart.point.from_index(n + (len / 2 -1), high[1] - atr2 / 2.5)) 
+    p.push(chart.point.from_index(n - 1, high[1] - atr2 / 15)) 
+    polyline.new(p, curved = true, closed = false, line_color = colUp, fill_color = color.new(colUp, 50))
+
+if up and highBuy
+    p = array.new<chart.point>()
+    p.push(chart.point.from_index(n - 1  , high[1] + atr2 / 15)) 
+    p.push(chart.point.from_index(n + (len / 2 -1), high[1] - atr2 / 2.5)) 
+    p.push(chart.point.from_index(n +  len, high[1] - atr2 * 2)) 
+    p.push(chart.point.from_index(n + (len / 2 -1), high[1] - atr2 / 2.5)) 
+    p.push(chart.point.from_index(n - 1, high[1] - atr2 / 15)) 
+    polyline.new(p, curved = true, closed = false, line_color = colUp, fill_color = color.new(colUp, 50))
+
+    
+
+    
+//-----------------------------------------------------------------------------}
+//Plots
+//-----------------------------------------------------------------------------{
+plot     (ma , 'MA',color=colMa)
+
+//Single
+plotshape(up and lowBuy ? low [1] : na, '', color = colUp, location = location.absolute, style = shape.circle, size = size.tiny, offset = -1)
+
+//Double
+plotshape(up and midBuy ? low [1] : na, '', color = colUp, location = location.absolute, style = shape.circle, size = size.tiny, offset = -1)
+plotshape(up and midBuy ? low [1] : na, '', color = color.new(colUp, 50), location = location.absolute, style = shape.circle, size = size.small, offset = -1)
+
+//Triple
+plotshape(up and highBuy ? low [1] : na, '', color = colUp, location = location.absolute, style = shape.circle, size = size.tiny, offset = -1)
+plotshape(up and highBuy ? low [1] : na, '', color = color.new(colUp, 50), location=location.absolute, style = shape.circle, size = size.small, offset = -1)
+plotshape(up and highBuy ? low [1] : na, '', color = color.new(colUp, 65), location = location.absolute, style = shape.circle, size = size.normal, offset = -1)
+
+
+
+//Single
+plotshape(dn and lowSell ? high[1] : na, '', color = colDn,  location = location.absolute, style = shape.circle, size = size.tiny, offset = -1)
+
+//Double
+plotshape(dn and midSell ? high[1] : na, '', color = colDn,  location = location.absolute, style = shape.circle, size = size.tiny, offset = -1)
+plotshape(dn and midSell ? high[1] : na, '', color = color.new(colDn, 50), location = location.absolute, style = shape.circle, size = size.small, offset = -1)
+
+//Triple
+plotshape(dn and highSell ? high[1] : na, '', color = colDn, location = location.absolute, style = shape.circle, size = size.tiny, offset = -1)
+plotshape(dn and highSell ? high[1] : na, '', color = color.new(colDn, 50),  location = location.absolute, style = shape.circle, size = size.small, offset = -1)
+plotshape(dn and highSell ? high[1] : na, '', color = color.new(colDn, 65),  location = location.absolute, style = shape.circle, size = size.normal, offset = -1)
+ 
+//-----------------------------------------------------------------------------}
+//Alerts
+//-----------------------------------------------------------------------------{
+
+anyAlert = ((up and lowBuy) and enableLowBuy) or ((up and midBuy) and enableMidBuy) or ((up and highBuy)  and enableHighBuy) 
+  or ((dn and lowSell)  and enableLowSell) or ((dn and midSell)  and enableMidSell) or ((dn and highSell) and enableHighSell)
+
+alertcondition(anyAlert, title = 'Any Alert()', message = 'Alert')
+
+
+anyBullish = (up and lowBuy)  or (up and midBuy)  or (up and highBuy)
+anyBearish = (dn and lowSell) or (dn and midSell) or (dn and highSell)
+
+alertcondition(anyBullish, title = 'Bullish Alert', message  = 'Buy Alert')
+alertcondition(anyBearish, title = 'Bearish Alert',  message = 'Sell Alert')
+
+//-----------------------------------------------------------------------------}

@@ -1,0 +1,36 @@
+//@version=5
+indicator("Quick Trade Indicator with Pivot Points", shorttitle="QTI Pivot Points", overlay=true)
+
+// Inputparameter
+pivotPeriod = input.string("Daily", title="Pivot Point Period", options=["Daily", "Weekly", "Monthly"])
+pivot_src = input.source(close, title="Pivot Point Source")
+
+// Funktion zur Berechnung der Pivot Points
+pivot(p, pPeriod) =>
+    _high = ta.highest(p, 5)
+    _low = ta.lowest(p, 5)
+    _close = close
+    _pivot_point = (_high + _low + _close) / 3
+    _r1 = 2 * _pivot_point - _low
+    _s1 = 2 * _pivot_point - _high
+    _r2 = _pivot_point + (_high - _low)
+    _s2 = _pivot_point - (_high - _low)
+    _r3 = _high + 2 * (_pivot_point - _low)
+    _s3 = _low - 2 * (_high - _pivot_point)
+    [_pivot_point, _r1, _s1, _r2, _s2, _r3, _s3]
+
+// Berechnung der Pivot Points
+[pivot_point, r1, s1, r2, s2, r3, s3] = pivot(pivot_src, pivotPeriod)
+
+// Bedingungen für Long- und Short-Signale
+buy_condition = close > pivot_point and ta.crossover(close, pivot_point)
+sell_condition = close < pivot_point and ta.crossunder(close, pivot_point)
+
+// Plot der Pivot Points
+plot(pivot_point, title="Pivot Point", color=color.blue, linewidth=1)
+plot(r1, title="R1", color=color.green, linewidth=1)
+plot(s1, title="S1", color=color.red, linewidth=1)
+
+// Plot Buy and Sell signals
+plotshape(series=buy_condition, title="Buy Signal", location=location.belowbar, color=color.green, text="BUY", style=shape.labelup, textcolor=color.black, size=size.tiny)
+plotshape(series=sell_condition, title="Sell Signal", location=location.abovebar, color=color.red, text="SELL", style=shape.labeldown, textcolor=color.black, size=size.tiny)

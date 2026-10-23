@@ -1,0 +1,24 @@
+//@version=5
+indicator("-Quick Trade Indicator-(QTI)-Short-SMA-10+Long-SMA-30-Cross-B+S-", shorttitle="-Quick Trade Indicator-(QTI)-Short-SMA-10+Long-SMA-30-Cross-B+S-", overlay=true)
+
+// Einstellungen für die Moving Averages
+fastLength = input.int(10, title="-Fast-SMA-Period-10-")
+fast_src = input.source(close, title="-Fast-SMA-Period-Source-close-")
+slowLength = input.int(30, title="-Slow-SMA-Period-30-")
+slow_src = input.source(close, title="-Slow-SMA-Period-Source-close-")
+
+// Berechnung der Moving Averages
+fastMA = ta.sma(fast_src, fastLength)
+slowMA = ta.sma(slow_src, slowLength)
+
+// Bedingungen für Long- und Short-Signale
+bullish_crossover = ta.crossover(fastMA, slowMA)
+bearish_crossover = ta.crossunder(fastMA, slowMA)
+
+// Plot der Moving Averages
+plot(fastMA, color=color.blue, title="-Fast-SMA-", linewidth=2)
+plot(slowMA, color=color.red, title="-Slow-SMA-", linewidth=2)
+
+// Plot Buy and Sell signals
+plotshape(series=bullish_crossover, title="-Buy Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=bearish_crossover, title="-Sell Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

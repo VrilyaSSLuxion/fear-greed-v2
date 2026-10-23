@@ -1,0 +1,44 @@
+//@version=5
+indicator("Diamond Trading Pattern", overlay=true)
+
+// Input settings
+left_peak_length = input.int(10, minval=1, title="Left Peak Length")
+right_peak_length = input.int(10, minval=1, title="Right Peak Length")
+line_color = input.color(color.new(color.blue, 0), title="Pattern Line Color")
+
+// Calculate local high and low points
+left_high = ta.highest(high, left_peak_length)
+right_high = ta.highest(high, right_peak_length)
+left_low = ta.lowest(low, left_peak_length)
+right_low = ta.lowest(low, right_peak_length)
+
+// Define the diamond shape boundaries
+upper_left = left_high
+upper_right = right_high
+lower_left = left_low
+lower_right = right_low
+
+// Check for diamond pattern conditions
+diamond_top = high > upper_left and high < upper_right
+diamond_bottom = low < lower_left and low > lower_right
+diamond_pattern = diamond_top and diamond_bottom
+
+// Plot the diamond pattern lines
+var upper_line = line.new(na, na, na, na, color=line_color, width=2)
+var lower_line = line.new(na, na, na, na, color=line_color, width=2)
+
+if diamond_pattern
+    line.set_xy1(upper_line, bar_index - left_peak_length, upper_left)
+    line.set_xy2(upper_line, bar_index, upper_right)
+    line.set_xy1(lower_line, bar_index - left_peak_length, lower_left)
+    line.set_xy2(lower_line, bar_index, lower_right)
+
+// Highlight the pattern breakout
+breakout_up = high > upper_right
+breakout_down = low < lower_right
+
+bgcolor(breakout_up ? color.new(color.green, 85) : breakout_down ? color.new(color.red, 85) : na, title="Breakout Highlight")
+
+// Alerts
+alertcondition(breakout_up, title="Diamond Pattern Breakout Up", message="Price broke out upward from the diamond pattern!")
+alertcondition(breakout_down, title="Diamond Pattern Breakout Down", message="Price broke out downward from the diamond pattern!")

@@ -1,0 +1,41 @@
+//@version=5
+indicator("Stochastic RSI with-MA-9-for Fast Trades-", overlay=true)
+
+// Input settings
+stochRsiLength = input.int(14, title="Stochastic RSI Length")
+stochRsiSource = input.source(close, title="Stochastic RSI Source")
+kSmoothing = input.int(3, title="Stochastic %K Smoothing")
+dSmoothing = input.int(3, title="Stochastic %D Smoothing")
+stochRsiOverbought = input.int(80, title="Stochastic RSI Overbought Level", minval=50, maxval=100)
+stochRsiOversold = input.int(20, title="Stochastic RSI Oversold Level", minval=0, maxval=50)
+maLength = input.int(9, title="MA Length")
+
+// Calculations
+rsi = ta.rsi(stochRsiSource, stochRsiLength)
+stochRsiK = ta.sma(ta.stoch(rsi, rsi, rsi, stochRsiLength), kSmoothing)
+stochRsiD = ta.sma(stochRsiK, dSmoothing)
+ma = ta.sma(close, maLength)
+
+// Buy Condition
+buyCondition = ta.crossover(stochRsiK, stochRsiOversold) and close > ma
+
+// Sell Condition
+sellCondition = ta.crossunder(stochRsiK, stochRsiOverbought) and close < ma
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, location=location.belowbar, color=color.new(color.green, 0), style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, location=location.abovebar, color=color.new(color.red, 0), style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal: Stochastic RSI %K crosses above oversold level and price is above MA.")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal: Stochastic RSI %K crosses below overbought level and price is below MA.")
+
+// Plot MA for reference
+plot(ma, title="MA", color=color.white, linewidth=2)
+
+// Settings to toggle the Stochastic RSI display
+showStochRsi = input(false, title="Show Stochastic RSI", inline="Stochastic RSI")
+plot(stochRsiK, title="Stochastic %K", color=color.aqua, linewidth=2, display=showStochRsi ? display.all : display.none)
+plot(stochRsiD, title="Stochastic %D", color=color.red, linewidth=3, display=showStochRsi ? display.all : display.none)
+hline(stochRsiOversold, "Stochastic RSI Oversold Level", color=color.green, linewidth=3, linestyle=hline.style_solid, display=showStochRsi ? display.all : display.none)
+hline(stochRsiOverbought, "Stochastic RSI Overbought Level", color=color.red, linewidth=3, linestyle=hline.style_solid, display=showStochRsi ? display.all : display.none)

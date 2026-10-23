@@ -1,0 +1,25 @@
+//@version=6
+indicator("Fibonacci 0.5 Level Signal", overlay=true)
+
+// Input settings
+length = input.int(20, minval=1, title="Lookback Period for High/Low")
+signal_color = input.color(color.new(color.red, 0), title="Signal Color")
+
+// Calculate Fibonacci retracement levels
+highestHigh = ta.highest(high, length)
+lowestLow = ta.lowest(low, length)
+priceRange = highestHigh - lowestLow
+
+fib_0_5 = lowestLow + priceRange * 0.5
+
+// Check if the 0.5 Fibonacci level is touched
+fib_touched = (low <= fib_0_5 and high >= fib_0_5)
+
+// Plot the Fibonacci level
+line.new(bar_index[length], fib_0_5, bar_index, fib_0_5, color=color.new(color.blue, 0), width=1, style=line.style_solid)
+
+// Signal when the level is touched
+plotshape(fib_touched, style=shape.labelup, location=location.absolute, color=signal_color, title="Fib 0.5 Signal", text="Fib 0.5")
+
+// Alerts
+alertcondition(fib_touched, title="Fib 0.5 Touched", message="The price has touched the 0.5 Fibonacci level!")

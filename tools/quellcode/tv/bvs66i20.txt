@@ -1,0 +1,49 @@
+//@version=5
+indicator("Volumen Delta und Kerzenformation Strategie", overlay=true)
+
+// Volumen Delta Konfiguration
+volDeltaLength = input.int(10, title="Volumen Delta Periode")
+volDeltaThreshold = input.float(0.0, title="Volumen Delta Schwelle")
+
+// Kerzenformation Konfiguration
+candlePattern = input.string("bullish_engulfing", title="Kerzenmuster", options=["bullish_engulfing", "bearish_engulfing", "hammer", "shooting_star"])
+
+// Volumen Delta Berechnung
+var float prevVolume = na
+volDelta = na(prevVolume) ? 0 : volume - prevVolume
+prevVolume := volume
+
+// Kerzenmuster Funktionen
+isBullishEngulfing() =>
+    close[1] < open[1] and close > open and open < close[1] and close > open[1]
+
+isBearishEngulfing() =>
+    close[1] > open[1] and close < open and open > close[1] and close < open[1]
+
+isHammer() =>
+    body = math.abs(close - open)
+    candleRange = high - low
+    body > candleRange * 0.5 and math.min(close, open) < low + candleRange * 0.3
+
+isShootingStar() =>
+    body = math.abs(close - open)
+    candleRange = high - low
+    body > candleRange * 0.5 and math.max(close, open) > high - candleRange * 0.3
+
+// Kerzenmuster Auswahl
+patternCondition = switch candlePattern
+    "bullish_engulfing" => isBullishEngulfing()
+    "bearish_engulfing" => isBearishEngulfing()
+    "hammer" => isHammer()
+    "shooting_star" => isShootingStar()
+
+// Buy und Sell Signale basierend auf Volumen Delta und Kerzenformation
+buySignal = volDelta > volDeltaThreshold and patternCondition and close > open
+sellSignal = volDelta < -volDeltaThreshold and patternCondition and close < open
+
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Hintergrundfarbe für Volumen Delta
+bgcolor(buySignal ? color.new(color.green, 90) : na, offset=-1)
+bgcolor(sellSignal ? color.new(color.red, 90) : na, offset=-1)

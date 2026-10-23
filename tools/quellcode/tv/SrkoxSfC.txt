@@ -1,0 +1,33 @@
+//@version=5
+indicator("Volume Delta Buy/Sell with EMA Confirmation and Alerts", overlay=true)
+
+// Berechnung des Volume Delta
+upVol = volume * (close > open ? 1 : 0)
+downVol = volume * (close < open ? 1 : 0)
+delta = upVol - downVol
+
+// Berechnung des EMA
+emaLength = input.int(21, title="EMA Length")
+ema = ta.ema(close, emaLength)
+
+// Kaufsignal, wenn das Volume Delta von negativ zu positiv wechselt und der Kurs über dem EMA liegt
+buySignal = ta.crossover(delta, 0) and close > ema
+
+// Verkaufssignal, wenn das Volume Delta von positiv zu negativ wechselt und der Kurs unter dem EMA liegt
+sellSignal = ta.crossunder(delta, 0) and close < ema
+
+// Zeichnen der Signale auf dem Chart mit schwarzem Text
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", size=size.small, textcolor=color.black)
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", size=size.small, textcolor=color.black)
+
+// Optional: Anzeige des Volume Delta als Histogramm
+plot(delta, color=color.blue, style=plot.style_histogram, title="Volume Delta")
+
+// Plot des EMA auf dem Chart
+plot(ema, color=color.orange, title="EMA")
+
+// Alarm für Kaufsignal
+alertcondition(buySignal, title="Buy Signal", message="Volume Delta Buy Signal with EMA Confirmation")
+
+// Alarm für Verkaufssignal
+alertcondition(sellSignal, title="Sell Signal", message="Volume Delta Sell Signal with EMA Confirmation")

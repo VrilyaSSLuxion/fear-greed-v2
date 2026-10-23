@@ -1,0 +1,27 @@
+//@version=5
+indicator("-VrilyaSS-Double RSI Trend-barrettdenning-", overlay=true)
+
+atrPeriod1 = input(1, "-ATR Length-1-")
+factor = input.float(1.85, "-Factor-1.85-", step = 0.01)
+
+[supertrend, direction] = ta.supertrend(factor, atrPeriod1)
+
+rsiSource = input(close, "-RSI Source-close- ")
+rsiPeriodShort = input(25, "-Short RSI Period-25- ")
+rsiPeriodLong = input(100, "-Long RSI Period-100-")
+
+Crossing0 = input(true, "-Crossing on the same candle-true-")
+Crossing1 = input(false, "-Crossing on the one candle before-false-")
+Crossing2 = input(false, "-Crossing on the two candle before-false-")
+
+rsi25 = ta.rsi(rsiSource, rsiPeriodShort)
+rsi100 = ta.rsi(rsiSource, rsiPeriodLong)
+
+isBuy = direction < 0 and direction[1] > 0 and ((ta.crossover(rsi25,rsi100) and Crossing0) or (ta.crossover(rsi25,rsi100)[1] and Crossing1) or (ta.crossover(rsi25,rsi100)[2] and Crossing2))
+isSell = direction >0 and direction[1] < 0 and ((ta.crossunder(rsi25,rsi100) and Crossing0) or (ta.crossunder(rsi25,rsi100)[1] and Crossing1) or (ta.crossunder(rsi25,rsi100)[2] and Crossing2))
+
+plotshape(isBuy ? 1 : na, style=shape.labelup, location=location.belowbar, size=size.small, color=color.green, text="Buy",textcolor=color.white)
+plotshape(isSell ? 1 : na, style=shape.labeldown, location=location.abovebar, size=size.small, color=color.red, text="Sell",textcolor=color.white)
+
+alertcondition(isBuy, "-Buy Signal-VrilyaSS-Double RSI Trend-barrettdenning-", "-Buy Signal-VrilyaSS-Double RSI Trend-barrettdenning-")
+alertcondition(isSell, "-Sell Signal-VrilyaSS-Double RSI Trend-barrettdenning-", "-Sell Signal-VrilyaSS-Double RSI Trend-barrettdenning-")

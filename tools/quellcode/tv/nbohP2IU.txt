@@ -1,0 +1,60 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Original by infernix, library integration by peshocore
+// Please note while the code is open source and you are free to use it however you like - the 'Traders Reality' name is not - ie if you produce derivatives of this 
+// source code you to name those scripts using "Traders Reality", "Pattern Watchers" or any other name that relates to Traders Reality in any way.
+
+//@version=5
+indicator(title='-VrilyaSS-Traders Reality Vector Candle Zones-', shorttitle='-VrilyaSS-TR_VCZ-', overlay=true)
+import TradersReality/Traders_Reality_Lib/1 as trLib
+
+color redVectorColor = input.color(title='Vector: Red', group='PVSRA Colors', defval=color.red, inline='vectors')
+color greenVectorColor = input.color(title='Green', group='PVSRA Colors', defval=color.lime, inline='vectors')
+color violetVectorColor = input.color(title='Violet', group='PVSRA Colors', defval=color.fuchsia, inline='vectors')
+color blueVectorColor = input.color(title='Blue', group='PVSRA Colors', defval=color.blue, inline='vectors', tooltip='Bull bars are green and bear bars are red when the bar is with volume >= 200% of the average volume of the 10 previous bars, or bars where the product of candle spread x candle volume is >= the highest for the 10 previous bars.\n Bull bars are blue and bear are violet when the bar is with with volume >= 150% of the average volume of the 10 previous bars.')
+color regularCandleUpColor = input.color(title='Regular: Up Candle', group='PVSRA Colors', defval=#999999, inline='nonVectors')
+color regularCandleDownColor = input.color(title='Down Candle', group='PVSRA Colors', defval=#4d4d4d, inline='nonVectors', tooltip='Bull bars are light gray and bear are dark gray when none of the red/green/blue/violet vector conditions are met.')
+bool setcandlecolors = input.bool(true, title='Set PVSRA candle colors?-derfault-false-', group='PVSRA Colors', inline='setCandle')
+
+int zonesMax = input.int(500, 'Maximum zones to draw', group='Vector Candle Zones')
+string zoneType = input.string(group='Vector Candle Zones', defval='Body only', title='Zone top/bottom is defined with: ', options=['Body only', 'Body with wicks'])
+string zoneUpdateType = input.string(group='Vector Candle Zones', defval='Body with wicks', title='Zones are cleared using candle: ', options=['Body only', 'Body with wicks'])
+int borderWidth = input.int(0, 'Zone border width', group='Vector Candle Zones')
+bool colorOverride = input.bool(false, 'Override color?-default-true-' , group='Vector Candle Zones', inline="vcz1")
+color zoneColor = input.color(title='Color', group='Vector Candle Zones', defval=color.rgb(255, 230, 75, 90), inline="vcz1", tooltip='the vector candle zones color to use if you dont not want to use the PVSRA Candle Colors.')
+int transperancy = input.int(85, 'Zone Transperancy-default-90-', minval = 0, maxval = 100, group='Vector Candle Zones', tooltip='If the vector candle zones color is not overriden, then we want to set the transparancy of the vector candle colors as defined by the PBSRA candle colors. This setting only affects the candle zone colors not the candle colors themselves.')
+
+bool overrideSym = input.bool(group='PVSRA Override', title='Override chart symbol?', defval=false, inline='pvsra')
+string pvsraSym = input.string(group='PVSRA Override', title='', defval='INDEX:BTCUSD', tooltip='You can use INDEX:BTCUSD or you can combine multiple feeds, for example BINANCE:BTCUSDT+COINBASE:BTCUSD. Note that adding too many will slow things down.', inline='pvsra')
+
+
+
+pvsraVolume(overrideSymbolX, pvsraSymbolX, tickerIdX) =>
+    request.security(overrideSymbolX ? pvsraSymbolX : tickerIdX, '', volume, barmerge.gaps_off, barmerge.lookahead_off)
+pvsraHigh(overrideSymbolX, pvsraSymbolX, tickerIdX) =>
+    request.security(overrideSymbolX ? pvsraSymbolX : tickerIdX, '', high, barmerge.gaps_off, barmerge.lookahead_off)
+pvsraLow(overrideSymbolX, pvsraSymbolX, tickerIdX) =>
+    request.security(overrideSymbolX ? pvsraSymbolX : tickerIdX, '', low, barmerge.gaps_off, barmerge.lookahead_off)
+pvsraClose(overrideSymbolX, pvsraSymbolX, tickerIdX) =>
+    request.security(overrideSymbolX ? pvsraSymbolX : tickerIdX, '', close, barmerge.gaps_off, barmerge.lookahead_off)
+pvsraOpen(overrideSymbolX, pvsraSymbolX, tickerIdX) =>
+    request.security(overrideSymbolX ? pvsraSymbolX : tickerIdX, '', open, barmerge.gaps_off, barmerge.lookahead_off)
+
+
+pvsraVolume = pvsraVolume(overrideSym, pvsraSym, syminfo.tickerid)
+pvsraHigh = pvsraHigh(overrideSym, pvsraSym, syminfo.tickerid)
+pvsraLow = pvsraLow(overrideSym, pvsraSym, syminfo.tickerid)
+pvsraClose = pvsraClose(overrideSym, pvsraSym, syminfo.tickerid)
+pvsraOpen = pvsraOpen(overrideSym, pvsraSym, syminfo.tickerid)
+[pvsraColor, alertFlag, averageVolume, volumeSpread, highestVolumeSpread] = trLib.calcPvsra(pvsraVolume, pvsraHigh, pvsraLow, pvsraClose, pvsraOpen, redVectorColor, greenVectorColor, violetVectorColor, blueVectorColor, regularCandleDownColor, regularCandleUpColor)
+
+
+var zoneBoxesAbove = array.new_box()
+var zoneBoxesBelow = array.new_box()
+
+
+barcolor(setcandlecolors ? pvsraColor : na)
+pvsra = trLib.getPvsraFlagByColor(pvsraColor, redVectorColor, greenVectorColor, violetVectorColor, blueVectorColor, regularCandleUpColor)
+trLib.updateZones(pvsra, 0, zoneBoxesBelow, zonesMax, pvsraHigh, pvsraLow, pvsraOpen, pvsraClose, transperancy, zoneUpdateType, zoneColor, zoneType, borderWidth, colorOverride, redVectorColor, greenVectorColor, violetVectorColor, blueVectorColor)
+trLib.updateZones(pvsra, 1, zoneBoxesAbove, zonesMax, pvsraHigh, pvsraLow, pvsraOpen, pvsraClose, transperancy, zoneUpdateType, zoneColor, zoneType, borderWidth, colorOverride, redVectorColor, greenVectorColor, violetVectorColor, blueVectorColor)
+trLib.cleanarr(zoneBoxesAbove)
+trLib.cleanarr(zoneBoxesBelow)

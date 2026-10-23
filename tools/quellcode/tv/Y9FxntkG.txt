@@ -1,0 +1,36 @@
+//@version=5
+indicator("-1-Minute-ATR+MACD-Indicator-", overlay=true)
+
+// Input settings
+atrLength = input.int(14, title="-ATR-Length-14-")
+atrMultiplier = input.float(2.0, title="-ATR-Multiplier-2.0-")
+macdFastLength = input.int(12, title="-MACD-Fast-Length-12-")
+macdSlowLength = input.int(26, title="-MACD-Slow-Length-26-")
+macdSignalSmoothing = input.int(9, title="-MACD-Signal-Smoothing-9-")
+
+// Calculations
+atr = ta.atr(atrLength)
+upperAtrBand = close + atrMultiplier * atr
+lowerAtrBand = close - atrMultiplier * atr
+
+[macdLine, signalLine, _] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalSmoothing)
+
+// Buy Condition
+buyCondition = ta.crossover(macdLine, signalLine) and close > lowerAtrBand
+
+// Sell Condition
+sellCondition = ta.crossunder(macdLine, signalLine) and close < upperAtrBand
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, location=location.belowbar, color=color.new(color.green, 0), style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, location=location.abovebar, color=color.new(color.red, 0), style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="-Buy-Signal-", message="Buy Signal: MACD crosses above Signal Line and price is below the lower ATR band.")
+alertcondition(sellCondition, title="-Sell-Signal-", message="Sell Signal: MACD crosses below Signal Line and price is above the upper ATR band.")
+
+// Plot ATR Bands and MACD for reference
+plot(upperAtrBand, title="-Upper-ATR-Band-", color=color.red, linewidth=2)
+plot(lowerAtrBand, title="-Lower-ATR-Band-", color=color.green, linewidth=2)
+plot(macdLine, title="-MACD-Line-", color=color.blue, linewidth=2, display=display.none)
+plot(signalLine, title="-Signal-Line-", color=color.orange, linewidth=2, display=display.none)

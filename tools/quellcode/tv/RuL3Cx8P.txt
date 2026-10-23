@@ -1,0 +1,55 @@
+//@version=5
+indicator("-VrilyaSS-6-SMA+21-SMA-Crossover and U-Turn+CCI Confirmation-", overlay=true)
+
+// SMA Einstellungen
+smaShortLength = input.int(6, title="SMA Short Length", minval=1)
+smaLongLength = input.int(21, title="SMA Long Length", minval=1)
+
+smaShort = ta.sma(close, smaShortLength)
+smaLong = ta.sma(close, smaLongLength)
+
+// CCI Einstellungen
+cciLength = input.int(21, title="CCI Length", minval=1)
+cci = ta.cci(close, cciLength)
+
+// SMA Plotten
+plot(smaShort, color=color.white, linewidth=1, title="SMA Short")
+plot(smaLong, color=color.green, linewidth=2, title="SMA Long")
+
+// Kreuzungssignale
+smaCrossUp = ta.crossover(smaShort, smaLong)
+smaCrossDown = ta.crossunder(smaShort, smaLong)
+
+// CCI Bestätigung
+cciUp = cci > cci[1]
+cciDown = cci < cci[1]
+
+// U-Turn Erkennung
+uTurnUp = ta.lowest(smaShort, 5) == smaShort
+uTurnDown = ta.highest(smaShort, 5) == smaShort
+
+// Signale aktivieren/deaktivieren
+activateBuyCross = input(true, title="Activate Buy Signal on SMA Cross Up with CCI Up")
+activateSellCross = input(true, title="Activate Sell Signal on SMA Cross Down with CCI Down")
+activateBuyUTurn = input(true, title="Activate Buy Signal on U-Turn Up with CCI Up")
+activateSellUTurn = input(true, title="Activate Sell Signal on U-Turn Down with CCI Down")
+
+// Kauf- und Verkaufssignale
+buySignalCross = activateBuyCross and smaCrossUp and cciUp
+sellSignalCross = activateSellCross and smaCrossDown and cciDown
+
+buySignalUTurn = activateBuyUTurn and uTurnUp and ta.crossover(smaShort, smaShort[1]) and cciUp
+sellSignalUTurn = activateSellUTurn and uTurnDown and ta.crossunder(smaShort, smaShort[1]) and cciDown
+
+// Plotte die Kauf- und Verkaufssignale auf dem Chart
+plotshape(series=buySignalCross, title="Buy Signal Cross", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy Cross", textcolor=color.white, size=size.small)
+plotshape(series=sellSignalCross, title="Sell Signal Cross", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell Cross", textcolor=color.white, size=size.small)
+
+plotshape(series=buySignalUTurn, title="Buy Signal U-Turn", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy U-Turn", textcolor=color.white, size=size.small)
+plotshape(series=sellSignalUTurn, title="Sell Signal U-Turn", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell U-Turn", textcolor=color.white, size=size.small)
+
+// Alarme
+alertcondition(buySignalCross, title="Buy Signal Cross Alert", message="Buy signal generated: SMA Short crossover with CCI confirmation.")
+alertcondition(sellSignalCross, title="Sell Signal Cross Alert", message="Sell signal generated: SMA Short crossunder with CCI confirmation.")
+alertcondition(buySignalUTurn, title="Buy Signal U-Turn Alert", message="Buy signal generated: SMA Short U-turn with CCI confirmation.")
+alertcondition(sellSignalUTurn, title="Sell Signal U-Turn Alert", message="Sell signal generated: SMA Short U-turn with CCI confirmation.")

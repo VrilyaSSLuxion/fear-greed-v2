@@ -1,0 +1,31 @@
+//@version=5
+indicator("Quick Trade Indicator (RSI + MACD)", shorttitle="QTI (RSI + MACD)", overlay=true)
+
+// Inputparameter
+rsi_period = input.int(14, title="RSI Period")
+macd_fast_length = input.int(12, title="MACD Fast Length")
+macd_slow_length = input.int(26, title="MACD Slow Length")
+macd_signal_length = input.int(9, title="MACD Signal Length")
+
+// Berechnung des RSI
+rsi = ta.rsi(close, rsi_period)
+
+// Berechnung des MACD
+[macdLine, signalLine, _] = ta.macd(close, macd_fast_length, macd_slow_length, macd_signal_length)
+
+// Signale
+buy_signal = rsi < 30 and ta.crossover(macdLine, signalLine)
+sell_signal = rsi > 70 and ta.crossunder(macdLine, signalLine)
+
+// Plots für den MACD (nicht auf dem Overlay, daher als Kommentar)
+plot(macdLine, color=color.blue, title="MACD Line", linewidth=2)
+plot(signalLine, color=color.orange, title="Signal Line", linewidth=2)
+
+// Buy and Sell Markierungen
+plotshape(series=buy_signal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// RSI als Plot unter dem Hauptchart (als Kommentar)
+hline(70, "Overbought", color=color.red)
+hline(30, "Oversold", color=color.green)
+plot(rsi, "RSI", color=color.blue)

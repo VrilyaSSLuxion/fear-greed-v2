@@ -1,0 +1,22 @@
+//@version=5
+indicator("30-Second Trading Strategy", overlay=true)
+
+// Define input variables
+smaPeriod = input(20, "Moving Average Period")
+rsiPeriod = input(14, "RSI Period")
+rsiOverbought = input(70, "RSI Overbought Level")
+rsiOversold = input(30, "RSI Oversold Level")
+
+// Calculate moving average
+smaValue = ta.sma(close, smaPeriod)
+
+// Calculate RSI
+rsiValue = ta.rsi(close, rsiPeriod)
+
+// Plot buy and sell signals
+buySignal = ta.crossover(close, smaValue) and rsiValue < rsiOversold
+sellSignal = ta.crossunder(close, smaValue) and rsiValue > rsiOverbought
+
+plotshape(buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)
+

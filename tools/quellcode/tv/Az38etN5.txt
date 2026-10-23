@@ -1,0 +1,166 @@
+//@version=5
+indicator(title="-VrilyaSS-Relative Strength Index-3X-BANDS-3x-Cross-ALARMS-0707-", shorttitle="-VrilyaSS-Relative Strength Index-3X-BANDS-3x-Cross-ALARMS-0707-", format=format.price, precision=2, timeframe="", timeframe_gaps=true)
+
+// Colors
+color rsi_color = color.yellow
+color ma_color = color.red
+color upper_band_color = color.red
+color lower_band_color = color.green
+color upper_band_2_color = color.red
+color middle_band_2_color = color.white
+color lower_band_2_color = color.green
+color upper_band_3_color = color.red
+color middle_band_3_color = color.white
+color lower_band_3_color = color.green
+color background_fill_color = color.rgb(126, 87, 194, 90)
+color overbought_color = color.new(color.green, 0)
+color oversold_color = color.new(color.red, 100)
+color none_color = color.new(color.white, 100)
+color bear_color = color.red
+color bull_color = color.green
+color text_color = color.white
+
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "Bollinger Bands" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+rsiLengthInput = input.int(14, minval=1, title="-RSI-Length-dafault-14-Color-yellow-13-Solid-Line-2-100%-", group="RSI Settings")
+rsiSourceInput = input.source(ohlc4, "-Source-close-", group="RSI Settings")
+maTypeInput = input.string("WMA", title="-MA-Type-default-SMA-", options=["SMA", "Bollinger Bands", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="MA Settings", display = display.data_window)
+maLengthInput = input.int(14, title="-MA-Length-14-", group="MA Settings", display = display.data_window)
+bbMultInput = input.float(2.0, minval=0.001, maxval=50, title="-BB-StdDev-2.0-", group="MA Settings", display = display.data_window)
+showDivergence = input.bool(true, title="-Show Divergence-true-", group="RSI Settings", display = display.data_window)
+
+// Custom RSI Bands
+upper_band_level = input.int(99, minval=0, maxval=100, title="-Upper-Band-1-Level-99-", group="RSI Bands")
+middle_band_level = input.int(89, minval=0, maxval=100, title="-Middle-Band-1-Level-89-", group="RSI Bands")
+lower_band_level = input.int(79, minval=0, maxval=100, title="-Lower-Band-1-Level-79-", group="RSI Bands")
+upper_band_2_level = input.int(56, minval=0, maxval=100, title="-Upper-Band-2-Level-56-", group="RSI Bands")
+middle_band_2_level = input.int(50, minval=0, maxval=100, title="-Middle-Band-2-Level-50-", group="RSI Bands")
+lower_band_2_level = input.int(44, minval=0, maxval=100, title="-Lower-Band-2-Level-44-", group="RSI Bands")
+upper_band_3_level = input.int(21, minval=0, maxval=100, title="-Upper-Band-3-Level-21-", group="RSI Bands")
+middle_band_3_level = input.int(11, minval=0, maxval=100, title="-Middle-Band-3-Level-11-", group="RSI Bands")
+lower_band_3_level = input.int(1, minval=0, maxval=100, title="-Lower-Band-3-Level-1-", group="RSI Bands")
+
+up = ta.rma(math.max(ta.change(rsiSourceInput), 0), rsiLengthInput)
+down = ta.rma(-math.min(ta.change(rsiSourceInput), 0), rsiLengthInput)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+rsiMA = ma(rsi, maLengthInput, maTypeInput)
+isBB = maTypeInput == "Bollinger Bands"
+
+rsiPlot = plot(rsi, "-RSI-Color-yellow-13-Solid-Line-2-100%-", linewidth = 2, color=color.new(color.yellow, 0))
+plot(rsiMA, "-RSI-based MA-Color-red-11-Solid-Line-3-100%-", linewidth = 3, color=color.new(#f23645, 0))
+rsiUpperBand = hline(upper_band_level, "-RSI TOP-BAND---Top-99-", linestyle = hline.style_solid, linewidth = 3, color=color.new(#f23645, 0))
+midline = hline(89, "-RSI TOP-BAND---Middle-89-", linestyle = hline.style_solid, linewidth = 2, color=color.new(color.white, 0))
+rsiLowerBand = hline(lower_band_level, "-RSI TOP-BAND---Bottom-79-", linestyle = hline.style_solid, linewidth = 2, color=color.new(color.aqua, 0))
+
+rsiUpperBand2 = hline(upper_band_2_level, "-RSI MIDDLE-BAND---Top-56-", linestyle = hline.style_solid, linewidth = 2, color=color.new(#f23645, 0))
+rsiMiddleBand2 = hline(middle_band_2_level, "-RSI MIDDLE-BAND---Middle-50-", linestyle = hline.style_solid, linewidth = 3, color=color.new(color.white, 0))
+rsiLowerBand2 = hline(lower_band_2_level, "-RSI MIDDLE-BAND---Bottom-44-", linestyle = hline.style_solid, linewidth = 2, color=color.new(color.green, 0))
+
+rsiUpperBand3 = hline(upper_band_3_level, "-RSI BOTTOM-BAND---Top-21-", linestyle = hline.style_solid, linewidth = 2, color=color.new(color.aqua, 0))
+rsiMiddleBand3 = hline(middle_band_3_level, "-RSI BOTTOM-BAND---Middle-11-", linestyle = hline.style_solid, linewidth = 2, color=color.new(color.white, 0))
+rsiLowerBand3 = hline(lower_band_3_level, "-RSI BOTTOM-BAND---Bottom-1-", linestyle = hline.style_solid, linewidth = 3, color=color.new(color.green, 0))
+
+fill(rsiUpperBand, rsiLowerBand, color=color.new(color.red, 85), title="-RSI Background Fill---TOP-BAND-Color-red-11-15%-")
+fill(rsiUpperBand2, rsiLowerBand2, color=color.new(color.gray, 85), title="-RSI Background Fill---MIDDLE-BAND-Color-gray-5-15%-")
+fill(rsiUpperBand3, rsiLowerBand3, color=color.new(color.green, 85), title="-RSI Background Fill---BOTTOM-BAND-Color-green-14-15%-")
+
+midLinePlot = plot(50, color = na, editable = false, display = display.none)
+
+fill(rsiPlot, midLinePlot, 100, 70, top_color = color.new(color.green, 0), bottom_color = color.new(color.green, 100),  title = "-Overbought-Gradient-Fill-1-")
+fill(rsiPlot, midLinePlot, 30,  0,  top_color = color.new(color.red, 100), bottom_color = color.new(color.red, 0),      title = "-Oversold-Gradient-Fill-1-")
+
+fill(rsiPlot, midLinePlot, 100, upper_band_2_level, top_color=color.new(overbought_color, 100), bottom_color=color.new(overbought_color, 100), title="-Overbought-Gradient-Fill-2-")
+fill(rsiPlot, midLinePlot, lower_band_2_level, 100, top_color=color.new(oversold_color, 100), bottom_color=color.new(oversold_color, 100), title="-Oversold-Gradient-Fill-2-")
+
+fill(rsiPlot, midLinePlot, 100, upper_band_3_level, top_color=color.new(overbought_color, 100), bottom_color=color.new(overbought_color, 100), title="-Overbought-Gradient-Fill-3-")
+fill(rsiPlot, midLinePlot, lower_band_3_level, 100, top_color=color.new(oversold_color, 100), bottom_color=color.new(oversold_color, 100), title="-Oversold-Gradient-Fill-3-")
+
+// Divergence
+lookbackRight = 5
+lookbackLeft = 5
+rangeUpper = 60
+rangeLower = 5
+
+plFound = na(ta.pivotlow(rsi, lookbackLeft, lookbackRight)) ? false : true
+phFound = na(ta.pivothigh(rsi, lookbackLeft, lookbackRight)) ? false : true
+
+_inRange(cond) =>
+    bars = ta.barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+
+// Regular Bullish
+rsiHL = rsi[lookbackRight] > ta.valuewhen(plFound, rsi[lookbackRight], 1) and _inRange(plFound[1])
+priceLL = low[lookbackRight] < ta.valuewhen(plFound, low[lookbackRight], 1)
+bullCondAlert = priceLL and rsiHL and plFound
+bullCond = showDivergence and bullCondAlert
+
+plot(plFound ? rsi[lookbackRight] : na, offset=-lookbackRight, title="-Regular Bullish-Color-green-14-Solid-Line-2-100%-", linewidth=2, color=(bullCond ? bull_color : none_color), display = display.pane)
+plotshape(bullCond ? rsi[lookbackRight] : na, offset=-lookbackRight, title="-Regular Bullish-Label-Color-green-14-100%-", text=" Bull ", style=shape.labelup, location=location.absolute, color=bull_color, textcolor=text_color)
+
+// Regular Bearish
+rsiLH = rsi[lookbackRight] < ta.valuewhen(phFound, rsi[lookbackRight], 1) and _inRange(phFound[1])
+priceHH = high[lookbackRight] > ta.valuewhen(phFound, high[lookbackRight], 1)
+bearCondAlert = priceHH and rsiLH and phFound
+bearCond = showDivergence and bearCondAlert
+
+plot(phFound ? rsi[lookbackRight] : na, offset=-lookbackRight, title="-Regular Bearish-Color-red-11-Solid-Line-2-100%-", linewidth=2, color=(bearCond ? bear_color : none_color), display = display.pane)
+plotshape(bearCond ? rsi[lookbackRight] : na, offset=-lookbackRight, title="-Regular Bearish-Label-Color-red-11-100%-", text=" Bear ", style=shape.labeldown, location=location.absolute, color=bear_color, textcolor=text_color)
+
+alertcondition(bullCondAlert, title='-Regular Bullish RSI-Divergence-', message="Found a new Regular Bullish Divergence, `Pivot Lookback Right` number of bars to the left of the current bar.")
+alertcondition(bearCondAlert, title='-Regular Bearish RSI-Divergence-', message='Found a new Regular Bearish Divergence, `Pivot Lookback Right` number of bars to the left of the current bar.')
+
+// RSI 50 Level Buy Signals
+showRSIBuySignal = input.bool(true, title="-Show RSI Buy Cross Signals- = buyCondition = ta.crossover(rsi, 50)-", group="RSI Cross Settings")
+buyCondition = ta.crossover(rsi, 50)
+
+plotshape(showRSIBuySignal and buyCondition ? rsi : na, title="-Buy Signal-", location=location.absolute, color=color.green, size=size.tiny, style=shape.labelup, text="Buy", textcolor=color.black)
+
+// Alerts for RSI Buy Signals
+alertcondition(showRSIBuySignal and buyCondition, title="-Buy Signal-RSI crossed above 50-", message="RSI crossed above 50 - Buy Signal")
+
+// RSI 50 Level Sell Signals
+showRSISellSignal = input.bool(true, title="-Show RSI Sell Cross Signals- = sellCondition = ta.crossunder(rsi, 50)-", group="RSI Cross Settings")
+sellCondition = ta.crossunder(rsi, 50)
+
+plotshape(showRSISellSignal and sellCondition ? rsi : na, title="-Sell Signal-", location=location.absolute, color=color.red, size=size.tiny, style=shape.labeldown, text="Sell", textcolor=color.black)
+
+// Alerts for RSI Sell Signals
+alertcondition(showRSISellSignal and sellCondition, title="-Sell Signal-RSI crossed below 50-", message="RSI crossed below 50 - Sell Signal")
+
+// RSI and RSI MA Cross Buy Signals
+showRSIMACrossBuySignal = input.bool(true, title="-Show RSI and RSI MA Cross Buy Signals- = rsiMACrossBuyCondition = ta.crossover(rsi, rsiMA)-", group="RSI/MA Cross Settings")
+rsiMACrossBuyCondition = ta.crossover(rsi, rsiMA)
+
+plotshape(showRSIMACrossBuySignal and rsiMACrossBuyCondition ? rsi : na, title="-RSI and RSI MA Buy Signal-", location=location.absolute, color=color.green, size=size.tiny,style=shape.labelup, text="RSI Buy", textcolor=color.black)
+
+// Alerts for RSI and RSI MA Cross Buy Signals
+alertcondition(showRSIMACrossBuySignal and rsiMACrossBuyCondition, title="-Buy Signal-RSI crossed above RSI MA-", message="RSI crossed above RSI MA - Buy Signal")
+
+// RSI and RSI MA Cross Sell Signals
+showRSIMACrossSellSignal = input.bool(true, title="-Show RSI and RSI MA Cross Sell Signals- = rsiMACrossSellCondition = ta.crossunder(rsi, rsiMA)-", group="RSI/MA Cross Settings")
+rsiMACrossSellCondition = ta.crossunder(rsi, rsiMA)
+
+plotshape(showRSIMACrossSellSignal and rsiMACrossSellCondition ? rsi : na, title="-RSI and RSI MA Sell Signal-", location=location.absolute, color=color.red, size=size.tiny,style=shape.labeldown, text="RSI Sell", textcolor=color.black)
+
+// Alerts for RSI and RSI MA Cross Sell Signals
+alertcondition(showRSIMACrossSellSignal and rsiMACrossSellCondition, title="-Sell Signal-RSI crossed below RSI MA-", message="RSI crossed below RSI MA - Sell Signal")
+
+// RSI U-Turn Signals
+showRSIUTurnBuySignal = input.bool(true, title="-Show RSI U-Turn Buy Signals-", group="RSI U-Turn Settings")
+showRSIUTurnSellSignal = input.bool(true, title="-Show RSI U-Turn Sell Signals-", group="RSI U-Turn Settings")
+
+uturnBuyCondition = ta.crossover(rsi, ta.lowest(rsi, 5))
+uturnSellCondition = ta.crossunder(rsi, ta.highest(rsi, 5))
+
+plotshape(showRSIUTurnBuySignal and uturnBuyCondition ? rsi : na, title="-RSI U-Turn Buy Signal-", location=location.absolute, color=color.green, size=size.tiny, style=shape.labelup, text="U-Buy", textcolor=color.black)
+plotshape(showRSIUTurnSellSignal and uturnSellCondition ? rsi : na, title="-RSI U-Turn Sell Signal-", location=location.absolute, color=color.red, size=size.tiny, style=shape.labeldown, text="U-Sell", textcolor=color.black)
+
+alertcondition(showRSIUTurnBuySignal and uturnBuyCondition, title="-RSI U-Turn Buy Signal-", message="RSI U-Turn Buy Signal")
+alertcondition(showRSIUTurnSellSignal and uturnSellCondition, title="-RSI U-Turn Sell Signal-", message="RSI U-Turn Sell Signal")

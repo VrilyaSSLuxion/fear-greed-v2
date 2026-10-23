@@ -1,0 +1,30 @@
+//@version=5
+indicator("RSI & Stochastic Signals", overlay=true)
+
+// Inputs for RSI
+rsi_length = input.int(title="RSI Period", defval=14)
+rsi_overbought = input.int(title="RSI Overbought Level", defval=70)
+rsi_oversold = input.int(title="RSI Oversold Level", defval=30)
+
+// Inputs for Stochastic
+stoch_k_period = input.int(title="Stochastic %K Period", defval=14)
+stoch_d_period = input.int(title="Stochastic %D Period", defval=3)
+stoch_overbought = input.int(title="Stochastic Overbought Level", defval=80)
+stoch_oversold = input.int(title="Stochastic Oversold Level", defval=20)
+
+// Calculate RSI
+rsi = ta.rsi(close, rsi_length)
+
+// Calculate Stochastic
+stoch_k = ta.stoch(close, high, low, stoch_k_period)
+stoch_d = ta.sma(stoch_k, stoch_d_period)
+
+// Buy Signal Conditions
+buy_condition = ((rsi[1] >= rsi_oversold and rsi < rsi_oversold) or (rsi[1] < 50 and rsi >= 50)) and stoch_k < stoch_oversold
+
+// Sell Signal Conditions
+sell_condition = ((rsi[1] <= rsi_overbought and rsi > rsi_overbought) or (rsi[1] > 50 and rsi <= 50)) and stoch_k > stoch_overbought
+
+// Plot Buy and Sell Signals
+plotshape(series=buy_condition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(series=sell_condition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)

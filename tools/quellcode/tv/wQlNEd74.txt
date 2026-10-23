@@ -1,0 +1,37 @@
+//@version=5
+indicator(title="-Trend Reversal Indicator-(TRI)-(Bollinger-Bands+RSI)-30S-", shorttitle="-Trend Reversal Indicator-(TRI)-(Bollinger-Bands+RSI)-30S-", overlay=true)
+
+// Inputs
+rsiSource = input.source(close, title="-RSI-Source-close-")
+rsiLength = input.int(14, title="-RSI-Length-14-")
+rsiOverbought = input.int(50, title="-RSI-Overbought-Level-70-")
+rsiOversold = input.int(50, title="-RSI-Oversold-Level-30-")
+bbSource = input.source(close, title="-Bollinger-Bands-Source-close-")
+bbLength = input.int(20, title="-Bollinger-Bands-Length-20")
+bbMult = input.float(2.0, title="-Bollinger-Bands-Multiplier-2.0-")
+
+// RSI Calculation
+rsi = ta.rsi(rsiSource, rsiLength)
+
+// Bollinger Bands Calculation
+basis = ta.sma(bbSource, bbLength)
+dev = bbMult * ta.stdev(bbSource, bbLength)
+upperBB = basis + dev
+lowerBB = basis - dev
+
+// Conditions for Buy and Sell Signals
+buySignal = ta.crossover(close, lowerBB) and rsi < rsiOversold
+sellSignal = ta.crossunder(close, upperBB) and rsi > rsiOverbought
+
+// Plot Bollinger Bands
+plot(upperBB, title="-Upper-Bollinger-Band-", color=color.red, linewidth=3)
+plot(basis, title="-Basis-", color=color.white, linewidth=2)
+plot(lowerBB, title="-Lower-Bollinger-Band-", color=color.green, linewidth=3)
+
+// Plot Buy and Sell Signals
+plotshape(series=buySignal, title="-Buy-Signal-", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", textcolor=color.black, size=size.tiny)
+plotshape(series=sellSignal, title="-Sell-Signal-", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.black, size=size.tiny)
+
+// Alerts for Buy and Sell Signals
+alertcondition(buySignal, title="Buy Signal", message="Trend Reversal Buy Signal")
+alertcondition(sellSignal, title="Sell Signal", message="Trend Reversal Sell Signal")

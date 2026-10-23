@@ -1,0 +1,217 @@
+//@version=5
+indicator(title="-VrilyaSS-More Awe-some Awesome -Fibbonomics- Oscillator with Fibonacci ALARM-Lines-", shorttitle="-VrilyaSS-AO-")
+
+// Berechnung des Awesome Oscillators
+ao = ta.sma(hl2, 5) - ta.sma(hl2, 34)
+diff = ao - ao[1]
+
+// Plot des Awesome Oscillators mit farbigen Säulen
+plot(ao, color = diff <= 0 ? #F44336 : #009688, style=plot.style_columns)
+
+
+// Hinzufügen von Linien mit Labels
+
+hline(3618, title="-Bull-Line-11-(+3618)-", color=color.red, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 3618, text="+3618", color=color.red, textcolor=color.black, style=label.style_label_right)
+
+hline(2618, title="-Bull-Line-10-(+2618)-", color=color.yellow, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 2618, text="+2618", color=color.yellow, textcolor=color.black, style=label.style_label_right)
+
+hline(1618, title="-Bull-Line-9-(+1618)-", color=color.white, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 1618, text="+1618", color=color.white, textcolor=color.black, style=label.style_label_right)
+
+hline(1382, title="-Bull-Line-8-(+1382)-", color=color.orange, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 1382, text="+1382", color=color.orange, textcolor=color.black, style=label.style_label_right)
+
+hline(786, title="-Bull-Line-7-(+786)-", color=color.aqua, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 786, text="+786", color=color.aqua, textcolor=color.black, style=label.style_label_right)
+
+hline(618, title="-Bull-Line-6-(+618)-", color=color.green, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 618, text="+618", color=color.green, textcolor=color.black, style=label.style_label_right)
+
+hline(382, title="-Bull-Line-5-(+382)-", color=color.white, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 382, text="+382", color=color.white, textcolor=color.black, style=label.style_label_right)
+
+hline(223, title="-Bull-Line-4-(+223)-", color=color.yellow, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 223, text="+223", color=color.yellow, textcolor=color.black, style=label.style_label_right)
+
+hline(138, title="-Bull-Line-3-(+138)-", color=color.white, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 138, text="+138", color=color.white, textcolor=color.black, style=label.style_label_right)
+
+hline(78.60, title="-Bull-Line-2-(+78.60)-", color=color.aqua, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 78.60, text="+78.60", color=color.aqua, textcolor=color.black, style=label.style_label_right)
+
+hline(61.80, title="-Bull-Line-1-(+61.80)-", color=color.green, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, 61.80, text="+61.80", color=color.green, textcolor=color.black, style=label.style_label_right)
+
+
+
+
+// Hinzufügen der Nullinie bei 0
+hline(0, title="-0-Nullinie-Lelouch Lamperouge-Zero-Line-", color=color.white, linewidth = 2, linestyle=hline.style_solid)
+
+
+
+
+// Hinzufügen der Bear-Linien
+
+hline(-61.80, title="-Bear-Line-1-(-61.80)-", color=color.green, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -61.80, text="-61.80", color=color.green, textcolor=color.black, style=label.style_label_right)
+
+hline(-78.60, title="-Bear-Line-2-(-78.60)-", color=color.aqua, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -78.60, text="-78.60", color=color.aqua, textcolor=color.black, style=label.style_label_right)
+
+hline(-138, title="-Bear-Line-3-(-138)-", color=color.white, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -138, text="-138", color=color.white, textcolor=color.black, style=label.style_label_right)
+
+hline(-223, title="-Bear-Line-4-(-223)-", color=color.yellow, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -223, text="-223", color=color.yellow, textcolor=color.black, style=label.style_label_right)
+
+hline(-382, title="-Bear-Line-5-(-382)-", color=color.white, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -382, text="-382", color=color.white, textcolor=color.black, style=label.style_label_right)
+
+hline(-618, title="-Bear-Line-6-(-618)-", color=color.green, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -618, text="-618", color=color.green, textcolor=color.black, style=label.style_label_right)
+
+hline(-786, title="-Bear-Line-7-(-786)-", color=color.aqua, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -786, text="-786", color=color.aqua, textcolor=color.black, style=label.style_label_right)
+
+hline(-1382, title="-Bear-Line-8-(-1382)-", color=color.orange, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -1382, text="-1382", color=color.orange, textcolor=color.black, style=label.style_label_right)
+
+hline(-1618, title="-Bear-Line-9-(-1618)-", color=color.white, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -1618, text="-1618", color=color.white, textcolor=color.black, style=label.style_label_right)
+
+hline(-2618, title="-Bear-Line-10-(-2618)-", color=color.yellow, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -2618, text="-2618", color=color.yellow, textcolor=color.black, style=label.style_label_right)
+
+hline(-3618, title="-Bear-Line-11-(-3618)-", color=color.green, linewidth = 2, linestyle=hline.style_solid)
+label.new(bar_index, -3618, text="-3618", color=color.green, textcolor=color.black, style=label.style_label_right)
+
+// Bedingung für Farbwechsel
+changeToGreen = ta.crossover(diff, 0)
+changeToRed = ta.crossunder(diff, 0)
+
+// Alarmbedingungen für Farbwechsel
+alertcondition(changeToGreen, title = "-AO color changed to green---BULL---", message = "Awesome Oscillator's color has changed to green---BULL---")
+alertcondition(changeToRed, title = "-AO color changed to red---BEAR---", message = "Awesome Oscillator's color has changed to red---BEAR---")
+
+// Alarmbedingungen für die Nullinie
+crossOverZero = ta.crossover(ao, 0)
+crossUnderZero = ta.crossunder(ao, 0)
+
+alertcondition(crossOverZero, title = "-AO crossed above Zero---BULL---", message = "-Awesome Oscillator has crossed above the Zero line---BULL---")
+alertcondition(crossUnderZero, title = "-AO crossed below Zero---BEAR---", message = "-Awesome Oscillator has crossed below the Zero line---BEAR---")
+
+// Alarme für die einzelnen Linien
+crossOver3618 = ta.crossover(ao, 3618)
+crossUnder3618 = ta.crossunder(ao, 3618)
+alertcondition(crossOver3618, title="-Bull-Line-11-AO crossed above 3618", message="Awesome Oscillator has crossed -Bull-Line-11- above 3618")
+alertcondition(crossUnder3618, title="-Bull-Line-11-AO crossed below 3618", message="Awesome Oscillator has crossed -Bull-Line-11- below 3618")
+
+crossOver2618 = ta.crossover(ao, 2618)
+crossUnder2618 = ta.crossunder(ao, 2618)
+alertcondition(crossOver2618, title="-Bull-Line-10-AO crossed above 2618", message="Awesome Oscillator has crossed -Bull-Line-10- above 2618")
+alertcondition(crossUnder2618, title="-Bull-Line-10-AO crossed below 2618", message="Awesome Oscillator has crossed -Bull-Line-10- below 2618")
+
+crossOver1618 = ta.crossover(ao, 1618)
+crossUnder1618 = ta.crossunder(ao, 1618)
+alertcondition(crossOver1618, title="-Bull-Line-9-AO crossed above 1618", message="Awesome Oscillator has crossed -Bull-Line-9- above 1618")
+alertcondition(crossUnder1618, title="-Bull-Line-9-AO crossed below 1618", message="Awesome Oscillator has crossed -Bull-Line-9- below 1618")
+
+crossOver1382 = ta.crossover(ao, 1382)
+crossUnder1382 = ta.crossunder(ao, 1382)
+alertcondition(crossOver1382, title="-Bull-Line-8-AO crossed above 1382", message="Awesome Oscillator has crossed -Bull-Line-8- above 1382")
+alertcondition(crossUnder1382, title="-Bull-Line-8-AO crossed below 1382", message="Awesome Oscillator has crossed -Bull-Line-8- below 1382")
+
+crossOver786 = ta.crossover(ao, 786)
+crossUnder786 = ta.crossunder(ao, 786)
+alertcondition(crossOver786, title="-Bull-Line-7-AO crossed above 786", message="Awesome Oscillator has crossed -Bull-Line-7- above 786")
+alertcondition(crossUnder786, title="-Bull-Line-7-AO crossed below 786", message="Awesome Oscillator has crossed -Bull-Line-7- below 786")
+
+crossOver618 = ta.crossover(ao, 618)
+crossUnder618 = ta.crossunder(ao, 618)
+alertcondition(crossOver618, title="-Bull-Line-6-AO crossed above 618", message="Awesome Oscillator has crossed -Bull-Line-6- above 618")
+alertcondition(crossUnder618, title="-Bull-Line-6-AO crossed below 618", message="Awesome Oscillator has crossed -Bull-Line-6- below 618")
+
+crossOver382 = ta.crossover(ao, 382)
+crossUnder382 = ta.crossunder(ao, 382)
+alertcondition(crossOver382, title="-Bull-Line-5-AO crossed above 382", message="Awesome Oscillator has crossed -Bull-Line-5- above 382")
+alertcondition(crossUnder382, title="-Bull-Line-5-AO crossed below 382", message="Awesome Oscillator has crossed -Bull-Line-5- below 382")
+
+crossOver223 = ta.crossover(ao, 223)
+crossUnder223 = ta.crossunder(ao, 223)
+alertcondition(crossOver223, title="-Bull-Line-4-AO crossed above 223", message="Awesome Oscillator has crossed -Bull-Line-4- above 223")
+alertcondition(crossUnder223, title="-Bull-Line-4-AO crossed below 223", message="Awesome Oscillator has crossed -Bull-Line-4- below 223")
+
+crossOver138 = ta.crossover(ao, 138)
+crossUnder138 = ta.crossunder(ao, 138)
+alertcondition(crossOver138, title="-Bull-Line-3-AO crossed above 138", message="Awesome Oscillator has crossed -Bull-Line-3- above 138")
+alertcondition(crossUnder138, title="-Bull-Line-3-AO crossed below 138", message="Awesome Oscillator has crossed -Bull-Line-3- below 138")
+
+crossOver78_60 = ta.crossover(ao, 78.60)
+crossUnder78_60 = ta.crossunder(ao, 78.60)
+alertcondition(crossOver78_60, title="-Bull-Line-2-AO crossed above 78.60", message="Awesome Oscillator has crossed -Bull-Line-2- above 78.60")
+alertcondition(crossUnder78_60, title="-Bull-Line-2-AO crossed below 78.60", message="Awesome Oscillator has crossed -Bull-Line-2- below 78.60")
+
+crossOver61_80 = ta.crossover(ao, 61.80)
+crossUnder61_80 = ta.crossunder(ao, 61.80)
+alertcondition(crossOver61_80, title="-Bull-Line-1-AO crossed above 61.80", message="Awesome Oscillator has crossed -Bull-Line-1- above 61.80")
+alertcondition(crossUnder61_80, title="-Bull-Line-1-AO crossed below 61.80", message="Awesome Oscillator has crossed -Bull-Line-1- below 61.80")
+
+crossOverNeg61_80 = ta.crossover(ao, -61.80)
+crossUnderNeg61_80 = ta.crossunder(ao, -61.80)
+alertcondition(crossOverNeg61_80, title="-Bear-Line-1-AO crossed above -61.80", message="Awesome Oscillator has crossed -Bear-Line-1- above -61.80")
+alertcondition(crossUnderNeg61_80, title="-Bear-Line-1-AO crossed below -61.80", message="Awesome Oscillator has crossed -Bear-Line-1- below -61.80")
+
+crossOverNeg78_60 = ta.crossover(ao, -78.60)
+crossUnderNeg78_60 = ta.crossunder(ao, -78.60)
+alertcondition(crossOverNeg78_60, title="-Bear-Line-2-AO crossed above -78.60", message="Awesome Oscillator has crossed -Bear-Line-2- above -78.60")
+alertcondition(crossUnderNeg78_60, title="-Bear-Line-2-AO crossed below -78.60", message="Awesome Oscillator has crossed -Bear-Line-2- below -78.60")
+
+crossOverNeg138 = ta.crossover(ao, -138)
+crossUnderNeg138 = ta.crossunder(ao, -138)
+alertcondition(crossOverNeg138, title="-Bear-Line-3-AO crossed above -138", message="Awesome Oscillator has crossed -Bear-Line-3- above -138")
+alertcondition(crossUnderNeg138, title="-Bear-Line-3-AO crossed below -138", message="Awesome Oscillator has crossed -Bear-Line-3- below -138")
+
+crossOverNeg223 = ta.crossover(ao, -223)
+crossUnderNeg223 = ta.crossunder(ao, -223)
+alertcondition(crossOverNeg223, title="-Bear-Line-4-AO crossed above -223", message="Awesome Oscillator has crossed -Bear-Line-4- above -223")
+alertcondition(crossUnderNeg223, title="-Bear-Line-4-AO crossed below -223", message="Awesome Oscillator has crossed -Bear-Line-4- below -223")
+
+crossOverNeg382 = ta.crossover(ao, -382)
+crossUnderNeg382 = ta.crossunder(ao, -382)
+alertcondition(crossOverNeg382, title="-Bear-Line-5-AO crossed above -382", message="Awesome Oscillator has crossed -Bear-Line-5- above -382")
+alertcondition(crossUnderNeg382, title="-Bear-Line-5-AO crossed below -382", message="Awesome Oscillator has crossed -Bear-Line-5- below -382")
+
+crossOverNeg618 = ta.crossover(ao, -618)
+crossUnderNeg618 = ta.crossunder(ao, -618)
+alertcondition(crossOverNeg618, title="-Bear-Line-6-AO crossed above -618", message="Awesome Oscillator has crossed -Bear-Line-6- above -618")
+alertcondition(crossUnderNeg618, title="-Bear-Line-6-AO crossed below -618", message="Awesome Oscillator has crossed -Bear-Line-6- below -618")
+
+
+crossOverNeg786 = ta.crossover(ao, -786)
+crossUnderNeg786 = ta.crossunder(ao, -786)
+alertcondition(crossOverNeg618, title="-Bear-Line-7-AO crossed above -786", message="Awesome Oscillator has crossed -Bear-Line-7- above -786")
+alertcondition(crossUnderNeg618, title="-Bear-Line-7-AO crossed below -786", message="Awesome Oscillator has crossed -Bear-Line-7- below -786")
+
+crossOverNeg1382 = ta.crossover(ao, -1382)
+crossUnderNeg1382 = ta.crossunder(ao, -1382)
+alertcondition(crossOverNeg1382, title="-Bear-Line-8-AO crossed above -1382", message="Awesome Oscillator has crossed -Bear-Line-8- above -1382")
+alertcondition(crossUnderNeg1382, title="-Bear-Line-8-AO crossed below -1382", message="Awesome Oscillator has crossed -Bear-Line-8- below -1382")
+
+
+crossOverNeg1618 = ta.crossover(ao, -1618)
+crossUnderNeg1618 = ta.crossunder(ao, -1618)
+alertcondition(crossOverNeg1618, title="-Bear-Line-9-AO crossed above -1618", message="Awesome Oscillator has crossed -Bear-Line-9- above -1618")
+alertcondition(crossUnderNeg1618, title="-Bear-Line-9-AO crossed below -1618", message="Awesome Oscillator has crossed -Bear-Line-9- below -1618")
+
+crossOverNeg2618 = ta.crossover(ao, -2618)
+crossUnderNeg2618 = ta.crossunder(ao, -2618)
+alertcondition(crossOverNeg2618, title="-Bear-Line-10-AO crossed above -2618", message="Awesome Oscillator has crossed -Bear-Line-10- above -2618")
+alertcondition(crossUnderNeg2618, title="-Bear-Line-10-AO crossed below -2618", message="Awesome Oscillator has crossed -Bear-Line-10- below -2618")
+
+crossOverNeg3618 = ta.crossover(ao, -3618)
+crossUnderNeg3618 = ta.crossunder(ao, -3618)
+alertcondition(crossOverNeg3618, title="-Bear-Line-11-AO crossed above -3618", message="Awesome Oscillator has crossed -Bear-Line-11- above -3618")
+alertcondition(crossUnderNeg3618, title="-Bear-Line-11-AO crossed below -3618", message="Awesome Oscillator has crossed -Bear-Line-11- below -3618")

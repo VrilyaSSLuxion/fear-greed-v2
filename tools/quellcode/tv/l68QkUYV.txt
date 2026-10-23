@@ -1,0 +1,33 @@
+//@version=5
+indicator(title="-Quick Trade Indicator-(QTI)-(Short-EMA-12+Long-EMA-26+MACD)-", shorttitle="-Quick Trade Indicator-(QTI)-(Short-EMA-12+Long-EMA-26+MACD)-", overlay=true)
+
+// Input parameters for Moving Averages
+fast_length = input.int(12, title="-Fast-MA-Length-12-", minval=1)
+slow_length = input.int(26, title="-Slow-MA-Length-26-", minval=1)
+signal_smoothing = input.int(9, title="-Signal-Smoothing-9-", minval=1)
+
+// Calculation of Moving Averages
+fast_ma = ta.ema(close, fast_length)
+slow_ma = ta.ema(close, slow_length)
+
+// Calculation of MACD
+macd = fast_ma - slow_ma
+signal = ta.ema(macd, signal_smoothing)
+histogram = macd - signal
+
+// Buy and Sell Signals based on MACD Crossovers
+buy_signal = ta.crossover(macd, signal)
+sell_signal = ta.crossunder(macd, signal)
+
+// Plots for Buy and Sell Signals
+plotshape(series=buy_signal, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// Plot for Moving Averages (hidden by default)
+fast_ma_plot = plot(fast_ma, title="-Fast-MA-", color=color.blue, linewidth=2)
+slow_ma_plot = plot(slow_ma, title="-Slow-MA-", color=color.orange, linewidth=2)
+
+// Plot for MACD Components (hidden by default)
+macd_plot = plot(macd, title="-MACD-", color=color.aqua, linewidth=2, display=display.none)
+signal_plot = plot(signal, title="-Signal-Line-", color=color.red, linewidth=3, display=display.none)
+histogram_plot = plot(histogram, title="-Histogram-", color=color.white, linewidth=2, display=display.none, style=plot.style_histogram)

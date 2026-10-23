@@ -1,0 +1,365 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © chipmonk
+
+//@version=5
+indicator(title="Multi EMA with labels (Any timeframe)", shorttitle="Multi EMA", overlay=true)
+
+get_timeframe_title(simple string tf = "") =>
+    chartTf = timeframe.isminutes == true and timeframe.multiplier > 59 ? (timeframe.multiplier/60 % 2 == 0 ? str.tostring(timeframe.multiplier/60)+"h" : str.tostring(timeframe.multiplier)+"m") : timeframe.isminutes == true ? str.tostring(timeframe.multiplier)+"m" : timeframe.period
+    result = tf == "" ? "" : request.security(syminfo.tickerid, tf, chartTf)
+
+distance = input(2, "Label Distance")
+
+show_prices = input.bool(true, "Show price labels")
+
+ema1_enable = input.bool(true, "-Enable EMA-1-Length-13-(-red-11-100%-Line-2-)-", group = "EMA Options")
+ema1_timeframe = input.timeframe("", "EMA 1 Timeframe", group = "EMA Options")
+ema1_len = input.int(13, minval=1, title="EMA 1 Length", group = "EMA Options")
+ema1_out = ta.ema(close, ema1_len)
+ema1_color_input = input(#ff0303, title="EMA 1 Color", group = "EMA Options") 
+ema1_color = ema1_enable ? ema1_color_input : na
+
+ema2_enable = input.bool(true, "-Enable EMA-2-Length-20-(-green-14-100%-Line-2-)-", group = "EMA Options")
+ema2_timeframe = input.timeframe("", "EMA 2 Timeframe", group = "EMA Options")
+ema2_len = input.int(20, minval=1, title="EMA 2 Length", group = "EMA Options")
+ema2_out = ta.ema(close, ema2_len)
+ema2_color_input = input(color.rgb(29, 216, 0, 31), title="EMA 2 Color", group = "EMA Options") 
+ema2_color = ema2_enable ? ema2_color_input : na
+
+ema3_enable = input.bool(true, "-Enable EMA-3-Length-50-(-orange-12-100%-Line-2-)-", group = "EMA Options")
+ema3_timeframe = input.timeframe("", "EMA 3 Timeframe", group = "EMA Options")
+ema3_len = input.int(50, minval=1, title="EMA 3 Length", group = "EMA Options")
+ema3_out = ta.ema(close, ema3_len)
+ema3_color_input = input(color.rgb(255, 132, 0), title="EMA 3 Color", group = "EMA Options") 
+ema3_color = ema3_enable ? ema3_color_input : na
+
+ema4_enable = input.bool(true, "-Enable EMA-4-Length-100-(-blue-17-100%-Line-2-)-", group = "EMA Options")
+ema4_timeframe = input.timeframe("", "EMA 4 Timeframe", group = "EMA Options")
+ema4_len = input.int(100, minval=1, title="EMA 4 Length", group = "EMA Options")
+ema4_out = ta.ema(close, ema4_len)
+ema4_color_input = input(#0077ff, title="EMA 4 Color", group = "EMA Options") 
+ema4_color = ema4_enable ? ema4_color_input : na
+
+ema5_enable = input.bool(true, "-Enable EMA-5-Length-200-(-light-red-21-100%-Line-3-)-", group = "EMA Options")
+ema5_timeframe = input.timeframe("", "EMA 5 Timeframe", group = "EMA Options")
+ema5_len = input.int(200, minval=1, title="EMA 5 Length", group = "EMA Options")
+ema5_out = ta.ema(close, ema5_len)
+ema5_color_input = input(#ffbab4, title="EMA 5 Color", group = "EMA Options") 
+ema5_color = ema5_enable ? ema5_color_input : na
+
+ema6_enable = input.bool(false, "-Enable EMA-6-Length-300-(-blue-17-100%-Line-2-)-", group = "EMA Options")
+ema6_timeframe = input.timeframe("", "EMA 6 Timeframe", group = "EMA Options")
+ema6_len = input.int(300, minval=1, title="EMA 6 Length", group = "EMA Options")
+ema6_out = ta.ema(close, ema6_len)
+ema6_color_input = input(#0241ff, title="EMA 6 Color", group = "EMA Options") 
+ema6_color = ema6_enable ? ema6_color_input : na
+
+ema7_enable = input.bool(true, "-Enable EMA-7-Length-400-(-light-blue-16-100%-Line-2-)-", group = "EMA Options")
+ema7_timeframe = input.timeframe("", "EMA 7 Timeframe", group = "EMA Options")
+ema7_len = input.int(400, minval=1, title="EMA 7 Length", group = "EMA Options")
+ema7_out = ta.ema(close, ema7_len)
+ema7_color_input = input(color.rgb(3, 192, 255), title="EMA 7 Color", group = "EMA Options") 
+ema7_color = ema7_enable ? ema7_color_input : na
+
+ema8_enable = input.bool(false, "-Enable EMA-8-Length-618-(-green-14-100%-Line-2-)-", group = "EMA Options")
+ema8_timeframe = input.timeframe("", "EMA 8 Timeframe", group = "EMA Options")
+ema8_len = input.int(618, minval=1, title="EMA 8 Length", group = "EMA Options")
+ema8_out = ta.ema(close, ema8_len)
+ema8_color_input = input(color.rgb(2, 147, 0), title="EMA 8 Color", group = "EMA Options") 
+ema8_color = ema8_enable ? ema8_color_input : na
+
+ema9_enable = input.bool(false, "-Enable EMA-9-Length-702-(-yellow-13-100%-Line-2-)-", group = "EMA Options")
+ema9_timeframe = input.timeframe("", "EMA 9 Timeframe", group = "EMA Options")
+ema9_len = input.int(702, minval=1, title="EMA 9 Length", group = "EMA Options")
+ema9_out = ta.ema(close, ema9_len)
+ema9_color_input = input(color.rgb(247, 255, 2), title="EMA 9 Color", group = "EMA Options") 
+ema9_color = ema9_enable ? ema9_color_input : na
+
+ema10_enable = input.bool(true, "-Enable EMA-10-Length-800-(-violett-19-100%-Line-2-)-", group = "EMA Options")
+ema10_timeframe = input.timeframe("", "EMA 10 Timeframe", group = "EMA Options")
+ema10_len = input.int(800, minval=1, title="EMA 10 Length", group = "EMA Options")
+ema10_out = ta.ema(close, ema10_len)
+ema10_color_input = input(#c300fffd, title="EMA 10 Color", group = "EMA Options") 
+ema10_color = ema10_enable ? ema10_color_input : na
+
+ema11_enable = input.bool(true, "-Enable EMA-11-Length-1000-(-red-11-100%-Line-3-)-", group = "EMA Options")
+ema11_timeframe = input.timeframe("", "EMA 11 Timeframe", group = "EMA Options")
+ema11_len = input.int(1000, minval=1, title="EMA 11 Length", group = "EMA Options")
+ema11_out = ta.ema(close, ema11_len)
+ema11_color_input = input(color.rgb(255, 5, 5), title="EMA 11 Color", group = "EMA Options") 
+ema11_color = ema11_enable ? ema11_color_input : na
+
+ema12_enable = input.bool(false, "-Enable EMA-12-Length-1309-(-blue-17-100%-Line-2-)-", group = "EMA Options")
+ema12_timeframe = input.timeframe("", "EMA 12 Timeframe", group = "EMA Options")
+ema12_len = input.int(1309, minval=1, title="EMA 12 Length", group = "EMA Options")
+ema12_out = ta.ema(close, ema12_len)
+ema12_color_input = input(color.rgb(65, 97, 255), title="EMA 12 Color", group = "EMA Options") 
+ema12_color = ema12_enable ? ema12_color_input : na
+
+ema13_enable = input.bool(false, "-Enable EMA-13-Length-1618-(-yellow-13-100%-Line-2-)-", group = "EMA Options")
+ema13_timeframe = input.timeframe("", "EMA 13 Timeframe", group = "EMA Options")
+ema13_len = input.int(1618, minval=1, title="EMA 13 Length", group = "EMA Options")
+ema13_out = ta.ema(close, ema13_len)
+ema13_color_input = input(color.rgb(255, 255, 5), title="EMA 13 Color", group = "EMA Options") 
+ema13_color = ema13_enable ? ema13_color_input : na
+
+ema14_enable = input.bool(false, "-Enable EMA-14-Length-2000-(-red-11-100%-Line-3-)-", group = "EMA Options")
+ema14_timeframe = input.timeframe("", "EMA 14 Timeframe", group = "EMA Options")
+ema14_len = input.int(2000, minval=1, title="EMA 14 Length", group = "EMA Options")
+ema14_out = ta.ema(close, ema14_len)
+ema14_color_input = input(color.rgb(255, 4, 4), title="EMA 14 Color", group = "EMA Options") 
+ema14_color = ema14_enable ? ema14_color_input : na
+
+ema15_enable = input.bool(false, "-Enable EMA-15-Length-2618-(-green-14-100%-Line-2-)-", group = "EMA Options")
+ema15_timeframe = input.timeframe("", "EMA 15 Timeframe", group = "EMA Options")
+ema15_len = input.int(2618, minval=1, title="EMA 15 Length", group = "EMA Options")
+ema15_out = ta.ema(close, ema15_len)
+ema15_color_input = input(#40ff00fe, title="EMA 15 Color", group = "EMA Options") 
+ema15_color = ema15_enable ? ema15_color_input : na
+
+ema16_enable = input.bool(false, "-Enable EMA-16-Length-3142-(-white-1-100%-Line-2-)-", group = "EMA Options")
+ema16_timeframe = input.timeframe("", "EMA 16 Timeframe", group = "EMA Options")
+ema16_len = input.int(3142, minval=1, title="EMA 16 Length", group = "EMA Options")
+ema16_out = ta.ema(close, ema16_len)
+ema16_color_input = input(#fffffe, title="EMA 16 Color", group = "EMA Options") 
+ema16_color = ema16_enable ? ema16_color_input : na
+
+ema17_enable = input.bool(false, "-Enable EMA-17-Length-3618-(-yellow-13-100%-Line-2-)-", group = "EMA Options")
+ema17_timeframe = input.timeframe("", "EMA 17 Timeframe", group = "EMA Options")
+ema17_len = input.int(3618, minval=1, title="EMA 17 Length", group = "EMA Options")
+ema17_out = ta.ema(close, ema17_len)
+ema17_color_input = input(#f6ff48, title="EMA 17 Color", group = "EMA Options") 
+ema17_color = ema17_enable ? ema17_color_input : na
+
+ema18_enable = input.bool(false, "-Enable EMA-18-Length-4618-(-green-14-100%-Line-3-)-", group = "EMA Options")
+ema18_timeframe = input.timeframe("", "EMA 18 Timeframe", group = "EMA Options")
+ema18_len = input.int(4618, minval=1, title="EMA 18 Length", group = "EMA Options")
+ema18_out = ta.ema(close, ema18_len)
+ema18_color_input = input(#3dff33, title="EMA 18 Color", group = "EMA Options") 
+ema18_color = ema18_enable ? ema18_color_input : na
+
+ema19_enable = input.bool(false, "-Enable EMA-19-Length-4786-(-red-11-100%-Line-4-)-", group = "EMA Options")
+ema19_timeframe = input.timeframe("", "EMA 19 Timeframe", group = "EMA Options")
+ema19_len = input.int(4786, minval=1, title="EMA 19 Length", group = "EMA Options")
+ema19_out = ta.ema(close, ema19_len)
+ema19_color_input = input(#fc0202, title="EMA 19 Color", group = "EMA Options") 
+ema19_color = ema19_enable ? ema19_color_input : na
+
+ema20_enable = input.bool(true, "-Enable EMA-20-Length-33-TIMEFRAME-1-HOUR-(TradingTim)-(-yellow-13-100%-Line-3-)-", group = "EMA Options")
+ema20_timeframe = input.timeframe("", "EMA 20 Timeframe", group = "EMA Options")
+ema20_len = input.int(33, minval=1, title="EMA 20 Length", group = "EMA Options")
+ema20_out = ta.ema(close, ema20_len)
+ema20_color_input = input(#eaff01, title="EMA 20 Color", group = "EMA Options") 
+ema20_color = ema20_enable ? ema20_color_input : na
+
+securityNoRepaint(sym, tf, src) => request.security(sym, tf, src[barstate.isrealtime ? 1 : 0])[barstate.isrealtime ? 0 : 1]
+ema1_tf = securityNoRepaint(syminfo.tickerid, ema1_timeframe, ema1_out)
+ema2_tf = securityNoRepaint(syminfo.tickerid, ema2_timeframe, ema2_out)
+ema3_tf = securityNoRepaint(syminfo.tickerid, ema3_timeframe, ema3_out)
+ema4_tf = securityNoRepaint(syminfo.tickerid, ema4_timeframe, ema4_out)
+ema5_tf = securityNoRepaint(syminfo.tickerid, ema5_timeframe, ema5_out)
+ema6_tf = securityNoRepaint(syminfo.tickerid, ema6_timeframe, ema6_out)
+ema7_tf = securityNoRepaint(syminfo.tickerid, ema7_timeframe, ema7_out)
+ema8_tf = securityNoRepaint(syminfo.tickerid, ema8_timeframe, ema8_out)
+ema9_tf = securityNoRepaint(syminfo.tickerid, ema9_timeframe, ema9_out)
+ema10_tf = securityNoRepaint(syminfo.tickerid, ema10_timeframe, ema10_out)
+ema11_tf = securityNoRepaint(syminfo.tickerid, ema11_timeframe, ema11_out)
+ema12_tf = securityNoRepaint(syminfo.tickerid, ema12_timeframe, ema12_out)
+ema13_tf = securityNoRepaint(syminfo.tickerid, ema13_timeframe, ema13_out)
+ema14_tf = securityNoRepaint(syminfo.tickerid, ema14_timeframe, ema14_out)
+ema15_tf = securityNoRepaint(syminfo.tickerid, ema15_timeframe, ema15_out)
+ema16_tf = securityNoRepaint(syminfo.tickerid, ema16_timeframe, ema16_out)
+ema17_tf = securityNoRepaint(syminfo.tickerid, ema17_timeframe, ema17_out)
+ema18_tf = securityNoRepaint(syminfo.tickerid, ema18_timeframe, ema18_out)
+ema19_tf = securityNoRepaint(syminfo.tickerid, ema19_timeframe, ema19_out)
+ema20_tf = securityNoRepaint(syminfo.tickerid, ema20_timeframe, ema20_out)
+plot(ema1_tf, title="EMA 1", color=ema1_color, linewidth=2, style=plot.style_line)
+plot(ema2_tf, title="EMA 2", color=ema2_color, linewidth=2, style=plot.style_line)
+plot(ema3_tf, title="EMA 3", color=ema3_color, linewidth=2, style=plot.style_line)
+plot(ema4_tf, title="EMA 4", color=ema4_color, linewidth=2, style=plot.style_line)
+plot(ema5_tf, title="EMA 5", color=ema5_color, linewidth=2, style=plot.style_line)
+plot(ema6_tf, title="EMA 6", color=ema6_color, linewidth=2, style=plot.style_line)
+plot(ema7_tf, title="EMA 7", color=ema7_color, linewidth=2, style=plot.style_line)
+plot(ema8_tf, title="EMA 8", color=ema8_color, linewidth=2, style=plot.style_line)
+plot(ema9_tf, title="EMA 9", color=ema9_color, linewidth=2, style=plot.style_line)
+plot(ema10_tf, title="EMA 10", color=ema10_color, linewidth=3, style=plot.style_line)
+plot(ema11_tf, title="EMA 11", color=ema11_color, linewidth=2, style=plot.style_line)
+plot(ema12_tf, title="EMA 12", color=ema12_color, linewidth=2, style=plot.style_line)
+plot(ema13_tf, title="EMA 13", color=ema13_color, linewidth=2, style=plot.style_line)
+plot(ema14_tf, title="EMA 14", color=ema14_color, linewidth=2, style=plot.style_line)
+plot(ema15_tf, title="EMA 15", color=ema15_color, linewidth=2, style=plot.style_line)
+plot(ema16_tf, title="EMA 16", color=ema16_color, linewidth=2, style=plot.style_line)
+plot(ema17_tf, title="EMA 17", color=ema17_color, linewidth=2, style=plot.style_line)
+plot(ema18_tf, title="EMA 18", color=ema18_color, linewidth=2, style=plot.style_line)
+plot(ema19_tf, title="EMA 19", color=ema19_color, linewidth=2, style=plot.style_line)
+plot(ema20_tf, title="EMA 20", color=ema20_color, linewidth=2, style=plot.style_line)
+
+var label ema1_label = na
+ema1_label_size = size.normal
+var label ema2_label = na
+ema2_label_size = size.normal
+var label ema3_label = na
+ema3_label_size = size.normal
+var label ema4_label = na
+ema4_label_size = size.normal
+var label ema5_label = na
+ema5_label_size = size.normal
+var label ema6_label = na
+ema6_label_size = size.normal
+var label ema7_label = na
+ema7_label_size = size.normal
+var label ema8_label = na
+ema8_label_size = size.normal
+var label ema9_label = na
+ema9_label_size = size.normal
+var label ema10_label = na
+ema10_label_size = size.normal
+var label ema11_label = na
+ema11_label_size = size.normal
+var label ema12_label = na
+ema12_label_size = size.normal
+var label ema13_label = na
+ema13_label_size = size.normal
+var label ema14_label = na
+ema14_label_size = size.normal
+var label ema15_label = na
+ema15_label_size = size.normal
+var label ema16_label = na
+ema16_label_size = size.normal
+var label ema17_label = na
+ema17_label_size = size.normal
+var label ema18_label = na
+ema18_label_size = size.normal
+var label ema19_label = na
+ema19_label_size = size.normal
+var label ema20_label = na
+ema20_label_size = size.normal
+
+
+timeframe_text = get_timeframe_title(ema1_timeframe)
+timeframe2_text = get_timeframe_title(ema2_timeframe)
+timeframe3_text = get_timeframe_title(ema3_timeframe)
+timeframe4_text = get_timeframe_title(ema4_timeframe)
+timeframe5_text = get_timeframe_title(ema5_timeframe)
+timeframe6_text = get_timeframe_title(ema6_timeframe)
+timeframe7_text = get_timeframe_title(ema7_timeframe)
+timeframe8_text = get_timeframe_title(ema8_timeframe)
+timeframe9_text = get_timeframe_title(ema9_timeframe)
+timeframe10_text = get_timeframe_title(ema10_timeframe)
+timeframe11_text = get_timeframe_title(ema11_timeframe)
+timeframe12_text = get_timeframe_title(ema12_timeframe)
+timeframe13_text = get_timeframe_title(ema13_timeframe)
+timeframe14_text = get_timeframe_title(ema14_timeframe)
+timeframe15_text = get_timeframe_title(ema15_timeframe)
+timeframe16_text = get_timeframe_title(ema16_timeframe)
+timeframe17_text = get_timeframe_title(ema17_timeframe)
+timeframe18_text = get_timeframe_title(ema18_timeframe)
+timeframe19_text = get_timeframe_title(ema19_timeframe)
+timeframe20_text = get_timeframe_title(ema20_timeframe)
+
+
+label_x = time + math.round(ta.change(time)*distance)
+
+ema1_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema1_tf)) : ""
+ema2_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema2_tf)) : ""
+ema3_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema3_tf)) : ""
+ema4_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema4_tf)) : ""
+ema5_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema5_tf)) : ""
+ema6_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema6_tf)) : ""
+ema7_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema7_tf)) : ""
+ema8_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema8_tf)) : ""
+ema9_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema9_tf)) : ""
+ema10_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema10_tf)) : ""
+ema11_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema11_tf)) : ""
+ema12_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema12_tf)) : ""
+ema13_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema13_tf)) : ""
+ema14_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema14_tf)) : ""
+ema15_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema15_tf)) : ""
+ema16_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema16_tf)) : ""
+ema17_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema17_tf)) : ""
+ema18_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema18_tf)) : ""
+ema19_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema19_tf)) : ""
+ema20_p_str = show_prices ? " - "+str.tostring(math.round_to_mintick(ema20_tf)) : ""
+
+labelpadding = "                                         "
+
+ema1_label_txt = timeframe_text == "" ? labelpadding+"EMA "+str.tostring(ema1_len)+ema1_p_str : labelpadding+"EMA "+str.tostring(ema1_len)+" ("+timeframe_text+")"+ema1_p_str
+ema1_label := label.new(label_x, ema1_tf, text = ema1_label_txt, xloc=xloc.bar_time, color = ema1_color, textcolor = ema1_color, style = label.style_none, size=size.normal)
+label.delete(ema1_label[1])
+
+ema2_label_txt = timeframe2_text == "" ? labelpadding+"EMA "+str.tostring(ema2_len)+ema2_p_str : labelpadding+"EMA "+str.tostring(ema2_len)+" ("+timeframe2_text+")"+ema2_p_str
+ema2_label := label.new(label_x, ema2_tf, text = ema2_label_txt, xloc=xloc.bar_time, color = ema2_color, textcolor = ema2_color, style = label.style_none, size=size.normal)
+label.delete(ema2_label[1])
+
+ema3_label_txt = timeframe3_text == "" ? labelpadding+"EMA "+str.tostring(ema3_len)+ema3_p_str : labelpadding+"EMA "+str.tostring(ema3_len)+" ("+timeframe3_text+")"+ema3_p_str
+ema3_label := label.new(label_x, ema3_tf, text = ema3_label_txt, xloc=xloc.bar_time, color = ema3_color, textcolor = ema3_color, style = label.style_none, size=size.normal)
+label.delete(ema3_label[1])
+
+ema4_label_txt = timeframe4_text == "" ? labelpadding+"EMA "+str.tostring(ema4_len)+ema4_p_str : labelpadding+"EMA "+str.tostring(ema4_len)+" ("+timeframe4_text+")"+ema4_p_str
+ema4_label := label.new(label_x, ema4_tf, text = ema4_label_txt, xloc=xloc.bar_time, color = ema4_color, textcolor = ema4_color, style = label.style_none, size=size.normal)
+label.delete(ema4_label[1])
+
+ema5_label_txt = timeframe5_text == "" ? labelpadding+"EMA "+str.tostring(ema5_len)+ema5_p_str : labelpadding+"EMA "+str.tostring(ema5_len)+" ("+timeframe5_text+")"+ema5_p_str
+ema5_label := label.new(label_x, ema5_tf, text = ema5_label_txt, xloc=xloc.bar_time, color = ema5_color, textcolor = ema5_color, style = label.style_none, size=size.normal)
+label.delete(ema5_label[1])
+
+ema6_label_txt = timeframe6_text == "" ? labelpadding+"EMA "+str.tostring(ema6_len)+ema6_p_str : labelpadding+"EMA "+str.tostring(ema6_len)+" ("+timeframe6_text+")"+ema6_p_str
+ema6_label := label.new(label_x, ema6_tf, text = ema6_label_txt, xloc=xloc.bar_time, color = ema6_color, textcolor = ema6_color, style = label.style_none, size=size.normal)
+label.delete(ema6_label[1])
+
+ema7_label_txt = timeframe7_text == "" ? labelpadding+"EMA "+str.tostring(ema7_len)+ema7_p_str : labelpadding+"EMA "+str.tostring(ema7_len)+" ("+timeframe7_text+")"+ema7_p_str
+ema7_label := label.new(label_x, ema7_tf, text = ema7_label_txt, xloc=xloc.bar_time, color = ema7_color, textcolor = ema7_color, style = label.style_none, size=size.normal)
+label.delete(ema7_label[1])
+
+ema8_label_txt = timeframe8_text == "" ? labelpadding+"EMA "+str.tostring(ema8_len)+ema8_p_str : labelpadding+"EMA "+str.tostring(ema8_len)+" ("+timeframe8_text+")"+ema8_p_str
+ema8_label := label.new(label_x, ema8_tf, text = ema8_label_txt, xloc=xloc.bar_time, color = ema8_color, textcolor = ema8_color, style = label.style_none, size=size.normal)
+label.delete(ema8_label[1])
+
+ema9_label_txt = timeframe9_text == "" ? labelpadding+"EMA "+str.tostring(ema9_len)+ema9_p_str : labelpadding+"EMA "+str.tostring(ema9_len)+" ("+timeframe9_text+")"+ema9_p_str
+ema9_label := label.new(label_x, ema9_tf, text = ema9_label_txt, xloc=xloc.bar_time, color = ema9_color, textcolor = ema9_color, style = label.style_none, size=size.normal)
+label.delete(ema9_label[1])
+
+ema10_label_txt = timeframe10_text == "" ? labelpadding+"EMA "+str.tostring(ema10_len)+ema10_p_str : labelpadding+"EMA "+str.tostring(ema10_len)+" ("+timeframe10_text+")"+ema10_p_str
+ema10_label := label.new(label_x, ema10_tf, text = ema10_label_txt, xloc=xloc.bar_time, color = ema10_color, textcolor = ema10_color, style = label.style_none, size=size.normal)
+label.delete(ema10_label[1])
+
+ema11_label_txt = timeframe11_text == "" ? labelpadding+"EMA "+str.tostring(ema11_len)+ema11_p_str : labelpadding+"EMA "+str.tostring(ema11_len)+" ("+timeframe11_text+")"+ema11_p_str
+ema11_label := label.new(label_x, ema11_tf, text = ema11_label_txt, xloc=xloc.bar_time, color = ema11_color, textcolor = ema11_color, style = label.style_none, size=size.normal)
+label.delete(ema11_label[1])
+
+ema12_label_txt = timeframe12_text == "" ? labelpadding+"EMA "+str.tostring(ema12_len)+ema12_p_str : labelpadding+"EMA "+str.tostring(ema12_len)+" ("+timeframe12_text+")"+ema12_p_str
+ema12_label := label.new(label_x, ema12_tf, text = ema12_label_txt, xloc=xloc.bar_time, color = ema12_color, textcolor = ema12_color, style = label.style_none, size=size.normal)
+label.delete(ema12_label[1])
+
+ema13_label_txt = timeframe13_text == "" ? labelpadding+"EMA "+str.tostring(ema13_len)+ema13_p_str : labelpadding+"EMA "+str.tostring(ema13_len)+" ("+timeframe13_text+")"+ema13_p_str
+ema13_label := label.new(label_x, ema13_tf, text = ema13_label_txt, xloc=xloc.bar_time, color = ema13_color, textcolor = ema13_color, style = label.style_none, size=size.normal)
+label.delete(ema13_label[1])
+
+ema14_label_txt = timeframe14_text == "" ? labelpadding+"EMA "+str.tostring(ema14_len)+ema14_p_str : labelpadding+"EMA "+str.tostring(ema14_len)+" ("+timeframe14_text+")"+ema14_p_str
+ema14_label := label.new(label_x, ema14_tf, text = ema14_label_txt, xloc=xloc.bar_time, color = ema14_color, textcolor = ema14_color, style = label.style_none, size=size.normal)
+label.delete(ema14_label[1])
+
+ema15_label_txt = timeframe15_text == "" ? labelpadding+"EMA "+str.tostring(ema15_len)+ema15_p_str : labelpadding+"EMA "+str.tostring(ema15_len)+" ("+timeframe15_text+")"+ema15_p_str
+ema15_label := label.new(label_x, ema15_tf, text = ema15_label_txt, xloc=xloc.bar_time, color = ema15_color, textcolor = ema15_color, style = label.style_none, size=size.normal)
+label.delete(ema15_label[1])
+
+ema16_label_txt = timeframe16_text == "" ? labelpadding+"EMA "+str.tostring(ema16_len)+ema16_p_str : labelpadding+"EMA "+str.tostring(ema16_len)+" ("+timeframe16_text+")"+ema16_p_str
+ema16_label := label.new(label_x, ema16_tf, text = ema16_label_txt, xloc=xloc.bar_time, color = ema16_color, textcolor = ema16_color, style = label.style_none, size=size.normal)
+label.delete(ema16_label[1])
+
+ema17_label_txt = timeframe17_text == "" ? labelpadding+"EMA "+str.tostring(ema17_len)+ema17_p_str : labelpadding+"EMA "+str.tostring(ema17_len)+" ("+timeframe17_text+")"+ema17_p_str
+ema17_label := label.new(label_x, ema17_tf, text = ema17_label_txt, xloc=xloc.bar_time, color = ema17_color, textcolor = ema17_color, style = label.style_none, size=size.normal)
+label.delete(ema17_label[1])
+
+ema18_label_txt = timeframe18_text == "" ? labelpadding+"EMA "+str.tostring(ema18_len)+ema18_p_str : labelpadding+"EMA "+str.tostring(ema18_len)+" ("+timeframe18_text+")"+ema18_p_str
+ema18_label := label.new(label_x, ema18_tf, text = ema18_label_txt, xloc=xloc.bar_time, color = ema18_color, textcolor = ema18_color, style = label.style_none, size=size.normal)
+label.delete(ema18_label[1])
+
+ema19_label_txt = timeframe19_text == "" ? labelpadding+"EMA "+str.tostring(ema19_len)+ema19_p_str : labelpadding+"EMA "+str.tostring(ema19_len)+" ("+timeframe19_text+")"+ema19_p_str
+ema19_label := label.new(label_x, ema19_tf, text = ema19_label_txt, xloc=xloc.bar_time, color = ema19_color, textcolor = ema19_color, style = label.style_none, size=size.normal)
+label.delete(ema19_label[1])
+
+ema20_label_txt = timeframe20_text == "" ? labelpadding+"EMA "+str.tostring(ema20_len)+ema20_p_str : labelpadding+"EMA "+str.tostring(ema20_len)+" ("+timeframe20_text+")"+ema20_p_str
+ema20_label := label.new(label_x, ema20_tf, text = ema20_label_txt, xloc=xloc.bar_time, color = ema20_color, textcolor = ema20_color, style = label.style_none, size=size.normal)
+label.delete(ema20_label[1])
+ 

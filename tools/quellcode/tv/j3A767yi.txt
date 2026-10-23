@@ -1,0 +1,51 @@
+//@version=5
+indicator("Volume Delta Buy/Sell with EMA and RSI Confirmation and Alerts", overlay=true)
+
+// Berechnung des Volume Delta
+upVol = volume * (close > open ? 1 : 0)
+downVol = volume * (close < open ? 1 : 0)
+delta = upVol - downVol
+
+// Berechnung des EMA
+emaLength = input.int(21, title="EMA Length")
+ema = ta.ema(close, emaLength)
+
+// Berechnung des RSI
+rsiLength = input.int(14, title="RSI Length")
+rsi = ta.rsi(close, rsiLength)
+
+// RSI-Filter
+rsiBullish = rsi > 49 and ta.crossover(rsi, 49)
+rsiBearish = rsi < 51 and ta.crossunder(rsi, 51)
+
+// Kaufsignal, wenn das Volume Delta von negativ zu positiv wechselt, der Kurs über dem EMA liegt und RSI bullish ist
+buySignal = ta.crossover(delta, 0) and close > ema and rsiBullish
+
+// Verkaufssignal, wenn das Volume Delta von positiv zu negativ wechselt, der Kurs unter dem EMA liegt und RSI bearish ist
+sellSignal = ta.crossunder(delta, 0) and close < ema and rsiBearish
+
+// Zeichnen der Signale auf dem Chart mit schwarzem Text
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", size=size.small, textcolor=color.black)
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", size=size.small, textcolor=color.black)
+
+// Optional: Anzeige des Volume Delta als Histogramm
+plot(delta, color=color.blue, style=plot.style_histogram, title="Volume Delta")
+
+// Plot des EMA und RSI auf dem Chart
+plot(ema, color=color.orange, title="EMA")
+hline(50, "50 Level", color=color.gray, linestyle=hline.style_dotted) // Level 50 Linie für RSI
+plot(rsi, color=color.purple, title="RSI")
+
+// Alarme für Buy-Signale
+alertcondition(ta.crossover(delta, 0) and close > ema, title="Buy Signal - Volume Delta & EMA", message="Volume Delta Buy Signal with EMA Confirmation")
+alertcondition(rsiBullish, title="Buy Signal - RSI Bullish", message="RSI Bullish Crossover")
+
+// Alarme für Sell-Signale
+alertcondition(ta.crossunder(delta, 0) and close < ema, title="Sell Signal - Volume Delta & EMA", message="Volume Delta Sell Signal with EMA Confirmation")
+alertcondition(rsiBearish, title="Sell Signal - RSI Bearish", message="RSI Bearish Crossunder")
+
+// Alarme für kombinierte Buy-Signale
+alertcondition(buySignal, title="Buy Signal - Combined", message="Volume Delta Buy Signal with EMA and RSI Bullish Confirmation")
+
+// Alarme für kombinierte Sell-Signale
+alertcondition(sellSignal, title="Sell Signal - Combined", message="Volume Delta Sell Signal with EMA and RSI Bearish Confirmation")

@@ -1,0 +1,845 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © fluxchart
+
+//@version=5
+const bool DEBUG = false
+indicator("-VrilyaSS-Support & Resistance (MTF) | Flux Charts-", overlay = true, max_labels_count = 500, max_lines_count = 500, max_boxes_count = 500, max_bars_back = 300)
+
+const int timeframeCount = 3
+const float touchATR = 1.0 / 30.0
+const float retestATR = 1.0 / 30.0
+const float labelOffsetY = 1.5
+const int labelOffsetsXIndex = 30
+const int maxPivotsBackSR = 15
+const int retestLabelEveryXBars = 3
+const int maxTraverse = 250  // Affects bar history limit. Default value 250.
+const int maxRetestLabels = 100
+const int maxSupports = 3
+const int maxResistances = 3
+const int debug_maxPivotLabels = 25
+
+// _____ INPUTS _____
+resistanceSupportCount = input.int(3, "Support & Resistance Count", options = [1, 2, 3], group = "General Configuration", display = display.none)
+pivotRange = input.int(15, "Pivot Range", options = [5, 15, 30], tooltip = "Increase for more general pivots, decrease for more private pivots.", group = "General Configuration", display = display.none)
+strength = input.int(1, "Strength", options = [1, 2, 3, 4], tooltip = "X many times price touched relative price area in order to be considered a support/resistance zone.", group = "General Configuration", display = display.none)
+expandLines = input.bool(true,"Expand Lines & Zones", group = "General Configuration", display = display.none)
+
+enableZones = input.bool(false, "Enable Zones", group = "Support & Resistance Zones", display = display.none)
+zoneWidthType = input.string("Dynamic", "Zone Width Type", options = ["Fixed", "Dynamic"], group = "Support & Resistance Zones", display = display.none)
+zoneWidth = input.int(1, "Fixed Zone Width", options = [1,2,3], group = "Support & Resistance Zones", display = display.none)
+
+timeframe1Enabled = input.bool(true, title = "", group = "Timeframes", inline = "timeframe1", display = display.none)
+timeframe1 = input.timeframe("", title = "", group = "Timeframes", inline = "timeframe1", display = display.none)
+timeframe2Enabled = input.bool(false, title = "", group = "Timeframes", inline = "timeframe2", display = display.none)
+timeframe2 = input.timeframe("15", title = "", group = "Timeframes", inline = "timeframe2", display = display.none)
+timeframe3Enabled = input.bool(false, title = "", group = "Timeframes", inline = "timeframe3", display = display.none)
+timeframe3 = input.timeframe("30", title = "", group = "Timeframes", inline = "timeframe3", display = display.none)
+
+showBreaks = input.bool(true,"Show Breaks", group = "Breaks & Retests", inline = "ShowBR", display = display.none)
+showRetests = input.bool(true,"Show Retests", group = "Breaks & Retests", inline = "ShowBR", display = display.none)
+avoidFalseBreaks = input.bool(true, "Avoid False Breaks", group = "Breaks & Retests", display = display.none)
+falseBreakoutVolumeThresholdOpt = input.float(0.3, "Break Volume Threshold", minval=0.1, maxval=1.0, step=0.1, group = "Breaks & Retests", tooltip = "Only taken into account if Avoid False Breakouts is enabled.\nHigher values mean it's less likely to be a break.", display = display.none)
+inverseBrokenLineColor = input.bool(true, "Inverse Color After Broken", tooltip = "Needs Show Breaks & Expand Lines option enabled.", group = "Breaks & Retests", display = display.none)
+
+falseBreakoutVolumeThreshold = falseBreakoutVolumeThresholdOpt * 100.0
+
+lineStyle = input.string("____", "Line Style", ["____", "----", "...."], group = "Style", display = display.none)
+lineWidth = input.int(2, "Line Width", minval = 1, group = "Style", display = display.none)
+supportColor = input.color(#08998180, "Support Color", group = "Style", inline = "RScolors", display = display.none)
+resistanceColor = input.color(#f2364580, "Resistance Color", group = "Style", inline = "RScolors", display = display.none)
+textColor = input.color(#ffffff80, "Text Color", group = "Style", inline = "RScolors", display = display.none)
+labelsAlign = input.string("Right", "Align Labels", options = ["Right", "Center"], group = "Style", tooltip = "Will only work when zones are disabled.", display = display.none)
+
+enableRetestAlerts = input.bool(true, "Enable Retest Alerts", tooltip = "Needs Show Retests option enabled.", group = "Alerts", display = display.none)
+enableBreakAlerts = input.bool(true, "Enable Break Alerts", group = "Alerts", display = display.none)
+
+memoryOptimizatonEnabled = input.bool(false, "Enable Memory Optimization", tooltip = "Enable this option if you encounter memory errors.", group = "Advanced", display = display.none)
+// _____ INPUTS END _____
+
+// _____ DEBUG OPTIONS _____
+debug_labelPivots = not DEBUG ? "None" : input.string("None", title = "[DBG] Label Pivots", group = "DEBUG", options = ["All", "RS", "None"], tooltip = "All -> Debugs all pivot labels.\nRS -> Debugs RS pivot labels.\nNone -> Debugs none of the last R&S pivots.")
+debug_pivotLabelText = not DEBUG ? false : input.bool(false, title = "[DBG] Pivot Label Text", group = "DEBUG")
+debug_showBrokenOnLabel = not DEBUG ? false : input.bool(false, "[DBG] Show Broken Text On Label", group = "DEBUG")
+debug_removeDuplicateRS = not DEBUG ? true : input.bool(true, "[DBG] Remove Duplicate RS", group = "DEBUG")
+debug_lastXResistances = not DEBUG ? 3 : input.int(3, "[DBG] Show Last X Resistances", minval = 0, maxval = maxResistances, group = "DEBUG")
+debug_lastXSupports = not DEBUG ? 3 : input.int(3, "[DBG] Show Last X Supports", minval = 0, maxval = maxSupports, group = "DEBUG")
+debug_enabledHistory = not DEBUG ? true : input.bool(true, "[DBG] Enable History", group = "DEBUG")
+debug_maxHistoryRecords = not DEBUG ? 10 : input.int(10, "[DBG] Max History Records", options =  [1, 2, 5, 10, 25], group = "DEBUG")
+// _____ DEBUG OPTIONS END _____
+
+atr = ta.atr(30)
+
+createRSLine (color) =>
+    line.new(na, na, na, na, extend = expandLines ? extend.both : extend.none, xloc=xloc.bar_time, color = color, width = lineWidth, style = lineStyle == "----" ? line.style_dashed : lineStyle == "...." ? line.style_dotted : line.style_solid)
+
+createRSBox (color, xlocType) =>
+    box.new(na, na, na, na, text_size = size.normal, xloc = xlocType, extend = extend.both, bgcolor = color, text_color = textColor, text_halign = expandLines ? text.align_right : text.align_center, border_color = #00000000)
+
+createRSLabel () =>
+    label.new(na, na, "", style = label.style_none, textcolor = textColor)
+
+createBreakLabel (RSType) =>
+    label.new(na,na,"B",style = RSType == "Resistance" ? label.style_label_up : label.style_label_down, color=color.blue, textcolor = color.white, xloc = xloc.bar_time, size = size.small)
+
+createRetestLabel (RSType) =>
+    label.new(na,na,"R",style = RSType == "Resistance" ? label.style_label_down : label.style_label_up, color = RSType == "Resistance" ? resistanceColor : supportColor, textcolor = color.white, xloc = xloc.bar_time, size = size.small)
+
+moveLine(_line, _x, _y, _x2) =>
+    line.set_xy1(_line, _x,  _y)
+    line.set_xy2(_line, _x2, _y)
+
+moveBox (_box, _topLeftX, _topLeftY, _bottomRightX, _bottomRightY) =>
+    box.set_lefttop(_box, _topLeftX, _topLeftY)
+    box.set_rightbottom(_box, _bottomRightX, _bottomRightY)
+
+moveRSInfoBox (_box, _startPointX, _price, _endPointX) =>
+    zoneWidthPercent = zoneWidth == 1 ? 0.05 : zoneWidth == 2 ? 0.06 : 0.075
+    if zoneWidthType == "Dynamic"
+        zoneWidthPercent := ((atr) / _price) * 100 / 3.0
+    topY = _price * (1.0 + (zoneWidthPercent / 2.0 / 100.0))
+    bottomY = _price * (1.0 - (zoneWidthPercent / 2.0 / 100.0))
+    moveBox(_box, _startPointX, topY, _endPointX, bottomY)
+
+// _____ TYPES _____
+
+type customPoint
+    int t
+    float price
+
+type RSInfo
+    bool isBroken = na
+    int brokenTime = na
+    string RSType = na
+    float price = na
+    line line = na
+    box box = na
+    label priceLabel = na
+    customPoint[] points = na
+    label[] debugPoints = na
+    label breakLabel = na
+    label[] retestLabels = na
+    line breakLine = na
+    box breakBox = na
+
+curTR = ta.tr(true)
+lowPivot = ta.pivotlow(low, pivotRange, pivotRange)
+highPivot = ta.pivothigh(high, pivotRange, pivotRange)
+pivotTime = time[pivotRange]
+
+newRSInfo (RSType) =>
+    newRSInfoF = RSInfo.new()
+    newRSInfoF.RSType := RSType
+    newRSInfoF.price := na
+    newRSInfoF.isBroken := false
+    newRSInfoF.brokenTime := na
+
+    newRSInfoF.line := enableZones ? na : createRSLine(RSType == "Resistance" ? resistanceColor : supportColor)
+    newRSInfoF.box := enableZones ? createRSBox(RSType == "Resistance" ? resistanceColor : supportColor, xloc.bar_time) : na
+    newRSInfoF.priceLabel := enableZones ? na : createRSLabel()
+    newRSInfoF.points := array.new<customPoint>(0)
+    newRSInfoF.debugPoints := array.new<label>(0)
+    newRSInfoF.retestLabels := array.new<label>(0)
+    newRSInfoF.breakLabel := na
+    newRSInfoF.breakLine := na
+    newRSInfoF.breakBox := na
+    
+    newRSInfoF
+
+histRSInfo (RSInfo RSInfoF) =>
+    RSType = RSInfoF.RSType
+    newRS = RSInfo.new()
+    newRS.RSType := RSType
+    newRS.price := RSInfoF.price
+
+    newRS.debugPoints := array.new<label>(0)
+    newRS.retestLabels := array.new<label>(0)
+    newRS.points := array.new<customPoint>(0)
+
+    histText = "History | " + str.tostring(newRS.price, format.mintick)
+
+    startTime = math.min(time, RSInfoF.points.get(RSInfoF.points.size() - 1).t)
+    endTime = RSInfoF.isBroken ? RSInfoF.brokenTime : time
+
+    if enableZones
+        newRS.box := createRSBox(RSType == "Resistance" ? resistanceColor : supportColor, xloc.bar_time)
+        moveRSInfoBox(newRS.box, startTime, newRS.price, endTime)
+        box.set_extend(newRS.box, expandLines ? extend.both : extend.none)
+        box.set_text(newRS.box, histText)
+    else
+        newRS.line := line.copy(RSInfoF.line)
+        moveLine(newRS.line, startTime, newRS.price, endTime)
+        line.set_extend(newRS.line, expandLines ? extend.both : extend.none)
+
+        newRS.priceLabel := label.copy(RSInfoF.priceLabel)
+        label.set_text(newRS.priceLabel, histText)
+        label.set_xloc(newRS.priceLabel, (startTime + endTime) / 2, xloc.bar_time)
+    
+    if not na(newRS.breakLabel)
+        newRS.breakLabel := label.copy(RSInfoF.breakLabel)
+    
+    newRS
+
+derenderRSInfo (RSInfo RSInfoF) =>
+    if not na(RSInfoF)
+        line.delete(RSInfoF.line)
+        box.delete(RSInfoF.box)
+        label.delete(RSInfoF.priceLabel)
+
+        if RSInfoF.debugPoints.size() > 0
+            for i = 0 to RSInfoF.debugPoints.size() - 1
+                label.delete(RSInfoF.debugPoints.get(i))
+
+        if RSInfoF.retestLabels.size() > 0
+            for i = 0 to RSInfoF.retestLabels.size() - 1
+                label.delete(RSInfoF.retestLabels.get(i))
+        
+        label.delete(RSInfoF.breakLabel)
+        line.delete(RSInfoF.breakLine)
+        box.delete(RSInfoF.breakBox)
+
+safeDeleteRSInfo (RSInfo RSInfoF) =>
+    if not na(RSInfoF)
+        derenderRSInfo(RSInfoF)
+        RSInfoF.points.clear()
+        RSInfoF.debugPoints.clear()
+        RSInfoF.retestLabels.clear()
+
+
+type timeframeInfo
+    int index = na
+    string timeframeStr = na
+    bool isEnabled = false
+
+    RSInfo[] resistances = na
+    RSInfo[] supports = na
+
+    float[] highPivots = na
+    float[] highTRs = na
+    int[] highTimes = na
+
+    float[] lowPivots = na
+    float[] lowTRs = na
+    int[] lowTimes = na
+
+newTimeframeInfo (index, timeframeStr, isEnabled) =>
+    newTFInfo = timeframeInfo.new()
+    newTFInfo.index := index
+    newTFInfo.isEnabled := isEnabled
+    newTFInfo.timeframeStr := timeframeStr
+
+    newTFInfo.resistances := array.new<RSInfo>(debug_lastXResistances)
+    newTFInfo.supports := array.new<RSInfo>(debug_lastXSupports)
+    
+    newTFInfo.highPivots := array.new<float>()
+    newTFInfo.highTRs := array.new<float>()
+    newTFInfo.highTimes := array.new<int>()
+
+    newTFInfo.lowPivots := array.new<float>()
+    newTFInfo.lowTRs := array.new<float>()
+    newTFInfo.lowTimes := array.new<int>()
+    
+    newTFInfo
+
+// _____ TYPES END _____
+
+// _____ VARS _____
+
+var timeframeInfo[] timeframeInfos = array.from(newTimeframeInfo(1, timeframe1, timeframe1Enabled), newTimeframeInfo(2, timeframe2, timeframe2Enabled), newTimeframeInfo(3, timeframe3, timeframe3Enabled))
+var bool initRun = true
+
+var float[] allLowPivots = array.new<float>(0)
+var float[] allHighPivots = array.new<float>(0)
+
+var int[] allLowTimes = array.new<int>(0)
+var int[] allHighTimes = array.new<int>(0)
+
+var float[] allHighTR = array.new<float>(0)
+var float[] allLowTR = array.new<float>(0)
+
+var RSInfo[] history = array.new<RSInfo>(0)
+
+RSInfo[] curRSList = array.new<RSInfo>(0)
+RSInfo[] oldRSList = array.new<RSInfo>(0)
+
+int maxPivotsAllowed = memoryOptimizatonEnabled ? 7 : 15 // Affects memory limit. Default value 15.
+
+// _____ VARS END _____
+
+doValuesTouch (float value1, float value2, float tr) =>
+    if math.abs(value1 - value2) <= tr * touchATR
+        true
+    else
+        false
+
+doValuesTouch (float value1, float value2, float tr, float customATRRatio) =>
+    if math.abs(value1 - value2) <= tr * customATRRatio
+        true
+    else
+        false
+
+findLatestRS (timeframeInfo timeframeInfoF, string RSType, pivots, times, trs, bannedValues) =>
+    RSInfo latestRSF = na
+    pivotsCount = pivots.size()
+    if pivotsCount > 0
+        for i = 0 to pivotsCount - 1
+            if i >= maxTraverse
+                break
+            
+            index = pivotsCount - i - 1
+            occurances = 0
+            invalidValue = false
+            pivotValue1 = pivots.get(index)
+            if bannedValues.size() > 0
+                for a = 0 to bannedValues.size() - 1
+                    if doValuesTouch(pivotValue1, bannedValues.get(a), trs.get(index))
+                        invalidValue := true
+                        break
+            
+            if invalidValue
+                continue
+            
+            for j = 0 to pivotsCount - 1
+                if j >= maxTraverse
+                    break
+                
+                index2 = pivotsCount - j - 1
+                pivotValue2 = pivots.get(index2)
+                if doValuesTouch(pivotValue1, pivotValue2, trs.get(index))
+                    occurances += 1
+                
+                if occurances >= strength
+                    latestRSF := newRSInfo(RSType)
+                    latestRSF.price := pivotValue1
+                    break
+                
+                if math.abs(index - index2) > maxPivotsBackSR * strength
+                    break
+                
+            if not na(latestRSF)
+                break
+            
+    if not na(latestRSF)
+        cnt = 0
+        if pivotsCount > 0
+            for i = 0 to pivotsCount - 1
+                if i >= maxTraverse
+                    break
+                
+                index = pivotsCount - i - 1
+                pivotValue = pivots.get(index)
+                if doValuesTouch(pivotValue, latestRSF.price, trs.get(index))
+                    labelTime = times.get(index)
+                    latestRSF.points.push(customPoint.new(labelTime, pivotValue))
+                    cnt += 1
+                if cnt == strength
+                    break
+
+    if not (debug_labelPivots == "None")
+        if not (debug_labelPivots == "All")
+            if not na(latestRSF)
+                cnt = 0
+                if pivotsCount > 0
+                    for i = 0 to pivotsCount - 1
+                        index = pivotsCount - i - 1
+                        pivotValue = pivots.get(index)
+                        if doValuesTouch(pivotValue, latestRSF.price, trs.get(index))
+                            labelTime = times.get(index)
+                            latestRSF.debugPoints.push(RSType == "Resistance" ? label.new(labelTime,pivotValue,text=debug_pivotLabelText ? str.tostring(pivotValue) : "",xloc=xloc.bar_time, color=resistanceColor, textcolor=color.white) : label.new(labelTime,pivotValue,text=debug_pivotLabelText ? str.tostring(pivotValue) : "",xloc=xloc.bar_time, color=supportColor,style = label.style_label_up, textcolor=color.white))
+                            cnt += 1
+                        if cnt == strength
+                            break
+        else
+            if not na(latestRSF)
+                if pivotsCount > 0
+                    for i = 0 to pivotsCount - 1
+                        index = pivotsCount - i - 1
+                        pivotValue = pivots.get(index)
+                        labelTime = times.get(index)
+                        latestRSF.debugPoints.push(RSType == "Resistance" ? label.new(labelTime,pivotValue,text=debug_pivotLabelText ? str.tostring(pivotValue) : "",xloc=xloc.bar_time, color=resistanceColor, textcolor=color.white) : label.new(labelTime,pivotValue,text=debug_pivotLabelText ? str.tostring(pivotValue) : "",xloc=xloc.bar_time, color=supportColor,style = label.style_label_up, textcolor=color.white))
+                        if latestRSF.debugPoints.size() > debug_maxPivotLabels
+                            break
+    latestRSF
+
+findLatestNthRS (timeframeInfo timeframeInfoF, string RSType, pivots, times, trs, n) =>
+    float[] bannedValues = array.new<float>()
+    foundRS = 0
+    RSInfo foundLatestRS = na
+    while foundRS < n
+        foundLatestRS := findLatestRS(timeframeInfoF, RSType, pivots, times, trs, bannedValues)
+        if not na(foundLatestRS)
+            foundRS += 1
+            bannedValues.push(foundLatestRS.price)
+        else
+            break
+    foundLatestRS
+
+isTimeframeLower (timeframe1F, timeframe2F) =>
+    timeframe.in_seconds(timeframe1F) < timeframe.in_seconds(timeframe2F)
+
+getMinTimeframe (timeframe1F, timeframe2F) =>
+    if isTimeframeLower(timeframe1F, timeframe2F)
+        timeframe1F
+    else
+        timeframe2F
+
+getMaxTimeframe (timeframe1F, timeframe2F) =>
+    if isTimeframeLower(timeframe1F, timeframe2F)
+        timeframe2F
+    else
+        timeframe1F
+
+getFirstBreak (RSInfo rsInfo) =>
+    if na(rsInfo)
+        [na, na]
+    
+    curIndex = 0
+    float foundBreakLevel = na
+    int foundBreakTime = na
+    float foundBreakTR = na
+
+    while true
+        if curIndex >= maxTraverse
+            break
+        isBarBreak = rsInfo.RSType == "Resistance" ? (close[curIndex + 1] <= rsInfo.price and close[curIndex] > rsInfo.price) : (close[curIndex + 1] >= rsInfo.price and close[curIndex] < rsInfo.price)
+        if isBarBreak
+            isTrueBreakout = true
+            if avoidFalseBreaks
+                shortTerm = 2
+                longTerm = 15
+                
+                shortSum = 0.0
+                longSum = 0.0
+                
+                for i = 0 to shortTerm
+                    shortSum += volume[curIndex + i]
+                
+                for i = 0 to longTerm
+                    longSum += volume[curIndex + i]
+                
+                shortVolumeAvg = shortSum / shortTerm
+                longVolumeAvg = longSum / longTerm
+
+                volumeRatio = ((shortVolumeAvg - longVolumeAvg) / longVolumeAvg) * 100.0
+                isTrueBreakout := (volumeRatio >= falseBreakoutVolumeThreshold)
+
+            if isTrueBreakout
+                foundBreakLevel := rsInfo.RSType == "Resistance" ? low[curIndex] : high[curIndex]
+                foundBreakTime := time[curIndex]
+                foundBreakTR := high[curIndex] - low[curIndex]
+            
+        curIndex += 1
+        if time[curIndex] <= rsInfo.points.get(rsInfo.points.size() - 1).t
+            break
+    [foundBreakLevel, foundBreakTime, foundBreakTR]
+
+getRetests (RSInfo rsInfo) =>
+    if na(rsInfo)
+        [na,na]
+    
+    curIndex = 0
+    lastRetestIndex = -999
+    int[] retestTimes = array.new<int>()
+    float[] retestLevels = array.new<float>()
+    float[] retestTRs = array.new<float>()
+
+    while true
+        if curIndex >= maxTraverse
+            break
+        if retestLevels.size() == maxRetestLabels
+            break
+        if rsInfo.isBroken and time[curIndex] >= rsInfo.brokenTime
+            curIndex += 1
+            continue
+
+        tr = high[curIndex] - low[curIndex]
+        isRetest = (rsInfo.RSType == "Resistance" ? (doValuesTouch(rsInfo.price, close[curIndex], tr, retestATR) or doValuesTouch(rsInfo.price, high[curIndex], tr, retestATR)) : (doValuesTouch(rsInfo.price, close[curIndex], tr, retestATR) or doValuesTouch(rsInfo.price, low[curIndex], tr, retestATR)))
+        if isRetest and curIndex - lastRetestIndex >= retestLabelEveryXBars
+            retestLevels.push(rsInfo.RSType == "Resistance" ? high[curIndex] : low[curIndex])
+            retestTimes.push(time[curIndex])
+            retestTRs.push(high[curIndex] - low[curIndex])
+            lastRetestIndex := curIndex
+        curIndex += 1
+        if time[curIndex] <= rsInfo.points.get(rsInfo.points.size() - 1).t
+            break
+    [retestLevels, retestTimes, retestTRs]
+
+formatTimeframeString (formatTimeframe) =>
+    timeframeF = formatTimeframe == "" ? timeframe.period : formatTimeframe
+    
+    if str.contains(timeframeF, "D") or str.contains(timeframeF, "W") or str.contains(timeframeF, "S") or str.contains(timeframeF, "M")
+        timeframeF
+    else
+        seconds = timeframe.in_seconds(timeframeF)
+        if seconds >= 3600
+            hourCount = int(seconds / 3600)
+            str.tostring(hourCount) + " Hour" + (hourCount > 1 ? "s" : "")
+        else
+            timeframeF + " Min"
+
+handleRSInfo (timeframeInfo timeframeInfoF, RSInfo RSInfoF, int index, string RSType) =>
+    if not na(RSInfoF)
+        if not na(timeframeInfoF)
+            curRSList.push(RSInfoF)
+        
+        [foundBreakLevel, foundBreakTime, foundBreakTR] = getFirstBreak(RSInfoF)
+        
+        RSInfoF.isBroken := na(foundBreakLevel) ? false : true
+        RSInfoF.brokenTime := na(foundBreakLevel) ? na : foundBreakTime
+
+        if not na(foundBreakLevel)
+            if showBreaks
+                if na(RSInfoF.breakLabel)
+                    RSInfoF.breakLabel := createBreakLabel(RSInfoF.RSType)
+                label.set_xy(RSInfoF.breakLabel, foundBreakTime, foundBreakLevel + (RSInfoF.RSType == "Resistance" ? (-foundBreakTR / labelOffsetY) : foundBreakTR / labelOffsetY))
+            
+            if expandLines
+                if na(RSInfoF.breakLine) and enableZones == false
+                    RSInfoF.breakLine := createRSLine(color.black)
+                
+                if na(RSInfoF.breakBox) and enableZones == true
+                    RSInfoF.breakBox := createRSBox(color.black, xloc.bar_time)
+
+                if not enableZones
+                    line.set_extend(RSInfoF.breakLine, extend.right)
+                else
+                    box.set_extend(RSInfoF.breakBox, extend.right)
+                
+                if inverseBrokenLineColor and showBreaks
+                    if not enableZones
+                        line.set_color(RSInfoF.breakLine, RSInfoF.RSType == "Resistance" ? supportColor : resistanceColor)
+                    else    
+                        box.set_bgcolor(RSInfoF.breakBox, RSInfoF.RSType == "Resistance" ? supportColor : resistanceColor)
+                else
+                    if not enableZones
+                        line.set_color(RSInfoF.breakLine, RSInfoF.RSType == "Resistance" ? resistanceColor : supportColor)
+                    else
+                        box.set_bgcolor(RSInfoF.breakBox, RSInfoF.RSType == "Resistance" ? resistanceColor : supportColor)
+
+        if showRetests
+            [retestLevels, retestTimes, retestTRs] = getRetests(RSInfoF)
+
+            if not na(retestLevels) and retestLevels.size() > 0
+                for i = 0 to retestLevels.size() - 1
+                    newRetestLabel = createRetestLabel(RSInfoF.RSType)
+                    label.set_xy(newRetestLabel, retestTimes.get(i), retestLevels.get(i) + (RSInfoF.RSType == "Support" ? (-retestTRs.get(i) / labelOffsetY) : retestTRs.get(i) / labelOffsetY))
+                    RSInfoF.retestLabels.push(newRetestLabel)
+
+        timeSkipOffset = 0
+        if enableZones
+            zoneEndX = time + timeSkipOffset + timeframe.in_seconds(timeframe.period) * 1000 * labelOffsetsXIndex 
+            startTime = math.min(time, RSInfoF.points.get(RSInfoF.points.size() - 1).t)
+            moveRSInfoBox(RSInfoF.box, startTime, RSInfoF.price, na(foundBreakTime) ? zoneEndX : foundBreakTime)
+            moveRSInfoBox(RSInfoF.breakBox, foundBreakTime, RSInfoF.price, zoneEndX)
+        else
+            endTime = time + timeSkipOffset + timeframe.in_seconds(timeframe.period) * 1000
+            startTime = math.min(time, RSInfoF.points.get(RSInfoF.points.size() - 1).t)
+            moveLine(RSInfoF.line, startTime, RSInfoF.price, na(foundBreakTime) ? endTime : foundBreakTime)
+            moveLine(RSInfoF.breakLine, foundBreakTime, RSInfoF.price, endTime)
+            //log.info(str.tostring(RSInfoF.price) + " | " + str.tostring(RSInfoF.points.get(strength - 1).time) + " = "  + str.tostring(line.get_x1(RSInfoF.line)) + " | " + str.tostring(endTime) + " = " + str.tostring(line.get_x2(RSInfoF.line)))
+        
+        if expandLines
+            if not enableZones
+                line.set_extend(RSInfoF.line, (na(foundBreakTime)) ? extend.both : extend.left)
+            else    
+                box.set_extend(RSInfoF.box, (na(foundBreakTime)) ? extend.both : extend.left)
+        else
+            if not enableZones
+                line.set_extend(RSInfoF.line, na(foundBreakTime) ? extend.right : extend.none)
+            else
+                box.set_extend(RSInfoF.box, na(foundBreakTime) ? extend.right : extend.none)
+
+        //labelTitleOld = formatTimeframeString(timeframeInfoF.timeframeStr) + " " + RSInfoF.RSType + " " + str.tostring(index + 1) + " (" + str.tostring(RSInfoF.price,format.mintick) + ")" + (RSInfoF.isBroken ? " [Broken]" : "")
+        labelTitle = formatTimeframeString(timeframeInfoF.timeframeStr) + " | " + str.tostring(RSInfoF.price,format.mintick) + ((debug_showBrokenOnLabel and RSInfoF.isBroken)  ? " [B]" : "")
+        
+        if not enableZones
+            label.set_text(RSInfoF.priceLabel, enableZones ? "" : labelTitle)
+            label.set_y(RSInfoF.priceLabel, RSInfoF.price)
+        else
+            box.set_text(RSInfoF.box, (RSInfoF.isBroken and expandLines) ? "" : labelTitle)
+            box.set_text(RSInfoF.breakBox, labelTitle)
+        
+        if expandLines or not RSInfoF.isBroken
+            if not enableZones
+                if labelsAlign == "Right"
+                    label.set_xloc(RSInfoF.priceLabel, bar_index + labelOffsetsXIndex, xloc.bar_index)
+                else
+                    label.set_xloc(RSInfoF.priceLabel, labelsAlign == "Center" ? ((chart.right_visible_bar_time + chart.left_visible_bar_time) / 2) : na, xloc.bar_time)
+            else
+                box.set_text_halign(RSInfoF.breakBox, text.align_right)
+                box.set_text_halign(RSInfoF.box, text.align_right)
+        else
+            if not enableZones
+                label.set_xloc(RSInfoF.priceLabel, (RSInfoF.points.get(RSInfoF.points.size() - 1).t + RSInfoF.brokenTime) / 2, xloc.bar_time)
+            else
+                box.set_text_halign(RSInfoF.box, text.align_center)
+                box.set_text_halign(RSInfoF.breakBox, text.align_center)
+    else
+        log.error("Couldn't find timeframe " + str.tostring(timeframeInfoF.index) + " " + str.tostring(index + 1) + "th " + RSType + " . Try decreasing pivot range in the settings.")
+
+handleTimeframe (timeframeIndex, lowPivots, highPivots, lowTimes, highTimes, lowTRs, highTRs) =>
+    timeframeInfoF = timeframeInfos.get(timeframeIndex - 1)
+    
+    timeframeInfoF.lowPivots.clear()
+    timeframeInfoF.highPivots.clear()
+
+    timeframeInfoF.lowTimes.clear()
+    timeframeInfoF.highTimes.clear()
+
+    timeframeInfoF.lowTRs.clear()
+    timeframeInfoF.highTRs.clear()
+
+    timeframeInfoF.lowPivots := lowPivots
+    timeframeInfoF.highPivots := highPivots
+
+    timeframeInfoF.lowTimes := lowTimes
+    timeframeInfoF.highTimes := highTimes
+
+    timeframeInfoF.lowTRs := lowTRs
+    timeframeInfoF.highTRs := highTRs
+
+getHigherTFData (timeframeStr) =>
+    request.security(syminfo.tickerid, getMaxTimeframe(timeframe.period, timeframeStr), [allLowPivots, allHighPivots, allLowTimes, allHighTimes, allLowTR, allHighTR])
+
+pushHighPivots (timeframeInfoF, highPivotF, timeF, trF) =>
+    if not na(highPivotF)
+        timeframeInfoF.highPivots.push(highPivotF)
+        timeframeInfoF.highTimes.push(timeF)
+        timeframeInfoF.highTRs.push(trF)
+
+pushLowPivots (timeframeInfoF, lowPivotF, timeF, trF) =>
+    if not na(lowPivotF)
+        timeframeInfoF.lowPivots.push(lowPivotF)
+        timeframeInfoF.lowTimes.push(timeF)
+        timeframeInfoF.lowTRs.push(trF)
+
+handleTimeframeIfLower (timeframeInfo timeframeInfoF, highs, lows, int[] timesF, float[] trsF) =>
+    if timeframeInfoF.isEnabled and isTimeframeLower(timeframeInfoF.timeframeStr, timeframe.period)
+        if highs.size() > 0
+            for i = 0 to highs.size() - 1
+                timeF = timesF.get(i)
+                pushHighPivots(timeframeInfoF, highs.get(i), timeF, trsF.get(i))
+        if lows.size() > 0
+            for i = 0 to lows.size() - 1
+                timeF = timesF.get(i)
+                pushLowPivots(timeframeInfoF, lows.get(i), timeF, trsF.get(i))
+
+getLowerTFData (timeframeStr) =>
+    lowPivots = isTimeframeLower(timeframeStr, timeframe.period) ? request.security_lower_tf(syminfo.tickerid, getMinTimeframe(timeframeStr, timeframe.period), ta.pivotlow(low, pivotRange, pivotRange)) : na
+    highPivots = isTimeframeLower(timeframeStr, timeframe.period) ? request.security_lower_tf(syminfo.tickerid, getMinTimeframe(timeframeStr, timeframe.period), ta.pivothigh(high, pivotRange, pivotRange)) : na
+    times = isTimeframeLower(timeframeStr, timeframe.period) ? request.security_lower_tf(syminfo.tickerid, getMinTimeframe(timeframeStr, timeframe.period), pivotTime) : na
+    trs = isTimeframeLower(timeframeStr, timeframe.period) ? request.security_lower_tf(syminfo.tickerid, getMinTimeframe(timeframeStr, timeframe.period), curTR[pivotRange]) : na
+    [lowPivots, highPivots, times, times, trs, trs]
+
+getTFData (timeframeStr) =>
+    if isTimeframeLower(timeframeStr, timeframe.period)
+        getLowerTFData(timeframeStr)
+    else
+        getHigherTFData(timeframeStr)
+
+checkIfRSAreSame (RSInfo rsInfo1, RSInfo rsInfo2) =>
+    if na(rsInfo1) or na(rsInfo2)
+        false
+    else if rsInfo1.RSType != rsInfo2.RSType
+        false
+    else if rsInfo1.price != rsInfo2.price
+        false
+    else
+        true
+
+checkIfArrHasRS (RSInfo[] arr, RSInfo rsInfoF) =>
+    if na(arr) or na(rsInfoF)
+        true
+    else if arr.size() == 0
+        false
+    else
+        foundRS = false
+        for i = 0 to arr.size() - 1
+            arrRS = arr.get(i)
+            if checkIfRSAreSame(arrRS, rsInfoF)
+                foundRS := true
+                break
+        if foundRS
+            true
+        else
+            false
+
+clearTimeframeRS (timeframeInfoF) =>
+    oldRetestsCount = 0
+    oldBreaksCount = 0
+
+    if timeframeInfoF.resistances.size() > 0
+        for j = 0 to timeframeInfoF.resistances.size() - 1
+            RSInfo RSInfoF = timeframeInfoF.resistances.get(j)
+            if not na(RSInfoF)
+                if debug_enabledHistory
+                    if checkIfArrHasRS(oldRSList, RSInfoF) == false
+                        oldRSList.push(RSInfoF)
+
+                oldRetestsCount += RSInfoF.retestLabels.size()
+                oldBreaksCount += RSInfoF.isBroken ? 1 : 0
+                derenderRSInfo(RSInfoF)
+    
+    if timeframeInfoF.supports.size() > 0
+        for j = 0 to timeframeInfoF.supports.size() - 1
+            RSInfo RSInfoF = timeframeInfoF.supports.get(j)
+            if not na(RSInfoF)
+                if debug_enabledHistory
+                    if checkIfArrHasRS(history, RSInfoF) == false
+                        oldRSList.push(RSInfoF)
+                
+                oldRetestsCount += RSInfoF.retestLabels.size()
+                oldBreaksCount += RSInfoF.isBroken ? 1 : 0
+                derenderRSInfo(RSInfoF)
+    
+    timeframeInfoF.resistances.clear()
+    timeframeInfoF.supports.clear()
+    [oldRetestsCount, oldBreaksCount]
+
+findTimeframeRS (timeframeInfoF, RSType, arr, count, pivots, times, trs) =>
+    curRetestsCount = 0
+    curBreaksCount = 0
+
+    if count > 0
+        for j = 0 to count - 1
+            foundRS = findLatestNthRS(timeframeInfoF, RSType, pivots, times, trs, j + 1)
+            if not na(foundRS)
+                notDuplicate = true
+                for a = 0 to timeframeInfos.size() - 1
+                    aInfo = timeframeInfos.get(a)
+                    if na(aInfo) or aInfo.isEnabled == false
+                        continue
+                    otherTimeframeArray = (RSType == "Resistance" ? aInfo.resistances : aInfo.supports)
+                    if otherTimeframeArray.size() > 0
+                        for b = 0 to otherTimeframeArray.size() - 1
+                            if checkIfRSAreSame(foundRS, otherTimeframeArray.get(b))
+                                notDuplicate := false
+                                break
+                    if notDuplicate == false
+                        break
+                
+                if notDuplicate or not debug_removeDuplicateRS
+                    arr.push(foundRS)
+        
+        if arr.size() > 0
+            for j = 0 to arr.size() - 1
+                curRS = arr.get(j)
+                if not na(curRS)
+                    handleRSInfo(timeframeInfoF, curRS, j, RSType)
+                    curRetestsCount += curRS.retestLabels.size()
+                    curBreaksCount += curRS.isBroken ? 1 : 0
+    [curRetestsCount, curBreaksCount]
+
+if not na(lowPivot)
+    allLowPivots.push(lowPivot)
+    allLowTimes.push(pivotTime)
+    allLowTR.push(curTR[pivotRange])
+    if allLowPivots.size() > maxPivotsAllowed
+        allLowPivots.remove(0)
+        allLowTimes.remove(0)
+        allLowTR.remove(0)
+        
+if not na(highPivot)
+    allHighPivots.push(highPivot)
+    allHighTimes.push(pivotTime)
+    allHighTR.push(curTR[pivotRange])
+    if allHighPivots.size() > maxPivotsAllowed
+        allHighPivots.remove(0)
+        allHighTimes.remove(0)
+        allHighTR.remove(0)
+
+[lowPivotsTF1, highPivotsTF1, lowTimesTF1, highTimesTF1, lowTRsTF1, highTRsTF1] = getTFData(timeframe1)
+handleTimeframeIfLower(timeframeInfos.get(0), highPivotsTF1, lowPivotsTF1, highTimesTF1, highTRsTF1)
+
+[lowPivotsTF2, highPivotsTF2, lowTimesTF2, highTimesTF2, lowTRsTF2, highTRsTF2] = getTFData(timeframe2)
+handleTimeframeIfLower(timeframeInfos.get(1), highPivotsTF2, lowPivotsTF2, highTimesTF2, highTRsTF2)
+
+[lowPivotsTF3, highPivotsTF3, lowTimesTF3, highTimesTF3, lowTRsTF3, highTRsTF3] = getTFData(timeframe3)
+handleTimeframeIfLower(timeframeInfos.get(2), highPivotsTF3, lowPivotsTF3, highTimesTF3, highTRsTF3)
+
+//plot(nz(na,timeframeInfos.get(0).highPivots.size() > 0 ? timeframeInfos.get(0).highPivots.get(timeframeInfos.get(0).highPivots.size() - 1) : 0), color = color.blue, title = "High Pivots")
+//plot(nz(na,timeframeInfos.get(0).lowPivots.size() > 0 ? timeframeInfos.get(0).lowPivots.get(timeframeInfos.get(0).lowPivots.size() - 1) : 0), color = color.fuchsia, title = "Low Pivots")
+
+if barstate.islastconfirmedhistory or (barstate.islast and barstate.isnew)
+    if timeframe1Enabled and not isTimeframeLower(timeframe1, timeframe.period)
+        handleTimeframe(1, lowPivotsTF1, highPivotsTF1, lowTimesTF1, highTimesTF1, lowTRsTF1, highTRsTF1)
+
+    if timeframe2Enabled and not isTimeframeLower(timeframe2, timeframe.period)
+        handleTimeframe(2, lowPivotsTF2, highPivotsTF2, lowTimesTF2, highTimesTF2, lowTRsTF2, highTRsTF2)
+    
+    if timeframe3Enabled and not isTimeframeLower(timeframe3, timeframe.period)
+        handleTimeframe(3, lowPivotsTF3, highPivotsTF3, lowTimesTF3, highTimesTF3, lowTRsTF3, highTRsTF3)
+
+    int enabledTimeframeCount = 0
+    for i = 0 to timeframeCount - 1
+        timeframeInfo curInfo = timeframeInfos.get(i)
+        if curInfo.isEnabled
+            enabledTimeframeCount += 1
+    
+    int oldRetestsCount = 0
+    int curRetestsCount = 0
+
+    int oldBreaksCount = 0
+    int curBreaksCount = 0
+
+    for i = 0 to timeframeCount - 1
+        timeframeInfo curInfo = timeframeInfos.get(i)
+        if not curInfo.isEnabled
+            continue
+
+        [oldRetests, oldBreaks] = clearTimeframeRS(curInfo)
+        oldRetestsCount += oldRetests
+        oldBreaksCount += oldBreaks
+
+        resistanceCount = math.min(DEBUG ? debug_lastXResistances : resistanceSupportCount, maxResistances - (enabledTimeframeCount > 1 ? 1 : 0))
+        resistanceCount := math.max(resistanceCount, 0)
+
+        supportCount = math.min(DEBUG ? debug_lastXSupports : resistanceSupportCount, maxSupports - (enabledTimeframeCount > 1 ? 1 : 0))
+        supportCount := math.max(supportCount, 0)
+
+        [curRetests1, curBreaks1] = findTimeframeRS(curInfo, "Resistance", curInfo.resistances, resistanceCount, curInfo.highPivots, curInfo.highTimes, curInfo.highTRs)
+        [curRetests2, curBreaks2] = findTimeframeRS(curInfo, "Support", curInfo.supports, supportCount, curInfo.lowPivots, curInfo.lowTimes, curInfo.lowTRs)
+        curRetestsCount += curRetests1 + curRetests2
+        curBreaksCount += curBreaks1 + curBreaks2
+    
+    if debug_enabledHistory
+        historyIndexesToDelete = array.new<int>(0)
+        if history.size() > 0
+            for i = 0 to history.size() - 1
+                if checkIfArrHasRS(curRSList, history.get(i))
+                    historyIndexesToDelete.push(i)
+            
+            if historyIndexesToDelete.size() > 0
+                for i = 0 to historyIndexesToDelete.size() - 1
+                    deleteIndex = historyIndexesToDelete.get(historyIndexesToDelete.size() - i - 1)
+                    safeDeleteRSInfo(history.get(deleteIndex))
+                    history.remove(deleteIndex)
+        
+        if oldRSList.size() > 0
+            for i = 0 to oldRSList.size() - 1
+                curRS = oldRSList.get(i)
+                if checkIfArrHasRS(curRSList, curRS) == false
+                    history.push(histRSInfo(curRS))
+                    if history.size() > debug_maxHistoryRecords
+                        safeDeleteRSInfo(history.get(0))
+                        history.remove(0)
+    
+    if oldRSList.size() > 0
+        for i = 0 to oldRSList.size() - 1
+            safeDeleteRSInfo(oldRSList.get(i))
+    
+    curRSList.clear()
+    oldRSList.clear()
+
+    if DEBUG
+        log.info("History Size : " + str.tostring(history.size()))
+        log.info("Label Count : " + str.tostring(label.all.size()))
+        log.info("Line Count : " + str.tostring(line.all.size()))
+        log.info("Box Count : " + str.tostring(box.all.size()))
+
+    if enableRetestAlerts and curRetestsCount > oldRetestsCount and initRun == false
+        alert("New Retests Occured.")
+    
+    if enableBreakAlerts and curBreaksCount > oldBreaksCount and initRun == false
+        alert("New Breaks Occured.")
+    
+    initRun := false

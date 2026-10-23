@@ -1,0 +1,38 @@
+//@version=5
+indicator("-Quick Trade Indicator-(QTI)-(Engulfing Candles+RSI+MACD)-", shorttitle="-Quick Trade Indicator-(QTI)-(Engulfing Candles+RSI+MACD)-", overlay=true)
+
+// Inputparameter für RSI
+rsi_source = input.source(open, title="-RSI-Source-close-")
+rsi_period = input.int(14, title="-RSI-Period-14-")
+rsi_overbought = input.int(50, title="-RSI-Overbought-Level-70-")
+rsi_oversold = input.int(50, title="-RSI-Oversold-Level-30-")
+
+// Inputparameter für MACD
+macd_short_period = input.int(12, title="-MACD-Short-Period-12-")
+macd_long_period = input.int(26, title="-MACD-Long-Period-26-")
+macd_signal_period = input.int(9, title="-MACD-Signal-Period-9-")
+
+// Berechnung des RSI
+rsi = ta.rsi(rsi_source, rsi_period)
+
+// Berechnung des MACD
+[macd_line, signal_line, _] = ta.macd(close, macd_short_period, macd_long_period, macd_signal_period)
+
+// Engulfing Candles Erkennung
+bullish_engulfing = (close > open and close[1] < open[1] and open <= close[1] and close >= open[1])
+bearish_engulfing = (close < open and close[1] > open[1] and open >= close[1] and close <= open[1])
+
+// Signale
+buy_signal = bullish_engulfing and rsi < rsi_oversold and ta.crossover(macd_line, signal_line)
+sell_signal = bearish_engulfing and rsi > rsi_overbought and ta.crossunder(macd_line, signal_line)
+
+// Plots für Buy und Sell Signale
+plotshape(series=buy_signal, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// Zusatzplot für RSI und MACD
+plot(rsi, title="-RSI-", color=color.yellow, linewidth=2, display=display.none)
+hline(rsi_overbought, title="-RSI-Overbought-", color=color.red, linewidth =3, linestyle=hline.style_solid, display=display.none)
+hline(rsi_oversold, title="-RSI-Oversold-", color=color.green, linewidth =3, linestyle=hline.style_solid, display=display.none)
+plot(macd_line, title="-MACD-Line-", color=color.aqua, linewidth=2, display=display.none)
+plot(signal_line, title="-MACD-Signal-Line-", color=color.red, linewidth=3, display=display.none)

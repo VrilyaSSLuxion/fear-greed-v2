@@ -1,0 +1,50 @@
+//@version=5
+indicator(title="-Quick Trade Indicator-(QTI)-(Tradingview-Alligator+RSI)-", shorttitle="-Quick Trade Indicator-(QTI)-(Tradingview-Alligator+RSI)-", overlay=true)
+
+// Williams Alligator Indicator
+smma(src, length) =>
+    smma =  0.0
+    smma := na(smma[1]) ? ta.sma(src, length) : (smma[1] * (length - 1) + src) / length
+    smma
+
+jawLength = input.int(13, minval=1, title="-Jaw-Length-13-")
+teethLength = input.int(8, minval=1, title="-Teeth-Length-8-")
+lipsLength = input.int(5, minval=1, title="-Lips-Length-5-")
+jawOffset = input.int(8, title="-Jaw-Offset-8-")
+teethOffset = input.int(5, title="-Teeth-Offset-5-")
+lipsOffset = input.int(3, title="-Lips-Offset-3-")
+
+jaw = smma(hl2, jawLength)
+teeth = smma(hl2, teethLength)
+lips = smma(hl2, lipsLength)
+
+plot(jaw, "-Jaw-", offset=jawOffset, color=#2962FF, linewidth=2)
+plot(teeth, "-Teeth-", offset=teethOffset, color=#E91E63, linewidth=2)
+plot(lips, "-Lips-", offset=lipsOffset, color=#66BB6A, linewidth=2)
+
+// Input parameter for RSI
+rsi_source = input.source(close, title="-RSI-Source-close-")
+rsi_period = input.int(14, title="-RSI-Period-14-")
+rsi_overbought = input.int(70, title="-RSI-Overbought-Level-70-")
+rsi_oversold = input.int(30, title="-RSI-Oversold-Level-30-")
+
+// Calculation of RSI
+rsi = ta.rsi(rsi_source, rsi_period)
+
+// Buy and Sell signals based on Alligator Indicator and RSI
+buy_signal = ta.crossover(lips, teeth) and ta.crossover(teeth, jaw) and rsi < rsi_oversold
+sell_signal = ta.crossunder(lips, teeth) and ta.crossunder(teeth, jaw) and rsi > rsi_overbought
+
+// Plot Buy and Sell signals
+plotshape(series=buy_signal, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// RSI styles for better visibility
+rsi_style = input.bool(false, title="-RSI-", inline="style")
+rsi_ob_style = input.bool(false, title="-RSI-Overbought-", inline="style")
+rsi_os_style = input.bool(false, title="-RSI-Oversold-", inline="style")
+
+// Hide styles depending on the settings
+plot(rsi, title="-RSI-", color=color.yellow, linewidth=2, display=rsi_style ? display.all : display.none)
+hline(rsi_overbought, title="-RSI-Overbought-", color=color.red, linewidth=3, linestyle=hline.style_solid, display=rsi_ob_style ? display.all : display.none)
+hline(rsi_oversold, title="-RSI-Oversold-", color=color.green, linewidth=3, linestyle=hline.style_solid, display=rsi_os_style ? display.all : display.none)

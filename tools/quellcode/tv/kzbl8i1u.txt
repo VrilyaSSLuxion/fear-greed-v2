@@ -1,0 +1,57 @@
+//@version=5
+// Copyright (c) 2019-present, Alex Orekhov (everget)
+// Chandelier Exit script may be freely distributed under the terms of the GPL-3.0 license.
+indicator('-VrilyaSS-CE-(Chandelier Exit)-', shorttitle='-VrilyaSS-CE-(Chandelier Exit)-', overlay=true)
+
+var string calcGroup = '-Calculation-'
+length = input.int(title='-ATR Period-(a-1-(My Trading Journey))-(b-3)-default-22-', defval=22, group=calcGroup)
+mult = input.float(title='-ATR Multiplier-(a-3-(My Trading Journey))-(b-1.6)-default-3.0-', step=0.1, defval=3.0, group=calcGroup)
+useClose = input.bool(title='-Use Close Price for Extremums-true-', defval=true, group=calcGroup)
+
+var string visualGroup = '-Visuals-'
+showLabels = input.bool(title='-Show Buy/Sell-Labels-true-', defval=true, group=visualGroup)
+highlightState = input.bool(title='-Highlight State-true-', defval=true, group=visualGroup)
+labelTextColor = input.color(title='-Label Text-Color-white-', defval=#000000, group=visualGroup) // Added input for label text color
+
+var string alertGroup = '-Alerts-'
+awaitBarConfirmation = input.bool(title="-Await Bar-Confirmation-true-", defval=true, group=alertGroup)
+
+atr = mult * ta.atr(length)
+
+longStop = (useClose ? ta.highest(close, length) : ta.highest(length)) - atr
+longStopPrev = nz(longStop[1], longStop)
+longStop := close[1] > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+
+shortStop = (useClose ? ta.lowest(close, length) : ta.lowest(length)) + atr
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := close[1] < shortStopPrev ? math.min(shortStop, shortStopPrev) : shortStop
+
+var int dir = 1
+dir := close > shortStopPrev ? 1 : close < longStopPrev ? -1 : dir
+
+var color longColor = color.green
+var color shortColor = color.red
+var color longFillColor = color.new(color.green, 90)
+var color shortFillColor = color.new(color.red, 90)
+
+longStopPlot = plot(dir == 1 ? longStop : na, title='-Long Stop-Color-green-14-100%-2-Line with Breaks-', style=plot.style_linebr, linewidth=2, color=color.new(longColor, 0))
+buySignal = dir == 1 and dir[1] == -1
+plotshape(buySignal ? longStop : na, title='-Long Stop Start-Color-green-14-100%-Circle-Absolute-', location=location.absolute, style=shape.circle, size=size.tiny, color=color.new(longColor, 0))
+plotshape(buySignal and showLabels ? longStop : na, title='-Buy Label-Color-green-14-100%-Label up-Absolute-', text='Buy', location=location.absolute, style=shape.labelup, size=size.tiny, color=color.new(longColor, 0), textcolor=labelTextColor) // Use the input color
+
+shortStopPlot = plot(dir == 1 ? na : shortStop, title='-Short Stop-Color-red-11-100%-2-Line with Breaks-', style=plot.style_linebr, linewidth=2, color=color.new(shortColor, 0))
+sellSignal = dir == -1 and dir[1] == 1
+plotshape(sellSignal ? shortStop : na, title='-Short Stop Start-Color-red-11-100%-Circle-Absolute-', location=location.absolute, style=shape.circle, size=size.tiny, color=color.new(shortColor, 0))
+plotshape(sellSignal and showLabels ? shortStop : na, title='-Sell Label-Color-red-11-100%-Labels down-Absolute-', text='Sell', location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.new(shortColor, 0), textcolor=labelTextColor) // Use the input color
+
+midPricePlot = plot(ohlc4, title='', style=plot.style_circles, linewidth=0, display=display.none, editable=false)
+
+longStateFillColor = highlightState ? dir == 1 ? longFillColor : na : na
+shortStateFillColor = highlightState ? dir == -1 ? shortFillColor : na : na
+fill(midPricePlot, longStopPlot, title='-Long State Filling-Color-green-14-10%-', color=longStateFillColor)
+fill(midPricePlot, shortStopPlot, title='-Short State Filling-Color-red-11-10%-', color=shortStateFillColor)
+
+await = awaitBarConfirmation ? barstate.isconfirmed : true
+alertcondition(dir != dir[1] and await, title='Alert: CE Direction Change', message='Chandelier Exit has changed direction!')
+alertcondition(buySignal and await, title='Alert: CE Buy', message='Chandelier Exit Buy!')
+alertcondition(sellSignal and await, title='Alert: CE Sell', message='Chandelier Exit Sell!')

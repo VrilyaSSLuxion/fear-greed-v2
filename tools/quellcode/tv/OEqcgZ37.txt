@@ -1,0 +1,36 @@
+//@version=5
+indicator("1-2 Minute Trade Indicator", overlay=true)
+
+length = input.int(1, "Trade Length (minutes)", minval=1, maxval=2)
+ma_length = input.int(20, "Moving Average Length", minval=1, maxval=200)
+
+var bool canOpenTrade = true
+var int tradeOpenTime = na
+var int tradeCloseTime = na
+
+// Moving Average calculation
+ma = ta.sma(close, ma_length)
+
+// Buy condition: Price crosses above the moving average
+buySignal = ta.crossover(close, ma)
+
+// Sell condition: Price crosses below the moving average
+sellSignal = ta.crossunder(close, ma)
+
+if (time[1] < time)
+    // Close previous trade
+    if (not na(tradeOpenTime) and na(tradeCloseTime))
+        tradeCloseTime := time
+
+    // New trade
+    if (na(tradeOpenTime) and na(tradeCloseTime))
+        tradeOpenTime := time
+
+if (not na(tradeOpenTime) and not na(tradeCloseTime))
+    canOpenTrade := (timenow - tradeOpenTime) >= length * 60 * 1000
+
+bgcolor(canOpenTrade ? na : color.new(color.red, 90))
+
+// Plot buy and sell signals on chart
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")

@@ -1,0 +1,43 @@
+//@version=5
+indicator(title="-VrilyaSS-11 EMA und 55 EMA System mit U-Turn Signalen-13072024-", shorttitle="-VrilyaSS-11 EMA und 55 EMA System mit U-Turn Signalen-13072024-", overlay=true)
+
+// Eingaben für die EMAs
+ema11_period = input.int(11, title="EMA-Periode-11")
+ema55_period = input.int(55, title="EMA-Periode-55")
+
+// Definition der EMAs
+ema11 = ta.ema(close, ema11_period)
+ema55 = ta.ema(close, ema55_period)
+
+// Plotten der EMAs
+plot(ema11, title="EMA-11", color=color.yellow, linewidth=2)
+plot(ema55, title="EMA-55", color=color.green, linewidth=3)
+
+// Eingaben zur Aktivierung oder Deaktivierung von Signalen
+activate_buy_signal = input(true, title="Activate Buy Signal - EMA 11 crosses above EMA 55")
+activate_sell_signal = input(true, title="Activate Sell Signal - EMA 11 crosses below EMA 55")
+activate_u_turn_buy_signal = input(true, title="Activate U-Turn Buy Signal - EMA 11 U-Turn upwards")
+activate_u_turn_sell_signal = input(true, title="Activate U-Turn Sell Signal - EMA 11 U-Turn downwards")
+
+// Kauf- und Verkaufsbedingungen
+buySignal = activate_buy_signal and ta.crossover(ema11, ema55)
+sellSignal = activate_sell_signal and ta.crossunder(ema11, ema55)
+
+// U-Turn Signale
+ema11_direction = ema11 > ema11[1] ? 1 : ema11 < ema11[1] ? -1 : 0
+u_turn_buy = activate_u_turn_buy_signal and (ema11_direction[1] == -1 and ema11_direction == 1)
+u_turn_sell = activate_u_turn_sell_signal and (ema11_direction[1] == 1 and ema11_direction == -1)
+
+// Kauf- und Verkaufssignale auf dem Chart anzeigen
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, textcolor=color.white, style=shape.labelup, text="Buy", size=size.tiny)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, textcolor=color.white, style=shape.labeldown, text="Sell", size=size.tiny)
+
+// U-Turn Signale auf dem Chart anzeigen
+plotshape(series=u_turn_buy, title="U-Turn Buy Signal", location=location.belowbar, color=color.blue, textcolor=color.black, style=shape.labelup, text="U-Buy", size=size.tiny)
+plotshape(series=u_turn_sell, title="U-Turn Sell Signal", location=location.abovebar, color=color.orange, textcolor=color.black, style=shape.labeldown, text="U-Sell", size=size.tiny)
+
+// Alerts
+alertcondition(buySignal, title="Buy Signal", message="Buy Signal - 11 EMA crossed above 55 EMA")
+alertcondition(sellSignal, title="Sell Signal", message="Sell Signal - 11 EMA crossed below 55 EMA")
+alertcondition(u_turn_buy, title="U-Turn Buy Signal", message="U-Turn Buy Signal - 11 EMA U-Turn upwards")
+alertcondition(u_turn_sell, title="U-Turn Sell Signal", message="U-Turn Sell Signal - 11 EMA U-Turn downwards")

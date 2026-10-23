@@ -1,0 +1,31 @@
+//@version=5
+indicator("-VrilyaSS-Schneller 1-Minuten Trade Indikator-5+15-EMA-13072024-", shorttitle="-VrilyaSS-Schneller 1-Minuten Trade Indikator-5+15-EMA-13072024-", overlay=true)
+
+// Eingaben für die EMAs
+ema_short_period = input.int(5, title="Kurzfristige EMA Periode", minval=1)
+ema_long_period = input.int(15, title="Langfristige EMA Periode", minval=1)
+
+// Eingaben für den RSI
+rsi_period = input.int(14, title="RSI Periode", minval=1)
+rsi_overbought = input.int(70, title="RSI Überkauft Schwelle", minval=1, maxval=100)
+rsi_oversold = input.int(30, title="RSI Überverkauft Schwelle", minval=1, maxval=100)
+
+// Berechnung der EMAs und des RSI
+ema_short = ta.ema(close, ema_short_period)
+ema_long = ta.ema(close, ema_long_period)
+rsi = ta.rsi(close, rsi_period)
+
+// Kauf- und Verkaufsbedingungen
+buySignal = ta.crossover(ema_short, ema_long) and rsi < rsi_oversold
+sellSignal = ta.crossunder(ema_short, ema_long) and rsi > rsi_overbought
+
+// Kauf- und Verkaufssignale auf dem Chart anzeigen
+plotshape(series=buySignal, title="Kauf Signal", location=location.belowbar, color=color.green, textcolor=color.white, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sellSignal, title="Verkauf Signal", location=location.abovebar, color=color.red, textcolor=color.white, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// Plotten der EMAs und des RSI (in einem separaten Fenster)
+plot(ema_short, title="Kurzfristige EMA", color=color.yellow, linewidth=2)
+plot(ema_long, title="Langfristige EMA", color=color.blue, linewidth=2)
+hline(rsi_overbought, "Überkauft", color=color.red, linestyle=hline.style_dotted)
+hline(rsi_oversold, "Überverkauft", color=color.green, linestyle=hline.style_dotted)
+plot(rsi, title="RSI", color=color.purple, linewidth=1)

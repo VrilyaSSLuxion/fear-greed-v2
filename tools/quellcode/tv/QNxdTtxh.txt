@@ -1,0 +1,125 @@
+//@version=6
+indicator('Daily Open, Previous Open & Close Markers', overlay = true)
+
+// === INPUTS ===
+tz = input.string('UTC+5', 'Daily timezone')
+
+// === VERTIKALE LINIEN (Unabhängig einstellbar) ===
+// 1. Previous Day Open
+showPrevOpenV = input.bool(true, '▶ Show Previous Day Open')
+prevOpenVColor = input.color(color.white, 'Previous Day Open - Color')
+prevOpenVTransparency = input.int(70, 'Previous Day Open - Transparency', minval=0, maxval=100)
+prevOpenVWidth = input.int(3, 'Previous Day Open - Width', minval=1, maxval=10)
+prevOpenVStyle = input.string('solid', 'Previous Day Open - Style', options=['solid', 'dotted', 'dashed'])
+
+// 2. Previous Day Close / Today Open
+showTodayOpenV = input.bool(true, '▶ Show Prev Close / Today Open')
+todayOpenVColor = input.color(color.green, 'Prev Close / Today Open - Color')
+todayOpenVTransparency = input.int(70, 'Prev Close / Today Open - Transparency', minval=0, maxval=100)
+todayOpenVWidth = input.int(3, 'Prev Close / Today Open - Width', minval=1, maxval=10)
+todayOpenVStyle = input.string('solid', 'Prev Close / Today Open - Style', options=['solid', 'dotted', 'dashed'])
+
+// 3. Today Close
+showTodayCloseV = input.bool(true, '▶ Show Today Close')
+todayCloseVColor = input.color(color.red, 'Today Close - Color')
+todayCloseVTransparency = input.int(70, 'Today Close - Transparency', minval=0, maxval=100)
+todayCloseVWidth = input.int(3, 'Today Close - Width', minval=1, maxval=10)
+todayCloseVStyle = input.string('solid', 'Today Close - Style', options=['solid', 'dotted', 'dashed'])
+
+// === HORIZONTALE LINIEN ===
+showHorizontal = input.bool(false, '▶ Show Horizontal Lines')
+hLineColor = input.color(color.blue, 'Horizontal Line Color')
+hLineWidth = input.int(2, 'Horizontal Line Width', minval=1, maxval=10)
+hLineStyle = input.string('solid', 'Horizontal Line Style', options=['solid', 'dotted', 'dashed'])
+hTransparency = input.int(70, 'Horizontal Transparency (0-100)', minval=0, maxval=100)
+
+// === STYLE FUNCTION ===
+f_getLineStyle(style) =>
+    style == 'solid' ? line.style_solid : style == 'dotted' ? line.style_dotted : line.style_dashed
+
+// === TIME & SECURITY ===
+dailyTime = time('D', tz)
+prevDailyTime = time('D', tz)[1]
+isNewDay = ta.change(dailyTime) != 0
+showLines = timeframe.isintraday and timeframe.multiplier <= 240
+
+openPrice = request.security(syminfo.tickerid, 'D', open)
+closePrice = request.security(syminfo.tickerid, 'D', close[1])
+prevOpenPrice = request.security(syminfo.tickerid, 'D', open[1])
+
+// === LINE VARIABLES ===
+var line linePrevOpenV = na
+var line lineTodayOpenV = na
+var line lineTodayCloseV = na
+var line openLineH = na
+var line closeLineH = na
+var line prevOpenLineH = na
+
+// === DELETE LINES ===
+if not showLines
+    if not na(linePrevOpenV)
+        line.delete(linePrevOpenV)
+    if not na(lineTodayOpenV)
+        line.delete(lineTodayOpenV)
+    if not na(lineTodayCloseV)
+        line.delete(lineTodayCloseV)
+    if not na(openLineH)
+        line.delete(openLineH)
+    if not na(closeLineH)
+        line.delete(closeLineH)
+    if not na(prevOpenLineH)
+        line.delete(prevOpenLineH)
+    
+    linePrevOpenV := na
+    lineTodayOpenV := na
+    lineTodayCloseV := na
+    openLineH := na
+    closeLineH := na
+    prevOpenLineH := na
+
+// === CREATE LINES ===
+if showLines and isNewDay
+    // Alte Linien entfernen
+    if not na(linePrevOpenV)
+        line.delete(linePrevOpenV)
+    if not na(lineTodayOpenV)
+        line.delete(lineTodayOpenV)
+    if not na(lineTodayCloseV)
+        line.delete(lineTodayCloseV)
+    if not na(openLineH)
+        line.delete(openLineH)
+    if not na(closeLineH)
+        line.delete(closeLineH)
+    if not na(prevOpenLineH)
+        line.delete(prevOpenLineH)
+
+    dayMs = 24 * 60 * 60 * 1000
+    openTs = dailyTime
+    closeTs = dailyTime + dayMs
+    prevOpenTs = prevDailyTime
+
+    // 1. Previous Day Open zeichnen
+    if showPrevOpenV
+        linePrevOpenV := line.new(prevOpenTs, low, prevOpenTs, high, xloc=xloc.bar_time, extend=extend.both, 
+                                  color=color.new(prevOpenVColor, prevOpenVTransparency), 
+                                  width=prevOpenVWidth, style=f_getLineStyle(prevOpenVStyle))
+
+    // 2. Prev Close / Today Open zeichnen
+    if showTodayOpenV
+        lineTodayOpenV := line.new(openTs, low, openTs, high, xloc=xloc.bar_time, extend=extend.both, 
+                                   color=color.new(todayOpenVColor, todayOpenVTransparency), 
+                                   width=todayOpenVWidth, style=f_getLineStyle(todayOpenVStyle))
+
+    // 3. Today Close zeichnen
+    if showTodayCloseV
+        lineTodayCloseV := line.new(closeTs, low, closeTs, high, xloc=xloc.bar_time, extend=extend.both, 
+                                    color=color.new(todayCloseVColor, todayCloseVTransparency), 
+                                    width=todayCloseVWidth, style=f_getLineStyle(todayCloseVStyle))
+
+    // Horizontale Linien zeichnen
+    if showHorizontal
+        hColor = color.new(hLineColor, hTransparency)
+        hStyle = f_getLineStyle(hLineStyle)
+        openLineH := line.new(bar_index, openPrice, bar_index + 1, openPrice, extend=extend.right, color=hColor, width=hLineWidth, style=hStyle)
+        closeLineH := line.new(bar_index, closePrice, bar_index + 1, closePrice, extend=extend.right, color=hColor, width=hLineWidth, style=hStyle)
+        prevOpenLineH := line.new(bar_index, prevOpenPrice, bar_index + 1, prevOpenPrice, extend=extend.right, color=hColor, width=hLineWidth, style=hStyle)

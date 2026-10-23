@@ -1,0 +1,155 @@
+//@version=5
+indicator("-VrilyaSS-TC-Bull/Bear Patterns after 3 Consecutive Candles-", overlay=true)
+
+// Funktionen zur Überprüfung der Muster
+isHammer(o, h, l, c) =>
+    bodySize = math.abs(c - o)
+    lowerShadow = math.min(o, c) - l
+    upperShadow = h - math.max(o, c)
+    isGreen = c > o
+    lowerShadow > 2 * bodySize and upperShadow < bodySize and isGreen
+
+isInvertedHammer(o, h, l, c) =>
+    bodySize = math.abs(c - o)
+    lowerShadow = math.min(o, c) - l
+    upperShadow = h - math.max(o, c)
+    isGreen = c > o
+    upperShadow > 2 * bodySize and lowerShadow < bodySize and isGreen
+
+isDragonflyDoji(o, h, l, c) =>
+    bodySize = math.abs(c - o)
+    lowerShadow = math.min(o, c) - l
+    upperShadow = h - math.max(o, c)
+    isGreen = c > o
+    bodySize < (h - l) * 0.1 and lowerShadow > (h - l) * 0.4 and upperShadow < (h - l) * 0.1 and isGreen
+
+isBullishSpinningTop(o, h, l, c) =>
+    bodySize = math.abs(c - o)
+    totalRange = h - l
+    upperShadow = h - math.max(o, c)
+    lowerShadow = math.min(o, c) - l
+    isGreen = c > o
+    bodySize < totalRange * 0.3 and upperShadow > bodySize and lowerShadow > bodySize and isGreen
+
+isHangingMan(o, h, l, c) =>
+    bodySize = math.abs(c - o)
+    lowerShadow = math.min(o, c) - l
+    upperShadow = h - math.max(o, c)
+    isRed = c < o
+    lowerShadow > 2 * bodySize and upperShadow < bodySize and isRed
+
+isShootingStar(o, h, l, c) =>
+    bodySize = math.abs(c - o)
+    lowerShadow = math.min(o, c) - l
+    upperShadow = h - math.max(o, c)
+    isRed = c < o
+    upperShadow > 2 * bodySize and lowerShadow < bodySize and isRed
+
+isGravestoneDoji(o, h, l, c) =>
+    bodySize = math.abs(c - o)
+    lowerShadow = math.min(o, c) - l
+    upperShadow = h - math.max(o, c)
+    isRed = c < o
+    bodySize < (h - l) * 0.1 and lowerShadow < (h - l) * 0.1 and upperShadow > (h - l) * 0.4 and isRed
+
+isBearishSpinningTop(o, h, l, c) =>
+    bodySize = math.abs(c - o)
+    totalRange = h - l
+    upperShadow = h - math.max(o, c)
+    lowerShadow = math.min(o, c) - l
+    isRed = c < o
+    bodySize < totalRange * 0.3 and upperShadow > bodySize and lowerShadow > bodySize and isRed
+
+// Checkboxen und Beschreibungen
+showHammer = input(true, title="Bullish Hammer anzeigen")
+showInvertedHammer = input(true, title="Bullish Inverted Hammer anzeigen")
+showDragonflyDoji = input(true, title="Bullish Dragonfly Doji anzeigen")
+showBullishSpinningTop = input(true, title="Bullish Spinning Top anzeigen")
+
+showHangingMan = input(true, title="Bearish Hanging Man anzeigen")
+showShootingStar = input(true, title="Bearish Shooting Star anzeigen")
+showGravestoneDoji = input(true, title="Bearish Gravestone Doji anzeigen")
+showBearishSpinningTop = input(true, title="Bearish Spinning Top anzeigen")
+
+// Beschreibungs-Labels
+var label hammerLabel = na
+var label invertedHammerLabel = na
+var label dragonflyDojiLabel = na
+var label spinningTopLabel = na
+
+var label hangingManLabel = na
+var label shootingStarLabel = na
+var label gravestoneDojiLabel = na
+var label bearishSpinningTopLabel = na
+
+if bar_index == 0
+    hammerLabel := label.new(bar_index, high, text="Zeigt einen bullischen Hammer nach drei bärischen Kerzen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+    invertedHammerLabel := label.new(bar_index, high, text="Zeigt einen bullischen Inverted Hammer nach drei bärischen Kerzen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+    dragonflyDojiLabel := label.new(bar_index, high, text="Zeigt einen bullischen Dragonfly Doji nach drei bärischen Kerzen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+    spinningTopLabel := label.new(bar_index, high, text="Zeigt einen bullischen Spinning Top nach drei bärischen Kerzen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+    
+    hangingManLabel := label.new(bar_index, high, text="Zeigt einen bärischen Hanging Man nach drei bullischen Kerzen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+    shootingStarLabel := label.new(bar_index, high, text="Zeigt einen bärischen Shooting Star nach drei bullischen Kerzen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+    gravestoneDojiLabel := label.new(bar_index, high, text="Zeigt einen bärischen Gravestone Doji nach drei bullischen Kerzen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+    bearishSpinningTopLabel := label.new(bar_index, high, text="Zeigt einen bärischen Spinning Top nach drei bullischen Kerzen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+
+// Berechnung der Muster
+threeBearishCandles = close[3] < open[3] and close[2] < open[2] and close[1] < open[1]
+threeBullishCandles = close[3] > open[3] and close[2] > open[2] and close[1] > open[1]
+
+hammer = isHammer(open, high, low, close)
+invertedHammer = isInvertedHammer(open, high, low, close)
+dragonflyDoji = isDragonflyDoji(open, high, low, close)
+bullishSpinningTop = isBullishSpinningTop(open, high, low, close)
+
+hangingMan = isHangingMan(open, high, low, close)
+shootingStar = isShootingStar(open, high, low, close)
+gravestoneDoji = isGravestoneDoji(open, high, low, close)
+bearishSpinningTop = isBearishSpinningTop(open, high, low, close)
+
+// Signale auf dem Chart anzeigen, wenn die entsprechenden Checkboxen aktiviert sind
+if showHammer and threeBearishCandles and hammer
+    label.new(x=bar_index, y=low, text="Bullish Hammer", style=label.style_label_up, color=color.green, textcolor=color.black, size=size.small)
+
+if showInvertedHammer and threeBearishCandles and invertedHammer
+    label.new(x=bar_index, y=low, text="Inverted Hammer", style=label.style_label_up, color=color.green, textcolor=color.black, size=size.small)
+
+if showDragonflyDoji and threeBearishCandles and dragonflyDoji
+    label.new(x=bar_index, y=low, text="Dragonfly Doji", style=label.style_label_up, color=color.green, textcolor=color.black, size=size.small)
+
+if showBullishSpinningTop and threeBearishCandles and bullishSpinningTop
+    label.new(x=bar_index, y=low, text="Spinning Top", style=label.style_label_up, color=color.green, textcolor=color.black, size=size.small)
+
+if showHangingMan and threeBullishCandles and hangingMan
+    label.new(x=bar_index, y=high, text="Hanging Man", style=label.style_label_down, color=color.red, textcolor=color.black, size=size.small)
+
+if showShootingStar and threeBullishCandles and shootingStar
+    label.new(x=bar_index, y=high, text="Shooting Star", style=label.style_label_down, color=color.red, textcolor=color.black, size=size.small)
+
+if showGravestoneDoji and threeBullishCandles and gravestoneDoji
+    label.new(x=bar_index, y=high, text="Gravestone Doji", style=label.style_label_down, color=color.red, textcolor=color.black, size=size.small)
+
+if showBearishSpinningTop and threeBullishCandles and bearishSpinningTop
+    label.new(x=bar_index, y=high, text="Spinning Top", style=label.style_label_down, color=color.red, textcolor=color.black, size=size.small)
+
+// Plots für Alarme
+plotshape(series=showHammer and threeBearishCandles and hammer, location=location.belowbar, color=color.green, style=shape.labeldown, text="Hammer", title="Bullish Hammer")
+plotshape(series=showInvertedHammer and threeBearishCandles and invertedHammer, location=location.belowbar, color=color.green, style=shape.labeldown, text="Inverted Hammer", title="Bullish Inverted Hammer")
+plotshape(series=showDragonflyDoji and threeBearishCandles and dragonflyDoji, location=location.belowbar, color=color.green, style=shape.labeldown, text="Dragonfly Doji", title="Bullish Dragonfly Doji")
+plotshape(series=showBullishSpinningTop and threeBearishCandles and bullishSpinningTop, location=location.belowbar, color=color.green, style=shape.labeldown, text="Spinning Top", title="Bullish Spinning Top")
+
+plotshape(series=showHangingMan and threeBullishCandles and hangingMan, location=location.abovebar, color=color.red, style=shape.labelup, text="Hanging Man", title="Bearish Hanging Man")
+plotshape(series=showShootingStar and threeBullishCandles and shootingStar, location=location.abovebar, color=color.red, style=shape.labelup, text="Shooting Star", title="Bearish Shooting Star")
+plotshape(series=showGravestoneDoji and threeBullishCandles and gravestoneDoji, location=location.abovebar, color=color.red, style=shape.labelup, text="Gravestone Doji", title="Bearish Gravestone Doji")
+plotshape(series=showBearishSpinningTop and threeBullishCandles and bearishSpinningTop, location=location.abovebar, color=color.red, style=shape.labelup, text="Spinning Top", title="Bearish Spinning Top")
+
+// Alarmbedingungen
+alertcondition(showHammer and threeBearishCandles and hammer, title="Bullish Hammer Alarm", message="Bullish Hammer nach 3 bärischen Kerzen")
+alertcondition(showInvertedHammer and threeBearishCandles and invertedHammer, title="Bullish Inverted Hammer Alarm", message="Bullish Inverted Hammer nach 3 bärischen Kerzen")
+alertcondition(showDragonflyDoji and threeBearishCandles and dragonflyDoji, title="Bullish Dragonfly Doji Alarm", message="Bullish Dragonfly Doji nach 3 bärischen Kerzen")
+alertcondition(showBullishSpinningTop and threeBearishCandles and bullishSpinningTop, title="Bullish Spinning Top Alarm", message="Bullish Spinning Top nach 3 bärischen Kerzen")
+
+alertcondition(showHangingMan and threeBullishCandles and hangingMan, title="Bearish Hanging Man Alarm", message="Bearish Hanging Man nach 3 bullischen Kerzen")
+alertcondition(showShootingStar and threeBullishCandles and shootingStar, title="Bearish Shooting Star Alarm", message="Bearish Shooting Star nach 3 bullischen Kerzen")
+alertcondition(showGravestoneDoji and threeBullishCandles and gravestoneDoji, title="Bearish Gravestone Doji Alarm", message="Bearish Gravestone Doji nach 3 bullischen Kerzen")
+alertcondition(showBearishSpinningTop and threeBullishCandles and bearishSpinningTop, title="Bearish Spinning Top Alarm", message="Bearish Spinning Top nach 3 bullischen Kerzen")

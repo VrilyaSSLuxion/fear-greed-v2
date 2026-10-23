@@ -1,0 +1,343 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © LoganMTrades
+
+//@version=6
+indicator('MTF FVG w/ Fibs', overlay = true, max_boxes_count = 250, max_lines_count = 500, dynamic_requests = true)
+
+
+//----------settings----------//
+bullCol = input.color(color.new(color.lime, 85), 'Bullish Color', inline = '1')
+bearCol = input.color(color.new(color.red, 85), 'Bearish Color', inline = '1')
+minGap = input.float(.05, 'Minimum FVG %', minval = .01, step = .01, inline = '2')
+tooLongBool = input.bool(true, 'Stop Drawing Box After', inline = '3')
+tooLong = input.int(60, ' ', inline = '3')
+removeOld = input.bool(true, 'Hide Boxes That Are Too Long', inline = '4')
+
+var g1 = 'Filled Gaps'
+mitType = input.string('Close', 'Mitigation Type', ['Close', 'Wicks'], group = g1, inline = '1')
+removeFilled = input.bool(true, 'Remove Filled Gaps', group = g1, inline = '2')
+filledBorder = input.bool(true, 'Changed Filled FVG Box Border', group = g1, inline = '3')
+borderStyle = input.string('Dashed', 'Filled Border ', options = ['Dotted', 'Dashed', 'Solid'], inline = '4', group = g1)
+borderCol = input.color(color.gray, ' ', inline = '4', group = g1)
+
+var g2 = 'Fibs'
+// Level 1: -4
+show_1 = input.bool(true, '', inline = 'L1', group = g2)
+value_1 = input.float(-4.0, '', inline = 'L1', group = g2)
+color_1 = input.color(#ff0000, '', inline = 'L1', group = g2)
+style_1 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L1', group = g2)
+width_1 = input.int(2, '', inline = 'L1', group = g2, minval=1, maxval=4)
+
+// Level 2: -3.5
+show_2 = input.bool(true, '', inline = 'L2', group = g2)
+value_2 = input.float(-3.5, '', inline = 'L2', group = g2)
+color_2 = input.color(#00ffff, '', inline = 'L2', group = g2)
+style_2 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L2', group = g2)
+width_2 = input.int(1, '', inline = 'L2', group = g2, minval=1, maxval=4)
+
+// Level 3: -3
+show_3 = input.bool(true, '', inline = 'L3', group = g2)
+value_3 = input.float(-3.0, '', inline = 'L3', group = g2)
+color_3 = input.color(#ffff00, '', inline = 'L3', group = g2)
+style_3 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L3', group = g2)
+width_3 = input.int(1, '', inline = 'L3', group = g2, minval=1, maxval=4)
+
+// Level 4: -2.5
+show_4 = input.bool(true, '', inline = 'L4', group = g2)
+value_4 = input.float(-2.5, '', inline = 'L4', group = g2)
+color_4 = input.color(#00ff00, '', inline = 'L4', group = g2)
+style_4 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L4', group = g2)
+width_4 = input.int(2, '', inline = 'L4', group = g2, minval=1, maxval=4)
+
+// Level 5: -2
+show_5 = input.bool(true, '', inline = 'L5', group = g2)
+value_5 = input.float(-2.0, '', inline = 'L5', group = g2)
+color_5 = input.color(#ff0000, '', inline = 'L5', group = g2)
+style_5 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L5', group = g2)
+width_5 = input.int(1, '', inline = 'L5', group = g2, minval=1, maxval=4)
+
+// Level 6: -1.5
+show_6 = input.bool(true, '', inline = 'L6', group = g2)
+value_6 = input.float(-1.5, '', inline = 'L6', group = g2)
+color_6 = input.color(#00ffff, '', inline = 'L6', group = g2)
+style_6 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L6', group = g2)
+width_6 = input.int(1, '', inline = 'L6', group = g2, minval=1, maxval=4)
+
+// Level 7: -1
+show_7 = input.bool(true, '', inline = 'L7', group = g2)
+value_7 = input.float(-1.0, '', inline = 'L7', group = g2)
+color_7 = input.color(#ffff00, '', inline = 'L7', group = g2)
+style_7 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L7', group = g2)
+width_7 = input.int(2, '', inline = 'L7', group = g2, minval=1, maxval=4)
+
+// Level 8: -0.5
+show_8 = input.bool(true, '', inline = 'L8', group = g2)
+value_8 = input.float(-0.5, '', inline = 'L8', group = g2)
+color_8 = input.color(#00ff00, '', inline = 'L8', group = g2)
+style_8 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L8', group = g2)
+width_8 = input.int(1, '', inline = 'L8', group = g2, minval=1, maxval=4)
+
+// Level 9: 0
+show_9 = input.bool(true, '', inline = 'L9', group = g2)
+value_9 = input.float(0.0, '', inline = 'L9', group = g2)
+color_9 = input.color(#00ff00, '', inline = 'L9', group = g2)
+style_9 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L9', group = g2)
+width_9 = input.int(3, '', inline = 'L9', group = g2, minval=1, maxval=4)
+
+// Level 10: 0.5
+show_10 = input.bool(true, '', inline = 'L10', group = g2)
+value_10 = input.float(0.5, '', inline = 'L10', group = g2)
+color_10 = input.color(color.white, '', inline = 'L10', group = g2)
+style_10 = input.string('Dashed', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L10', group = g2)
+width_10 = input.int(1, '', inline = 'L10', group = g2, minval=1, maxval=4)
+
+// Level 11: 0.972
+show_11 = input.bool(true, '', inline = 'L11', group = g2)
+value_11 = input.float(0.972, '', inline = 'L11', group = g2)
+color_11 = input.color(#ff0000, '', inline = 'L11', group = g2)
+style_11 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L11', group = g2)
+width_11 = input.int(3, '', inline = 'L11', group = g2, minval=1, maxval=4)
+
+// Level 12: 1
+show_12 = input.bool(true, '', inline = 'L12', group = g2)
+value_12 = input.float(1.0, '', inline = 'L12', group = g2)
+color_12 = input.color(#ff0000, '', inline = 'L12', group = g2)
+style_12 = input.string('Solid', ' ', options = ['Dotted', 'Dashed', 'Solid'], inline = 'L12', group = g2)
+width_12 = input.int(3, '', inline = 'L12', group = g2, minval=1, maxval=4)
+
+var g3 = 'Clean Up'
+activeBoxes = input.int(20, 'Maximum Number of Gaps to Update', group = g3, inline = '1')
+
+var g4 = 'Multi-Timeframe FVGs'
+show_3m = input.bool(false, 'Show 3m', group = g4)
+show_5m = input.bool(false, 'Show 5m', group = g4)
+show_15m = input.bool(false, 'Show 15m', group = g4)
+show_1h = input.bool(false, 'Show 1H', group = g4)
+show_4h = input.bool(false, 'Show 4H', group = g4)
+show_1d = input.bool(false, 'Show 1D', group = g4)
+
+//----------udt----------//
+type FVG
+    box b
+    bool a = true
+    bool bull = true
+    float f50_price = na
+    line f1
+    line f2
+    line f3
+    line f4
+    line f5
+    line f6
+    line f7
+    line f8
+    line f9
+    line f10
+    line f11
+    line f12
+
+//----------variables----------//
+var bearFvg = array.new<FVG>()
+var bullFvg = array.new<FVG>()
+
+//----------methods----------//
+method switcher(string this) =>
+    switch this
+        'Dashed' => line.style_dashed
+        'Dotted' => line.style_dotted
+        'Solid' => line.style_solid
+
+method run(array<FVG> this) =>
+    for [idx, fvg] in this
+        src = mitType == 'Close' ? close : fvg.bull ? low : high
+        if fvg.a
+            fvg.b.set_right(bar_index)
+            fvg.f1.set_x2(bar_index)
+            fvg.f2.set_x2(bar_index)
+            fvg.f3.set_x2(bar_index)
+            fvg.f4.set_x2(bar_index)
+            fvg.f5.set_x2(bar_index)
+            fvg.f6.set_x2(bar_index)
+            fvg.f7.set_x2(bar_index)
+            fvg.f8.set_x2(bar_index)
+            fvg.f9.set_x2(bar_index)
+            fvg.f10.set_x2(bar_index)
+            fvg.f11.set_x2(bar_index)
+            fvg.f12.set_x2(bar_index)
+            
+            // 50% Berührungs-Check (Nutzt hier Value_10 da 0.5 Level)
+            bool hit50 = false
+            if not na(fvg.f50_price) and barstate.isconfirmed
+                hit50 := (fvg.bull and src <= fvg.f50_price) or (not fvg.bull and src >= fvg.f50_price)
+                
+            // Original FVG Füll-Check
+            bool isFilled = (src <= fvg.b.get_bottom() and barstate.isconfirmed and fvg.bull) or (src >= fvg.b.get_top() and barstate.isconfirmed and not fvg.bull)
+            
+            if isFilled or hit50
+                fvg.a := false
+                alert(hit50 ? 'FVG 50% Hit - Removed' : (fvg.bull ? 'Bullish FVG Filled' : 'Bearish FVG Filled'), alert.freq_once_per_bar_close)
+                if filledBorder and not hit50
+                    fvg.b.set_border_color(borderCol)
+                    fvg.b.set_border_style(borderStyle.switcher())
+                if removeFilled or hit50
+                    fvg.b.delete()
+                    fvg.f1.delete()
+                    fvg.f2.delete()
+                    fvg.f3.delete()
+                    fvg.f4.delete()
+                    fvg.f5.delete()
+                    fvg.f6.delete()
+                    fvg.f7.delete()
+                    fvg.f8.delete()
+                    fvg.f9.delete()
+                    fvg.f10.delete()
+                    fvg.f11.delete()
+                    fvg.f12.delete()
+            if fvg.b.get_right() - fvg.b.get_left() > tooLong and tooLongBool
+                fvg.a := false
+                if removeOld
+                    fvg.b.delete()
+                    fvg.f1.delete()
+                    fvg.f2.delete()
+                    fvg.f3.delete()
+                    fvg.f4.delete()
+                    fvg.f5.delete()
+                    fvg.f6.delete()
+                    fvg.f7.delete()
+                    fvg.f8.delete()
+                    fvg.f9.delete()
+                    fvg.f10.delete()
+                    fvg.f11.delete()
+                    fvg.f12.delete()
+        if not fvg.a
+            this.remove(idx)
+
+//----------chart TF conditions & calculations----------//
+bullishFVG = low > high[2] and close[1] > high[2] and (low - high[2]) / high[2] * 100 >= minGap
+bearishFVG = high < low[2] and close[1] < low[2] and (low[2] - high) / high * 100 >= minGap
+
+// Berechnungen für alle 12 Levels
+v1 = bullishFVG ? low - value_1 * (low - high[2]) : high + value_1 * (low[2] - high)
+v2 = bullishFVG ? low - value_2 * (low - high[2]) : high + value_2 * (low[2] - high)
+v3 = bullishFVG ? low - value_3 * (low - high[2]) : high + value_3 * (low[2] - high)
+v4 = bullishFVG ? low - value_4 * (low - high[2]) : high + value_4 * (low[2] - high)
+v5 = bullishFVG ? low - value_5 * (low - high[2]) : high + value_5 * (low[2] - high)
+v6 = bullishFVG ? low - value_6 * (low - high[2]) : high + value_6 * (low[2] - high)
+v7 = bullishFVG ? low - value_7 * (low - high[2]) : high + value_7 * (low[2] - high)
+v8 = bullishFVG ? low - value_8 * (low - high[2]) : high + value_8 * (low[2] - high)
+v9 = bullishFVG ? low - value_9 * (low - high[2]) : high + value_9 * (low[2] - high)
+v10 = bullishFVG ? low - value_10 * (low - high[2]) : high + value_10 * (low[2] - high)
+v11 = bullishFVG ? low - value_11 * (low - high[2]) : high + value_11 * (low[2] - high)
+v12 = bullishFVG ? low - value_12 * (low - high[2]) : high + value_12 * (low[2] - high)
+
+//----------store chart TF FVGs----------//
+if bullishFVG
+    if bullFvg.size() > activeBoxes - 1
+        bullFvg.pop()
+    bullFvg.unshift(FVG.new(
+         b = box.new(bar_index[2], low, bar_index, high[2], bullCol, bgcolor = bullCol), 
+         bull = true,
+         f50_price = v10, // Speichert den 0.5 Wert für die Lösch-Logik
+         f1 = show_1 ? line.new(bar_index[2], v1, bar_index, v1, color = color_1, width = width_1, style = style_1.switcher()) : na, 
+         f2 = show_2 ? line.new(bar_index[2], v2, bar_index, v2, color = color_2, width = width_2, style = style_2.switcher()) : na, 
+         f3 = show_3 ? line.new(bar_index[2], v3, bar_index, v3, color = color_3, width = width_3, style = style_3.switcher()) : na, 
+         f4 = show_4 ? line.new(bar_index[2], v4, bar_index, v4, color = color_4, width = width_4, style = style_4.switcher()) : na, 
+         f5 = show_5 ? line.new(bar_index[2], v5, bar_index, v5, color = color_5, width = width_5, style = style_5.switcher()) : na, 
+         f6 = show_6 ? line.new(bar_index[2], v6, bar_index, v6, color = color_6, width = width_6, style = style_6.switcher()) : na, 
+         f7 = show_7 ? line.new(bar_index[2], v7, bar_index, v7, color = color_7, width = width_7, style = style_7.switcher()) : na, 
+         f8 = show_8 ? line.new(bar_index[2], v8, bar_index, v8, color = color_8, width = width_8, style = style_8.switcher()) : na, 
+         f9 = show_9 ? line.new(bar_index[2], v9, bar_index, v9, color = color_9, width = width_9, style = style_9.switcher()) : na, 
+         f10 = show_10 ? line.new(bar_index[2], v10, bar_index, v10, color = color_10, width = width_10, style = style_10.switcher()) : na, 
+         f11 = show_11 ? line.new(bar_index[2], v11, bar_index, v11, color = color_11, width = width_11, style = style_11.switcher()) : na, 
+         f12 = show_12 ? line.new(bar_index[2], v12, bar_index, v12, color = color_12, width = width_12, style = style_12.switcher()) : na))
+
+if bearishFVG
+    if bearFvg.size() > activeBoxes - 1
+        bearFvg.pop()
+    bearFvg.unshift(FVG.new(
+         b = box.new(bar_index[2], low[2], bar_index + 1, high, bearCol, bgcolor = bearCol), 
+         bull = false,
+         f50_price = v10,
+         f1 = show_1 ? line.new(bar_index[2], v1, bar_index, v1, color = color_1, width = width_1, style = style_1.switcher()) : na, 
+         f2 = show_2 ? line.new(bar_index[2], v2, bar_index, v2, color = color_2, width = width_2, style = style_2.switcher()) : na, 
+         f3 = show_3 ? line.new(bar_index[2], v3, bar_index, v3, color = color_3, width = width_3, style = style_3.switcher()) : na, 
+         f4 = show_4 ? line.new(bar_index[2], v4, bar_index, v4, color = color_4, width = width_4, style = style_4.switcher()) : na, 
+         f5 = show_5 ? line.new(bar_index[2], v5, bar_index, v5, color = color_5, width = width_5, style = style_5.switcher()) : na, 
+         f6 = show_6 ? line.new(bar_index[2], v6, bar_index, v6, color = color_6, width = width_6, style = style_6.switcher()) : na, 
+         f7 = show_7 ? line.new(bar_index[2], v7, bar_index, v7, color = color_7, width = width_7, style = style_7.switcher()) : na, 
+         f8 = show_8 ? line.new(bar_index[2], v8, bar_index, v8, color = color_8, width = width_8, style = style_8.switcher()) : na, 
+         f9 = show_9 ? line.new(bar_index[2], v9, bar_index, v9, color = color_9, width = width_9, style = style_9.switcher()) : na, 
+         f10 = show_10 ? line.new(bar_index[2], v10, bar_index, v10, color = color_10, width = width_10, style = style_10.switcher()) : na, 
+         f11 = show_11 ? line.new(bar_index[2], v11, bar_index, v11, color = color_11, width = width_11, style = style_11.switcher()) : na, 
+         f12 = show_12 ? line.new(bar_index[2], v12, bar_index, v12, color = color_12, width = width_12, style = style_12.switcher()) : na))
+
+//----------MTF FVG function----------//
+fvgMTF(tf, show) =>
+    if show
+        [h, l, c] = request.security(syminfo.tickerid, tf, [high, low, close])
+        bull = l > h[2] and c[1] > h[2] and (l - h[2]) / h[2] * 100 >= minGap
+        bear = h < l[2] and c[1] < l[2] and (l[2] - h) / h * 100 >= minGap
+        
+        m1 = bull ? l - value_1 * (l - h[2]) : h + value_1 * (l[2] - h)
+        m2 = bull ? l - value_2 * (l - h[2]) : h + value_2 * (l[2] - h)
+        m3 = bull ? l - value_3 * (l - h[2]) : h + value_3 * (l[2] - h)
+        m4 = bull ? l - value_4 * (l - h[2]) : h + value_4 * (l[2] - h)
+        m5 = bull ? l - value_5 * (l - h[2]) : h + value_5 * (l[2] - h)
+        m6 = bull ? l - value_6 * (l - h[2]) : h + value_6 * (l[2] - h)
+        m7 = bull ? l - value_7 * (l - h[2]) : h + value_7 * (l[2] - h)
+        m8 = bull ? l - value_8 * (l - h[2]) : h + value_8 * (l[2] - h)
+        m9 = bull ? l - value_9 * (l - h[2]) : h + value_9 * (l[2] - h)
+        m10 = bull ? l - value_10 * (l - h[2]) : h + value_10 * (l[2] - h)
+        m11 = bull ? l - value_11 * (l - h[2]) : h + value_11 * (l[2] - h)
+        m12 = bull ? l - value_12 * (l - h[2]) : h + value_12 * (l[2] - h)
+
+        if bull
+            if bullFvg.size() > activeBoxes - 1
+                bullFvg.pop()
+            bullFvg.unshift(FVG.new(
+                 b = box.new(bar_index[2], l, bar_index, h[2], bullCol, bgcolor = bullCol), 
+                 bull = true,
+                 f50_price = m10,
+                 f1 = show_1 ? line.new(bar_index[2], m1, bar_index, m1, color = color_1, width = width_1, style = style_1.switcher()) : na, 
+                 f2 = show_2 ? line.new(bar_index[2], m2, bar_index, m2, color = color_2, width = width_2, style = style_2.switcher()) : na, 
+                 f3 = show_3 ? line.new(bar_index[2], m3, bar_index, m3, color = color_3, width = width_3, style = style_3.switcher()) : na, 
+                 f4 = show_4 ? line.new(bar_index[2], m4, bar_index, m4, color = color_4, width = width_4, style = style_4.switcher()) : na, 
+                 f5 = show_5 ? line.new(bar_index[2], m5, bar_index, m5, color = color_5, width = width_5, style = style_5.switcher()) : na, 
+                 f6 = show_6 ? line.new(bar_index[2], m6, bar_index, m6, color = color_6, width = width_6, style = style_6.switcher()) : na, 
+                 f7 = show_7 ? line.new(bar_index[2], m7, bar_index, m7, color = color_7, width = width_7, style = style_7.switcher()) : na, 
+                 f8 = show_8 ? line.new(bar_index[2], m8, bar_index, m8, color = color_8, width = width_8, style = style_8.switcher()) : na, 
+                 f9 = show_9 ? line.new(bar_index[2], m9, bar_index, m9, color = color_9, width = width_9, style = style_9.switcher()) : na, 
+                 f10 = show_10 ? line.new(bar_index[2], m10, bar_index, m10, color = color_10, width = width_10, style = style_10.switcher()) : na, 
+                 f11 = show_11 ? line.new(bar_index[2], m11, bar_index, m11, color = color_11, width = width_11, style = style_11.switcher()) : na, 
+                 f12 = show_12 ? line.new(bar_index[2], m12, bar_index, m12, color = color_12, width = width_12, style = style_12.switcher()) : na))
+
+        if bear
+            if bearFvg.size() > activeBoxes - 1
+                bearFvg.pop()
+            bearFvg.unshift(FVG.new(
+                 b = box.new(bar_index[2], l[2], bar_index + 1, h, bearCol, bgcolor = bearCol), 
+                 bull = false,
+                 f50_price = m10,
+                 f1 = show_1 ? line.new(bar_index[2], m1, bar_index, m1, color = color_1, width = width_1, style = style_1.switcher()) : na, 
+                 f2 = show_2 ? line.new(bar_index[2], m2, bar_index, m2, color = color_2, width = width_2, style = style_2.switcher()) : na, 
+                 f3 = show_3 ? line.new(bar_index[2], m3, bar_index, m3, color = color_3, width = width_3, style = style_3.switcher()) : na, 
+                 f4 = show_4 ? line.new(bar_index[2], m4, bar_index, m4, color = color_4, width = width_4, style = style_4.switcher()) : na, 
+                 f5 = show_5 ? line.new(bar_index[2], m5, bar_index, m5, color = color_5, width = width_5, style = style_5.switcher()) : na, 
+                 f6 = show_6 ? line.new(bar_index[2], m6, bar_index, m6, color = color_6, width = width_6, style = style_6.switcher()) : na, 
+                 f7 = show_7 ? line.new(bar_index[2], m7, bar_index, m7, color = color_7, width = width_7, style = style_7.switcher()) : na, 
+                 f8 = show_8 ? line.new(bar_index[2], m8, bar_index, m8, color = color_8, width = width_8, style = style_8.switcher()) : na, 
+                 f9 = show_9 ? line.new(bar_index[2], m9, bar_index, m9, color = color_9, width = width_9, style = style_9.switcher()) : na, 
+                 f10 = show_10 ? line.new(bar_index[2], m10, bar_index, m10, color = color_10, width = width_10, style = style_10.switcher()) : na, 
+                 f11 = show_11 ? line.new(bar_index[2], m11, bar_index, m11, color = color_11, width = width_11, style = style_11.switcher()) : na, 
+                 f12 = show_12 ? line.new(bar_index[2], m12, bar_index, m12, color = color_12, width = width_12, style = style_12.switcher()) : na))
+
+//----------MTF calls----------//
+fvgMTF('3', show_3m)
+fvgMTF('5', show_5m)
+fvgMTF('15', show_15m)
+fvgMTF('60', show_1h)
+fvgMTF('240', show_4h)
+fvgMTF('D', show_1d)
+
+//----------run----------//
+bearFvg.run()
+bullFvg.run()

@@ -1,0 +1,23 @@
+//@version=5
+indicator("-VrilyaSS-BB-(15-1)-5-M-Chart-15 M-Trade-red+closeunderlowbb-", overlay=true)
+
+// Inputs für Bollinger Bands
+bbLength = input.int(15, title="Bollinger Bands Length")
+bbMultiplier = input.float(1.0, title="Bollinger Bands Multiplier")
+[bbBasis, bbUpper, bbLower] = ta.bb(close, bbLength, bbMultiplier)
+
+// Bedingungen für Verkaufsignal
+currentCandleRed = close < open
+closeBelowLowerBand = close < bbLower
+sellSignal = currentCandleRed and closeBelowLowerBand
+
+// Plotte Bollinger Bands
+plot(bbUpper, color=color.red, title="Bollinger Upper Band")
+plot(bbBasis, color=color.blue, title="Bollinger Basis")
+plot(bbLower, color=color.green, title="Bollinger Lower Band")
+
+// Plotte Verkaufsignal
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.white, size=size.small)
+
+// Alarme
+alertcondition(sellSignal, title="Sell Signal Alert", message="Sell signal generated based on Bollinger Bands and candle conditions.")

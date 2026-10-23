@@ -1,0 +1,93 @@
+//@version=5
+indicator("-VrilyaSS-Candlestick Pattern Indicator-Doji+Hammer+Engulfing-", overlay=true)
+
+// Inputs
+length = input(20, title="Lookback Length")
+show_bullish_hammer = input(true, title="Show Bullish Hammer")
+show_bearish_hammer = input(true, title="Show Bearish Hammer")
+show_bullish_engulfing = input(true, title="Show Bullish Engulfing")
+show_bearish_engulfing = input(true, title="Show Bearish Engulfing")
+show_doji = input(true, title="Show Doji")
+
+// RSI and Stochastic Inputs
+rsi_length = input(14, title="RSI Length")
+rsi_ob = input(70, title="RSI Overbought")
+rsi_os = input(30, title="RSI Oversold")
+stoch_k = input(14, title="Stochastic %K Length")
+stoch_d = input(3, title="Stochastic %D Length")
+stoch_ob = input(80, title="Stochastic Overbought")
+stoch_os = input(20, title="Stochastic Oversold")
+
+// Calculate RSI and Stochastic
+rsi = ta.rsi(close, rsi_length)
+k = ta.stoch(close, high, low, stoch_k)
+d = ta.sma(k, stoch_d)
+
+// Candlestick Pattern Functions
+isBullishHammer(candleOpen, candleHigh, candleLow, candleClose) =>
+    bodySize = math.abs(candleClose - candleOpen)
+    lowerShadow = candleOpen < candleClose ? (candleOpen - candleLow) : (candleClose - candleLow)
+    upperShadow = candleHigh - math.max(candleOpen, candleClose)
+    lowerShadow > 2 * bodySize and upperShadow < bodySize
+
+isBearishHammer(candleOpen, candleHigh, candleLow, candleClose) =>
+    bodySize = math.abs(candleClose - candleOpen)
+    lowerShadow = candleOpen > candleClose ? (candleOpen - candleClose) : (candleClose - candleHigh)
+    upperShadow = math.max(candleOpen, candleClose) - candleLow
+    lowerShadow > 2 * bodySize and upperShadow < bodySize
+
+isBullishEngulfing(candleOpen, candleHigh, candleLow, candleClose) =>
+    engulfing = candleOpen > candleClose[1] and candleClose < candleOpen and candleClose > candleOpen[1] and candleOpen < candleClose[1]
+    engulfing
+
+isBearishEngulfing(candleOpen, candleHigh, candleLow, candleClose) =>
+    engulfing = candleOpen < candleClose[1] and candleClose > candleOpen and candleClose < candleOpen[1] and candleOpen > candleClose[1]
+    engulfing
+
+isDoji(candleOpen, candleHigh, candleLow, candleClose) =>
+    doji = math.abs(candleClose - candleOpen) <= 0.1 * (candleHigh - candleLow)
+    doji
+
+// Variables to store the pattern signals
+var bool isBullishPattern = na
+var bool isBearishPattern = na
+
+// Determine if current bar is a pattern and meets RSI/Stochastic conditions
+isBullishPattern := na
+isBearishPattern := na
+
+if isBullishHammer(open, high, low, close) and show_bullish_hammer and rsi < rsi_os and k < stoch_os and d < stoch_os
+    isBullishPattern := true
+
+if isBearishHammer(open, high, low, close) and show_bearish_hammer and rsi > rsi_ob and k > stoch_ob and d > stoch_ob
+    isBearishPattern := true
+
+if isBullishEngulfing(open, high, low, close) and show_bullish_engulfing and rsi < rsi_os and k < stoch_os and d < stoch_os
+    isBullishPattern := true
+
+if isBearishEngulfing(open, high, low, close) and show_bearish_engulfing and rsi > rsi_ob and k > stoch_ob and d > stoch_ob
+    isBearishPattern := true
+
+if isDoji(open, high, low, close) and show_doji and ((rsi < rsi_os and k < stoch_os and d < stoch_os) or (rsi > rsi_ob and k > stoch_ob and d > stoch_ob))
+    isBullishPattern := true
+
+// Plot patterns
+plotshape(series=isBullishPattern, style=shape.labelup, color=color.green, textcolor=color.black, text="Bullish Pattern", location=location.belowbar, size=size.tiny)
+plotshape(series=isBearishPattern, style=shape.labeldown, color=color.red, textcolor=color.black, text="Bearish Pattern", location=location.abovebar, size=size.tiny)
+
+// Alert conditions
+alertcondition(isBullishPattern, title="Bullish Pattern Alert", message="Buy - Bullish Pattern detected")
+alertcondition(isBearishPattern, title="Bearish Pattern Alert", message="Sell - Bearish Pattern detected")
+
+// Individual alerts for each pattern
+alertcondition(isBullishHammer(open, high, low, close) and show_bullish_hammer, title="Bullish Hammer Alert", message="Buy - Bullish Hammer detected")
+alertcondition(isBearishHammer(open, high, low, close) and show_bearish_hammer, title="Bearish Hammer Alert", message="Sell - Bearish Hammer detected")
+alertcondition(isBullishEngulfing(open, high, low, close) and show_bullish_engulfing, title="Bullish Engulfing Alert", message="Buy - Bullish Engulfing detected")
+alertcondition(isBearishEngulfing(open, high, low, close) and show_bearish_engulfing, title="Bearish Engulfing Alert", message="Sell - Bearish Engulfing detected")
+alertcondition(isDoji(open, high, low, close) and show_doji, title="Doji Alert", message="Doji pattern detected")
+
+// Chart Title
+var label titleLabel = na
+if not na(titleLabel)
+    label.delete(titleLabel)
+titleLabel := label.new(x=bar_index, y=high, text="Candlestick Pattern Indicator (" + str.tostring(length) + " candles)", style=label.style_label_down, color=color.blue, textcolor=color.black, size=size.tiny)

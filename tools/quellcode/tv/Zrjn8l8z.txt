@@ -1,0 +1,88 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+
+//@version=5
+indicator(title='-VrilyaSS-RSI Rising Alert-', overlay=true)//, initial_capital=100, default_qty_type=strategy.percent_of_equity, default_qty_value=100, slippage=0, commission_type=strategy.commission.percent, commission_value=0.03)
+
+/////////////////////
+source = close
+bb_length = 20
+bb_mult = 1.0
+basis = ta.sma(source, bb_length)
+dev = bb_mult * ta.stdev(source, bb_length)
+upperx = basis + dev
+lowerx = basis - dev
+bbr = (source - lowerx) / (upperx - lowerx)
+bbr_len = 21
+bbr_std = ta.stdev(bbr, bbr_len)
+bbr_std_thresh = 0.1
+is_sideways = bbr > 0.0 and bbr < 1.0 and bbr_std <= bbr_std_thresh
+
+
+////////////////
+fromDay = input.int(defval=1, title='From Day', minval=1, maxval=31)
+fromMonth = input.int(defval=1, title='From Month', minval=1, maxval=12)
+fromYear = input.int(defval=2010, title='From Year', minval=1970)
+//monday and session 
+// To Date Inputs
+toDay = input.int(defval=31, title='To Day', minval=1, maxval=31)
+toMonth = input.int(defval=12, title='To Month', minval=1, maxval=12)
+toYear = input.int(defval=2021, title='To Year', minval=1970)
+
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+
+
+
+sourcex = close
+length = 2
+pcntChange = 1
+
+roc = 100 * (sourcex - sourcex[length]) / sourcex[length]
+emaroc = ta.ema(roc, length / 2)
+isMoving() =>
+    emaroc > pcntChange / 2 or emaroc < 0 - pcntChange / 2
+
+
+periods = input(19)
+smooth = input(14, title='RSI Length')
+src = input(low, title='Source')
+
+
+rsiClose = ta.rsi(ta.ema(src, periods), smooth)
+long = ta.rising(rsiClose, 2) and not is_sideways and isMoving()
+short = not ta.rising(rsiClose, 2) and not is_sideways and isMoving()
+
+
+
+
+
+// ------------------------- Strategy Logic --------------------------------- //
+var longOpeneds = false
+var shortOpeneds = false
+var int timeOfBuys = na
+
+
+
+longConditions = long and not longOpeneds 
+
+if longConditions
+    longOpeneds := true
+    timeOfBuys := time
+
+
+longExitSignals = short
+exitLongConditions = longOpeneds[1] and longExitSignals
+
+if exitLongConditions
+    longOpeneds := false
+    timeOfBuys := na
+
+
+alertcondition(condition=longConditions, title="Long", message='Long')
+alertcondition(condition=exitLongConditions, title="Short", message='Short')
+
+plotshape(longConditions, style=shape.labelup, location=location.belowbar, color=color.green, size=size.tiny, title="Long", text="Long", textcolor=color.white)
+plotshape(exitLongConditions , style=shape.labeldown, location=location.abovebar, color=color.red, size=size.tiny, title="Short ", text="Short ", textcolor=color.white)
+

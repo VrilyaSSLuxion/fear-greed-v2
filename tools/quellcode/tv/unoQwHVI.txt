@@ -1,0 +1,1009 @@
+//@version=6
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingView
+indicator("Visible Fibonacci", "Vis. Fib", true, max_lines_count = 500)
+
+// Visible Fibonacci
+// v5.3 - Individual Time Points mit eigenen Level-Einstellungen + Body/Wick Option
+
+import PineCoders/VisibleChart/5 as chart
+
+//#region ———————————————————— Constants and inputs
+
+// Colors
+color GRAY    = color.gray
+color RED     = color.red
+color ORANGE  = color.orange
+color TEAL    = color.teal
+color RUBY    = #e91e63
+color AQUA    = color.aqua
+color BLUE    = color.blue
+color GREEN   = color.green
+color PURPLE  = color.purple
+color LIME    = color.lime
+color FUCHSIA = color.fuchsia
+color CYAN    = #00bcd4
+color YELLOW  = #ffeb3b
+color MAROON  = #880e4f
+color WHITE   = color.white
+
+// Line types
+string TY01 = " ─ Line"
+string TY02 = " ┄ Dashed line"
+string TY03 = " ┉ Dotted line"
+
+// Fib level types
+string LV01  = "Values"
+string LV02  = "Percent"
+
+// Fib calculation types
+string FT01  = "Visible chart range"
+string FT02  = "Visible Zig Zag"
+string FT03  = "Last closed bar"
+string FT04  = "Individual Time Points"
+
+// Label locations
+string LB01  = "Left"
+string LB02  = "Center"
+string LB03  = "Right"
+string LB04  = "Top"
+string LB05  = "Middle"
+string LB06  = "Bottom"
+
+// Label sizes
+string SZ01  = "tiny"
+string SZ02  = "small"
+string SZ03  = "normal"
+string SZ04  = "large"
+string SZ05  = "huge"
+
+// Tooltips
+string TT_FT = (
+    "Choose from 4 calculation types:\n\n• "
+    + "'Visible chart range'\n"
+    + "Calculates the Fibonacci retracement levels using the high and low values of the visible chart range.\n\n•"
+    + "'Visible Zig Zag'\n"
+    + "Calculates the Fibonacci retracement levels based on zig zag pivots within the visible chart range.\n\n•"
+    + "'Last closed bar'\n"
+    + "Calculates the Fibonacci retracement levels based on the high and low (or open and close) of the last closed bar.\n\n•"
+    + "'Individual Time Points'\n"
+    + "Creates Fibonacci retracements at up to 3 specific dates/times that you define below. Each point can have its own extend range."
+)
+string TT_ZZ = "Enable to show Zig Zag lines when the calculation type is 'Visible Zig Zag'."
+string TT_MP = (
+    "If enabled, the indicator adds a pivot in the opposite direction if it does not find a new one over the number of "
+    + "bars specified by 'Pivot length'."
+)
+string TT_PL = "Number of bars back for which to find pivots for the Zig Zag (e.g., the highest point over 50 bars)."
+string TT_ZA = "Specify the colors, width, and style of the Zig Zag lines."
+string TT_LP = "Places the fib retracement at the nth pivot point back relative to the last visible pivot point."
+string TT_TIME = "Enable this time point to create a Fibonacci retracement at the specified date and time."
+string TT_DATE = "Target date for the Fibonacci (format: DD.MM.YYYY)."
+string TT_CLOCK = "Target time for the Fibonacci (format: HH:MM)."
+string TT_EXTEND = "Number of candles to extend the Fibonacci to the right from the target candle."
+string TT_USEBODY = "Use Open/Close instead of High/Low for Fibonacci calculation at this time point."
+
+// Inputs
+string fibTypeInput = input.string(FT01, "Fib calculation type", options = [FT01, FT02, FT03, FT04], tooltip = TT_FT)
+
+string GRP1 = "Visible Zig Zag"
+bool   showZZInput       = input.bool(true,    "Show Zig Zag",              group = GRP1, inline = "00", tooltip = TT_ZZ)
+bool   addPivotInput     = input.bool(true,    "Detect additional pivots",  group = GRP1, inline = "01", tooltip = TT_MP)
+int    lengthInput       = input.int(50,       "  Pivot length",            group = GRP1, minval = 1,    tooltip = TT_PL)
+color  zzBullColorInput  = input.color(GRAY,   "  ",                        group = GRP1, inline = "02")
+color  zzBearColorInput  = input.color(GRAY,   "",                          group = GRP1, inline = "02")
+int    zzwidthInput      = input.int(2,        "",                          group = GRP1, inline = "02", minval = 1)
+string zzStyleInput      = input.string(TY01,  "",                          group = GRP1, inline = "02", tooltip = TT_ZA, options = [TY01, TY02, TY03])
+int    pivotInput        = input.int(1,        "  nth last pivot",          group = GRP1, minval = 0,    tooltip = TT_LP)
+
+string GRP2 = "Fib Levels (Global - for Visible Range/ZigZag/Last Closed)"
+bool   useBodyInput      = input.bool(false,   "Use Body (O/C) instead of Wick (H/L)", group = GRP2, tooltip = "Calculates Fibs based on Open/Close of the bar instead of High/Low.")
+bool   extendRtInput     = input.bool(true,    "Extend to real time",       group = GRP2)
+bool   extendRightInput  = input.bool(false,   "Extend lines right",        group = GRP2)
+bool   extendLeftInput   = input.bool(false,   "Extend lines left",         group = GRP2)
+bool   trendLineInput    = input.bool(true,    "Trend line",                group = GRP2, inline = "10")
+color  trendColorInput   = input.color(GRAY,   "",                          group = GRP2, inline = "10")
+int    trendWidthInput   = input.int(1,        "",                          group = GRP2, inline = "10", minval = 1)
+string trendStyleInput   = input.string(TY02,  "",                          group = GRP2, inline = "10", options = [TY01, TY02, TY03])
+int    levelsWidthInput  = input.int(1,        "Level lines",               group = GRP2, inline = "11", minval = 1)
+string fibStyleInput     = input.string(TY01,  "",                          group = GRP2, inline = "11", options = [TY01, TY02, TY03])
+string extStyleInput     = input.string(TY03,  "",                          group = GRP2, inline = "11", options = [TY01, TY02, TY03])
+
+// Individual Time Points Settings
+string GRP3 = "Individual Time Points"
+
+// ————— Time Point 1 —————
+string GRP3_1 = "Time Point 1 - Settings"
+bool   enableTP1         = input.bool(true,    "Enable Time Point 1",       group = GRP3_1, inline = "tp1", tooltip = TT_TIME)
+int    tp1Day            = input.int(1,        "  Date (DD.MM.YYYY)",       group = GRP3_1, inline = "tp1", minval = 1, maxval = 31, tooltip = TT_DATE)
+int    tp1Month          = input.int(1,        ".",                         group = GRP3_1, inline = "tp1", minval = 1, maxval = 12)
+int    tp1Year           = input.int(2024,     ".",                         group = GRP3_1, inline = "tp1", minval = 2000, maxval = 2100)
+int    tp1Hour           = input.int(0,        "  Time (HH:MM)",            group = GRP3_1, inline = "tp1", minval = 0, maxval = 23, tooltip = TT_CLOCK)
+int    tp1Minute         = input.int(0,        ":",                         group = GRP3_1, inline = "tp1", minval = 0, maxval = 59)
+int    extend1           = input.int(20,       "  Extend (candles)",        group = GRP3_1, inline = "tp1", minval = 1, tooltip = TT_EXTEND)
+color  colorTP1          = input.color(RED,    "  Color",                   group = GRP3_1, inline = "tp1")
+bool   useBodyTP1        = input.bool(false,   "  Use Body (O/C)",          group = GRP3_1, inline = "tp1", tooltip = TT_USEBODY)
+
+string GRP3_1L = "Time Point 1 - Fib Levels"
+bool   showNeg70TP1    = input.bool(false,   "", group = GRP3_1L, inline = "tp1l0")
+float  levelNeg70TP1   = input.float(-0.7,   "", group = GRP3_1L, inline = "tp1l0")
+color  colorNeg70TP1   = input.color(MAROON, "", group = GRP3_1L, inline = "tp1l0")
+bool   showNeg60TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l0")
+float  levelNeg60TP1   = input.float(-0.6,   "", group = GRP3_1L, inline = "tp1l0")
+color  colorNeg60TP1   = input.color(RED,    "", group = GRP3_1L, inline = "tp1l0")
+bool   showNeg50TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l0")
+float  levelNeg50TP1   = input.float(-0.5,   "", group = GRP3_1L, inline = "tp1l0")
+color  colorNeg50TP1   = input.color(CYAN,   "", group = GRP3_1L, inline = "tp1l0")
+bool   showNeg40TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l1")
+float  levelNeg40TP1   = input.float(-0.4,   "", group = GRP3_1L, inline = "tp1l1")
+color  colorNeg40TP1   = input.color(YELLOW, "", group = GRP3_1L, inline = "tp1l1")
+bool   showNeg30TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l1")
+float  levelNeg30TP1   = input.float(-0.3,   "", group = GRP3_1L, inline = "tp1l1")
+color  colorNeg30TP1   = input.color(GREEN,  "", group = GRP3_1L, inline = "tp1l1")
+bool   show000TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l1")
+float  level000TP1     = input.float(0,      "", group = GRP3_1L, inline = "tp1l1")
+color  color000TP1     = input.color(GREEN,  "", group = GRP3_1L, inline = "tp1l1")
+bool   show050TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l2")
+float  level050TP1     = input.float(0.5,    "", group = GRP3_1L, inline = "tp1l2")
+color  color050TP1     = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l2")
+bool   show100TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l2")
+float  level100TP1     = input.float(1,      "", group = GRP3_1L, inline = "tp1l2")
+color  color100TP1     = input.color(RED,    "", group = GRP3_1L, inline = "tp1l2")
+bool   show130TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l2")
+float  level130TP1     = input.float(1.3,    "", group = GRP3_1L, inline = "tp1l2")
+color  color130TP1     = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l2")
+bool   show140TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l3")
+float  level140TP1     = input.float(1.4,    "", group = GRP3_1L, inline = "tp1l3")
+color  color140TP1     = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l3")
+bool   show150TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l3")
+float  level150TP1     = input.float(1.5,    "", group = GRP3_1L, inline = "tp1l3")
+color  color150TP1     = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l3")
+bool   show160TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l3")
+float  level160TP1     = input.float(1.6,    "", group = GRP3_1L, inline = "tp1l3")
+color  color160TP1     = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l3")
+bool   showNeg65TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l4")
+float  levelNeg65TP1   = input.float(-0.65,  "", group = GRP3_1L, inline = "tp1l4")
+color  colorNeg65TP1   = input.color(RED,    "", group = GRP3_1L, inline = "tp1l4")
+bool   showNeg55TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l4")
+float  levelNeg55TP1   = input.float(-0.55,  "", group = GRP3_1L, inline = "tp1l4")
+color  colorNeg55TP1   = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l4")
+bool   showNeg45TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l4")
+float  levelNeg45TP1   = input.float(-0.45,  "", group = GRP3_1L, inline = "tp1l4")
+color  colorNeg45TP1   = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l4")
+bool   showNeg35TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l5")
+float  levelNeg35TP1   = input.float(-0.35,  "", group = GRP3_1L, inline = "tp1l5")
+color  colorNeg35TP1   = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l5")
+bool   showNeg25TP1    = input.bool(true,    "", group = GRP3_1L, inline = "tp1l5")
+float  levelNeg25TP1   = input.float(-0.25,  "", group = GRP3_1L, inline = "tp1l5")
+color  colorNeg25TP1   = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l5")
+bool   show010TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l5")
+float  level010TP1     = input.float(0.1,    "", group = GRP3_1L, inline = "tp1l5")
+color  color010TP1     = input.color(RED,    "", group = GRP3_1L, inline = "tp1l5")
+bool   show090TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l6")
+float  level090TP1     = input.float(0.9,    "", group = GRP3_1L, inline = "tp1l6")
+color  color090TP1     = input.color(WHITE,  "", group = GRP3_1L, inline = "tp1l6")
+bool   show125TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l7")
+float  level125TP1     = input.float(1.25,   "", group = GRP3_1L, inline = "tp1l7")
+color  color125TP1     = input.color(GREEN,  "", group = GRP3_1L, inline = "tp1l7")
+bool   show135TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l7")
+float  level135TP1     = input.float(1.35,   "", group = GRP3_1L, inline = "tp1l7")
+color  color135TP1     = input.color(GREEN,  "", group = GRP3_1L, inline = "tp1l7")
+bool   show145TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l8")
+float  level145TP1     = input.float(1.45,   "", group = GRP3_1L, inline = "tp1l8")
+color  color145TP1     = input.color(YELLOW, "", group = GRP3_1L, inline = "tp1l8")
+bool   show155TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l9")
+float  level155TP1     = input.float(1.55,   "", group = GRP3_1L, inline = "tp1l9")
+color  color155TP1     = input.color(CYAN,   "", group = GRP3_1L, inline = "tp1l9")
+bool   show165TP1      = input.bool(true,    "", group = GRP3_1L, inline = "tp1l10")
+float  level165TP1     = input.float(1.65,   "", group = GRP3_1L, inline = "tp1l10")
+color  color165TP1     = input.color(RED,    "", group = GRP3_1L, inline = "tp1l10")
+
+// ————— Time Point 2 —————
+string GRP3_2 = "Time Point 2 - Settings"
+bool   enableTP2         = input.bool(false,   "Enable Time Point 2",       group = GRP3_2, inline = "tp2", tooltip = TT_TIME)
+int    tp2Day            = input.int(1,        "  Date (DD.MM.YYYY)",       group = GRP3_2, inline = "tp2", minval = 1, maxval = 31, tooltip = TT_DATE)
+int    tp2Month          = input.int(1,        ".",                         group = GRP3_2, inline = "tp2", minval = 1, maxval = 12)
+int    tp2Year           = input.int(2024,     ".",                         group = GRP3_2, inline = "tp2", minval = 2000, maxval = 2100)
+int    tp2Hour           = input.int(12,       "  Time (HH:MM)",            group = GRP3_2, inline = "tp2", minval = 0, maxval = 23, tooltip = TT_CLOCK)
+int    tp2Minute         = input.int(0,        ":",                         group = GRP3_2, inline = "tp2", minval = 0, maxval = 59)
+int    extend2           = input.int(20,       "  Extend (candles)",        group = GRP3_2, inline = "tp2", minval = 1, tooltip = TT_EXTEND)
+color  colorTP2          = input.color(BLUE,   "  Color",                   group = GRP3_2, inline = "tp2")
+bool   useBodyTP2        = input.bool(false,   "  Use Body (O/C)",          group = GRP3_2, inline = "tp2", tooltip = TT_USEBODY)
+
+string GRP3_2L = "Time Point 2 - Fib Levels"
+bool   showNeg70TP2    = input.bool(false,   "", group = GRP3_2L, inline = "tp2l0")
+float  levelNeg70TP2   = input.float(-0.7,   "", group = GRP3_2L, inline = "tp2l0")
+color  colorNeg70TP2   = input.color(MAROON, "", group = GRP3_2L, inline = "tp2l0")
+bool   showNeg60TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l0")
+float  levelNeg60TP2   = input.float(-0.6,   "", group = GRP3_2L, inline = "tp2l0")
+color  colorNeg60TP2   = input.color(RED,    "", group = GRP3_2L, inline = "tp2l0")
+bool   showNeg50TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l0")
+float  levelNeg50TP2   = input.float(-0.5,   "", group = GRP3_2L, inline = "tp2l0")
+color  colorNeg50TP2   = input.color(CYAN,   "", group = GRP3_2L, inline = "tp2l0")
+bool   showNeg40TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l1")
+float  levelNeg40TP2   = input.float(-0.4,   "", group = GRP3_2L, inline = "tp2l1")
+color  colorNeg40TP2   = input.color(YELLOW, "", group = GRP3_2L, inline = "tp2l1")
+bool   showNeg30TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l1")
+float  levelNeg30TP2   = input.float(-0.3,   "", group = GRP3_2L, inline = "tp2l1")
+color  colorNeg30TP2   = input.color(GREEN,  "", group = GRP3_2L, inline = "tp2l1")
+bool   show000TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l1")
+float  level000TP2     = input.float(0,      "", group = GRP3_2L, inline = "tp2l1")
+color  color000TP2     = input.color(GREEN,  "", group = GRP3_2L, inline = "tp2l1")
+bool   show050TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l2")
+float  level050TP2     = input.float(0.5,    "", group = GRP3_2L, inline = "tp2l2")
+color  color050TP2     = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l2")
+bool   show100TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l2")
+float  level100TP2     = input.float(1,      "", group = GRP3_2L, inline = "tp2l2")
+color  color100TP2     = input.color(RED,    "", group = GRP3_2L, inline = "tp2l2")
+bool   show130TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l2")
+float  level130TP2     = input.float(1.3,    "", group = GRP3_2L, inline = "tp2l2")
+color  color130TP2     = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l2")
+bool   show140TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l3")
+float  level140TP2     = input.float(1.4,    "", group = GRP3_2L, inline = "tp2l3")
+color  color140TP2     = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l3")
+bool   show150TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l3")
+float  level150TP2     = input.float(1.5,    "", group = GRP3_2L, inline = "tp2l3")
+color  color150TP2     = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l3")
+bool   show160TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l3")
+float  level160TP2     = input.float(1.6,    "", group = GRP3_2L, inline = "tp2l3")
+color  color160TP2     = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l3")
+bool   showNeg65TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l4")
+float  levelNeg65TP2   = input.float(-0.65,  "", group = GRP3_2L, inline = "tp2l4")
+color  colorNeg65TP2   = input.color(RED,    "", group = GRP3_2L, inline = "tp2l4")
+bool   showNeg55TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l4")
+float  levelNeg55TP2   = input.float(-0.55,  "", group = GRP3_2L, inline = "tp2l4")
+color  colorNeg55TP2   = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l4")
+bool   showNeg45TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l4")
+float  levelNeg45TP2   = input.float(-0.45,  "", group = GRP3_2L, inline = "tp2l4")
+color  colorNeg45TP2   = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l4")
+bool   showNeg35TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l5")
+float  levelNeg35TP2   = input.float(-0.35,  "", group = GRP3_2L, inline = "tp2l5")
+color  colorNeg35TP2   = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l5")
+bool   showNeg25TP2    = input.bool(true,    "", group = GRP3_2L, inline = "tp2l5")
+float  levelNeg25TP2   = input.float(-0.25,  "", group = GRP3_2L, inline = "tp2l5")
+color  colorNeg25TP2   = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l5")
+bool   show010TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l5")
+float  level010TP2     = input.float(0.1,    "", group = GRP3_2L, inline = "tp2l5")
+color  color010TP2     = input.color(RED,    "", group = GRP3_2L, inline = "tp2l5")
+bool   show090TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l6")
+float  level090TP2     = input.float(0.9,    "", group = GRP3_2L, inline = "tp2l6")
+color  color090TP2     = input.color(WHITE,  "", group = GRP3_2L, inline = "tp2l6")
+bool   show125TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l7")
+float  level125TP2     = input.float(1.25,   "", group = GRP3_2L, inline = "tp2l7")
+color  color125TP2     = input.color(GREEN,  "", group = GRP3_2L, inline = "tp2l7")
+bool   show135TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l7")
+float  level135TP2     = input.float(1.35,   "", group = GRP3_2L, inline = "tp2l7")
+color  color135TP2     = input.color(GREEN,  "", group = GRP3_2L, inline = "tp2l7")
+bool   show145TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l8")
+float  level145TP2     = input.float(1.45,   "", group = GRP3_2L, inline = "tp2l8")
+color  color145TP2     = input.color(YELLOW, "", group = GRP3_2L, inline = "tp2l8")
+bool   show155TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l9")
+float  level155TP2     = input.float(1.55,   "", group = GRP3_2L, inline = "tp2l9")
+color  color155TP2     = input.color(CYAN,   "", group = GRP3_2L, inline = "tp2l9")
+bool   show165TP2      = input.bool(true,    "", group = GRP3_2L, inline = "tp2l10")
+float  level165TP2     = input.float(1.65,   "", group = GRP3_2L, inline = "tp2l10")
+color  color165TP2     = input.color(RED,    "", group = GRP3_2L, inline = "tp2l10")
+
+// ————— Time Point 3 —————
+string GRP3_3 = "Time Point 3 - Settings"
+bool   enableTP3         = input.bool(false,   "Enable Time Point 3",       group = GRP3_3, inline = "tp3", tooltip = TT_TIME)
+int    tp3Day            = input.int(1,        "  Date (DD.MM.YYYY)",       group = GRP3_3, inline = "tp3", minval = 1, maxval = 31, tooltip = TT_DATE)
+int    tp3Month          = input.int(1,        ".",                         group = GRP3_3, inline = "tp3", minval = 1, maxval = 12)
+int    tp3Year           = input.int(2024,     ".",                         group = GRP3_3, inline = "tp3", minval = 2000, maxval = 2100)
+int    tp3Hour           = input.int(18,       "  Time (HH:MM)",            group = GRP3_3, inline = "tp3", minval = 0, maxval = 23, tooltip = TT_CLOCK)
+int    tp3Minute         = input.int(0,        ":",                         group = GRP3_3, inline = "tp3", minval = 0, maxval = 59)
+int    extend3           = input.int(20,       "  Extend (candles)",        group = GRP3_3, inline = "tp3", minval = 1, tooltip = TT_EXTEND)
+color  colorTP3          = input.color(GREEN,  "  Color",                   group = GRP3_3, inline = "tp3")
+bool   useBodyTP3        = input.bool(false,   "  Use Body (O/C)",          group = GRP3_3, inline = "tp3", tooltip = TT_USEBODY)
+
+string GRP3_3L = "Time Point 3 - Fib Levels"
+bool   showNeg70TP3    = input.bool(false,   "", group = GRP3_3L, inline = "tp3l0")
+float  levelNeg70TP3   = input.float(-0.7,   "", group = GRP3_3L, inline = "tp3l0")
+color  colorNeg70TP3   = input.color(MAROON, "", group = GRP3_3L, inline = "tp3l0")
+bool   showNeg60TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l0")
+float  levelNeg60TP3   = input.float(-0.6,   "", group = GRP3_3L, inline = "tp3l0")
+color  colorNeg60TP3   = input.color(RED,    "", group = GRP3_3L, inline = "tp3l0")
+bool   showNeg50TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l0")
+float  levelNeg50TP3   = input.float(-0.5,   "", group = GRP3_3L, inline = "tp3l0")
+color  colorNeg50TP3   = input.color(CYAN,   "", group = GRP3_3L, inline = "tp3l0")
+bool   showNeg40TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l1")
+float  levelNeg40TP3   = input.float(-0.4,   "", group = GRP3_3L, inline = "tp3l1")
+color  colorNeg40TP3   = input.color(YELLOW, "", group = GRP3_3L, inline = "tp3l1")
+bool   showNeg30TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l1")
+float  levelNeg30TP3   = input.float(-0.3,   "", group = GRP3_3L, inline = "tp3l1")
+color  colorNeg30TP3   = input.color(GREEN,  "", group = GRP3_3L, inline = "tp3l1")
+bool   show000TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l1")
+float  level000TP3     = input.float(0,      "", group = GRP3_3L, inline = "tp3l1")
+color  color000TP3     = input.color(GREEN,  "", group = GRP3_3L, inline = "tp3l1")
+bool   show050TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l2")
+float  level050TP3     = input.float(0.5,    "", group = GRP3_3L, inline = "tp3l2")
+color  color050TP3     = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l2")
+bool   show100TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l2")
+float  level100TP3     = input.float(1,      "", group = GRP3_3L, inline = "tp3l2")
+color  color100TP3     = input.color(RED,    "", group = GRP3_3L, inline = "tp3l2")
+bool   show130TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l2")
+float  level130TP3     = input.float(1.3,    "", group = GRP3_3L, inline = "tp3l2")
+color  color130TP3     = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l2")
+bool   show140TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l3")
+float  level140TP3     = input.float(1.4,    "", group = GRP3_3L, inline = "tp3l3")
+color  color140TP3     = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l3")
+bool   show150TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l3")
+float  level150TP3     = input.float(1.5,    "", group = GRP3_3L, inline = "tp3l3")
+color  color150TP3     = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l3")
+bool   show160TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l3")
+float  level160TP3     = input.float(1.6,    "", group = GRP3_3L, inline = "tp3l3")
+color  color160TP3     = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l3")
+bool   showNeg65TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l4")
+float  levelNeg65TP3   = input.float(-0.65,  "", group = GRP3_3L, inline = "tp3l4")
+color  colorNeg65TP3   = input.color(RED,    "", group = GRP3_3L, inline = "tp3l4")
+bool   showNeg55TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l4")
+float  levelNeg55TP3   = input.float(-0.55,  "", group = GRP3_3L, inline = "tp3l4")
+color  colorNeg55TP3   = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l4")
+bool   showNeg45TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l4")
+float  levelNeg45TP3   = input.float(-0.45,  "", group = GRP3_3L, inline = "tp3l4")
+color  colorNeg45TP3   = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l4")
+bool   showNeg35TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l5")
+float  levelNeg35TP3   = input.float(-0.35,  "", group = GRP3_3L, inline = "tp3l5")
+color  colorNeg35TP3   = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l5")
+bool   showNeg25TP3    = input.bool(true,    "", group = GRP3_3L, inline = "tp3l5")
+float  levelNeg25TP3   = input.float(-0.25,  "", group = GRP3_3L, inline = "tp3l5")
+color  colorNeg25TP3   = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l5")
+bool   show010TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l5")
+float  level010TP3     = input.float(0.1,    "", group = GRP3_3L, inline = "tp3l5")
+color  color010TP3     = input.color(RED,    "", group = GRP3_3L, inline = "tp3l5")
+bool   show090TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l6")
+float  level090TP3     = input.float(0.9,    "", group = GRP3_3L, inline = "tp3l6")
+color  color090TP3     = input.color(WHITE,  "", group = GRP3_3L, inline = "tp3l6")
+bool   show125TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l7")
+float  level125TP3     = input.float(1.25,   "", group = GRP3_3L, inline = "tp3l7")
+color  color125TP3     = input.color(GREEN,  "", group = GRP3_3L, inline = "tp3l7")
+bool   show135TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l7")
+float  level135TP3     = input.float(1.35,   "", group = GRP3_3L, inline = "tp3l7")
+color  color135TP3     = input.color(GREEN,  "", group = GRP3_3L, inline = "tp3l7")
+bool   show145TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l8")
+float  level145TP3     = input.float(1.45,   "", group = GRP3_3L, inline = "tp3l8")
+color  color145TP3     = input.color(YELLOW, "", group = GRP3_3L, inline = "tp3l8")
+bool   show155TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l9")
+float  level155TP3     = input.float(1.55,   "", group = GRP3_3L, inline = "tp3l9")
+color  color155TP3     = input.color(CYAN,   "", group = GRP3_3L, inline = "tp3l9")
+bool   show165TP3      = input.bool(true,    "", group = GRP3_3L, inline = "tp3l10")
+float  level165TP3     = input.float(1.65,   "", group = GRP3_3L, inline = "tp3l10")
+color  color165TP3     = input.color(RED,    "", group = GRP3_3L, inline = "tp3l10")
+
+// Global Fib levels (for non-TimePoints modes)
+bool   showNeg70Input    = input.bool(false,   "",                          group = GRP2, inline = "20")
+float  levelNeg70Input   = input.float(-0.7,   "",                          group = GRP2, inline = "20")
+color  colorNeg70Input   = input.color(MAROON, "",                          group = GRP2, inline = "20")
+bool   showNeg60Input    = input.bool(true,    "",                          group = GRP2, inline = "20")
+float  levelNeg60Input   = input.float(-0.6,   "",                          group = GRP2, inline = "20")
+color  colorNeg60Input   = input.color(RED,    "",                          group = GRP2, inline = "20")
+bool   showNeg50Input    = input.bool(true,    "",                          group = GRP2, inline = "20")
+float  levelNeg50Input   = input.float(-0.5,   "",                          group = GRP2, inline = "20")
+color  colorNeg50Input   = input.color(CYAN,   "",                          group = GRP2, inline = "20")
+bool   showNeg40Input    = input.bool(true,    "",                          group = GRP2, inline = "21")
+float  levelNeg40Input   = input.float(-0.4,   "",                          group = GRP2, inline = "21")
+color  colorNeg40Input   = input.color(YELLOW, "",                          group = GRP2, inline = "21")
+bool   showNeg30Input    = input.bool(true,    "",                          group = GRP2, inline = "21")
+float  levelNeg30Input   = input.float(-0.3,   "",                          group = GRP2, inline = "21")
+color  colorNeg30Input   = input.color(GREEN,  "",                          group = GRP2, inline = "21")
+bool   show000Input      = input.bool(true,    "",                          group = GRP2, inline = "21")
+float  level000Input     = input.float(0,      "",                          group = GRP2, inline = "21")
+color  color000Input     = input.color(GREEN,  "",                          group = GRP2, inline = "21")
+bool   show050Input      = input.bool(true,    "",                          group = GRP2, inline = "22")
+float  level050Input     = input.float(0.5,    "",                          group = GRP2, inline = "22")
+color  color050Input     = input.color(WHITE,  "",                          group = GRP2, inline = "22")
+bool   show100Input      = input.bool(true,    "",                          group = GRP2, inline = "22")
+float  level100Input     = input.float(1,      "",                          group = GRP2, inline = "22")
+color  color100Input     = input.color(RED,    "",                          group = GRP2, inline = "22")
+bool   show130Input      = input.bool(true,    "",                          group = GRP2, inline = "22")
+float  level130Input     = input.float(1.3,    "",                          group = GRP2, inline = "22")
+color  color130Input     = input.color(WHITE,  "",                          group = GRP2, inline = "22")
+bool   show140Input      = input.bool(true,    "",                          group = GRP2, inline = "23")
+float  level140Input     = input.float(1.4,    "",                          group = GRP2, inline = "23")
+color  color140Input     = input.color(WHITE,  "",                          group = GRP2, inline = "23")
+bool   show150Input      = input.bool(true,    "",                          group = GRP2, inline = "23")
+float  level150Input     = input.float(1.5,    "",                          group = GRP2, inline = "23")
+color  color150Input     = input.color(WHITE,  "",                          group = GRP2, inline = "23")
+bool   show160Input      = input.bool(true,    "",                          group = GRP2, inline = "23")
+float  level160Input     = input.float(1.6,    "",                          group = GRP2, inline = "23")
+color  color160Input     = input.color(WHITE,  "",                          group = GRP2, inline = "23")
+
+bool   showNeg65Input    = input.bool(true,    "",                          group = GRP2, inline = "24")
+float  levelNeg65Input   = input.float(-0.65,  "",                          group = GRP2, inline = "24")
+color  colorNeg65Input   = input.color(RED,    "",                          group = GRP2, inline = "24")
+bool   showNeg55Input    = input.bool(true,    "",                          group = GRP2, inline = "24")
+float  levelNeg55Input   = input.float(-0.55,  "",                          group = GRP2, inline = "24")
+color  colorNeg55Input   = input.color(WHITE,  "",                          group = GRP2, inline = "24")
+bool   showNeg45Input    = input.bool(true,    "",                          group = GRP2, inline = "24")
+float  levelNeg45Input   = input.float(-0.45,  "",                          group = GRP2, inline = "24")
+color  colorNeg45Input   = input.color(WHITE,  "",                          group = GRP2, inline = "24")
+bool   showNeg35Input    = input.bool(true,    "",                          group = GRP2, inline = "25")
+float  levelNeg35Input   = input.float(-0.35,  "",                          group = GRP2, inline = "25")
+color  colorNeg35Input   = input.color(WHITE,  "",                          group = GRP2, inline = "25")
+bool   showNeg25Input    = input.bool(true,    "",                          group = GRP2, inline = "25")
+float  levelNeg25Input   = input.float(-0.25,  "",                          group = GRP2, inline = "25")
+color  colorNeg25Input   = input.color(WHITE,  "",                          group = GRP2, inline = "25")
+bool   show010Input      = input.bool(true,    "",                          group = GRP2, inline = "25")
+float  level010Input     = input.float(0.1,    "",                          group = GRP2, inline = "25")
+color  color010Input     = input.color(RED,    "",                          group = GRP2, inline = "25")
+bool   show090Input      = input.bool(true,    "",                          group = GRP2, inline = "25")
+float  level090Input     = input.float(0.9,    "",                          group = GRP2, inline = "25")
+color  color090Input     = input.color(WHITE,  "",                          group = GRP2, inline = "25")
+bool   show125Input      = input.bool(true,    "",                          group = GRP2, inline = "26")
+float  level125Input     = input.float(1.25,   "",                          group = GRP2, inline = "26")
+color  color125Input     = input.color(GREEN,  "",                          group = GRP2, inline = "26")
+bool   show135Input      = input.bool(true,    "",                          group = GRP2, inline = "26")
+float  level135Input     = input.float(1.35,   "",                          group = GRP2, inline = "26")
+color  color135Input     = input.color(GREEN,  "",                          group = GRP2, inline = "26")
+bool   show145Input      = input.bool(true,    "",                          group = GRP2, inline = "24")
+float  level145Input     = input.float(1.45,   "",                          group = GRP2, inline = "24")
+color  color145Input     = input.color(YELLOW, "",                          group = GRP2, inline = "24")
+bool   show155Input      = input.bool(true,    "",                          group = GRP2, inline = "26")
+float  level155Input     = input.float(1.55,   "",                          group = GRP2, inline = "26")
+color  color155Input     = input.color(CYAN,   "",                          group = GRP2, inline = "26")
+bool   show165Input      = input.bool(true,    "",                          group = GRP2, inline = "27")
+float  level165Input     = input.float(1.65,   "",                          group = GRP2, inline = "27")
+color  color165Input     = input.color(RED,    "",                          group = GRP2, inline = "27")
+
+// Logic for visibility
+bool   useFillInput      = input.bool(true,    "Background",                group = GRP2, inline = "32")
+int    bgTranspInput     = input.int(90,       "",                          group = GRP2, inline = "32")
+bool   invertFibInput    = input.bool(false,   "Reverse",                   group = GRP2)
+bool   useLogScaleInput  = input.bool(false,   "Log scale fibs",            group = GRP2)
+
+string GRP4 = "Labels"
+bool   showPricesInput   = input.bool(true,    "Prices",                    group = GRP4)
+bool   showLevelsInput   = input.bool(true,    "Levels",                    group = GRP4, inline = "40")
+string levelTypeInput    = input.string(LV01,  "",                          group = GRP4, inline = "40", options = [LV01, LV02])
+string labelXInput       = input.string(LB01,  "Fib labels",                group = GRP4, inline = "41", options = [LB01, LB02, LB03])
+string labelYInput       = input.string(LB04,  "",                          group = GRP4, inline = "41", options = [LB04, LB05, LB06])
+string labelSizeInput    = input.string(SZ03,  "",                          group = GRP4, inline = "41", options = [SZ01, SZ02, SZ03, SZ04, SZ05])
+bool   tLabelsInput      = input.bool(true,    "Time labels",               group = GRP4, inline = "42")
+string tLabelSizeInput   = input.string(SZ03,  "",                          group = GRP4, inline = "42", options = [SZ01, SZ02, SZ03, SZ04, SZ05])
+//#endregion
+
+//#region ———————————————————— User-defined types
+
+type point
+    float y
+    int   x
+
+type pivotPoint
+    point start
+    point end
+    int   dir
+    line  ln
+    int   bars = 0
+
+type fibLevel
+    float level
+    color fibColor
+    line  fibLine
+    line  extLine
+    label fibLabel
+//#endregion
+
+//#region ———————————————————— Global Variables
+
+var array<float>    levels      = array.new<float>()
+var array<fibLevel> fibLevels   = array.new<fibLevel>()
+var array<int>      sortedArray = array.new<int>()
+
+string extendExt = extendRightInput ? extend.right : extend.none
+string extendFib = switch
+    not extendRtInput and extendLeftInput and extendRightInput => extend.both
+    not extendRtInput and extendRightInput => extend.right
+    extendLeftInput => extend.left
+    => extend.none
+
+bool   showLabels  = showPricesInput or showLevelsInput
+bool   showPercent = levelTypeInput == LV02
+string labelStyle  = switch
+    labelYInput == LB04 and labelXInput == LB01 => label.style_label_lower_right
+    labelYInput == LB05 and labelXInput == LB01 => label.style_label_right
+    labelYInput == LB06 and labelXInput == LB01 => label.style_label_upper_right
+    labelYInput == LB04 and labelXInput == LB02 => label.style_label_down
+    labelYInput == LB05 and labelXInput == LB02 => label.style_label_center
+    labelYInput == LB06 and labelXInput == LB02 => label.style_label_up
+    labelYInput == LB04 and labelXInput == LB03 => label.style_label_lower_left
+    labelYInput == LB05 and labelXInput == LB03 => label.style_label_left
+    labelYInput == LB06 and labelXInput == LB03 => label.style_label_upper_left
+
+bool isZigZag = fibTypeInput == FT02
+bool isLastClosed = fibTypeInput == FT03
+bool isTimePoints = fibTypeInput == FT04
+
+// Global variables for findHiLo results
+var int gLeftX = na
+var float gLeftY = na
+var int gRightX = na
+var float gRightY = na
+//#endregion
+
+//#region ———————————————————— Functions
+
+toLog(series float value) =>
+    float exponent = math.abs(value)
+    float product  = math.log10(exponent + 0.0001) + 4
+    float result   = exponent < 1e-8 ? 0 : value < 0 ? - product : product
+
+fromLog(series float value) =>
+    float exponent = math.abs(value)
+    float product  = math.pow(10, exponent - 4) - 0.0001
+    float result   = exponent < 1e-8 ? 0 : value < 0 ? - product : product
+
+getPrice(series float value, series float hiPrice, series float loPrice, series bool isBull, series bool useLogScale, series bool invertFib) =>
+    float hiPoint  = useLogScale ? toLog(hiPrice) : hiPrice
+    float loPoint  = useLogScale ? toLog(loPrice) : loPrice
+    float fibPrice = (
+        isBull and invertFib or not isBull and not invertFib ?
+        loPoint + ((hiPoint - loPoint) * value) :
+        hiPoint - ((hiPoint - loPoint) * value)
+    )
+    float result = useLogScale ? fromLog(fibPrice) : fibPrice
+
+lineStyle(simple string styleString) =>
+    switch styleString
+        TY01 => line.style_solid
+        TY02 => line.style_dashed
+        TY03 => line.style_dotted
+
+populate(simple bool condition, simple float value, series color color) =>
+    if condition
+        fibLevel fib = fibLevel.new(value, color)
+        fib.fibLine := line.new(
+            na, na, na, na, xloc.bar_time, extendFib, color, lineStyle(fibStyleInput), levelsWidthInput
+        )
+        if extendRtInput
+            fib.extLine := line.new(
+                na, na, na, na, xloc.bar_time, extendExt, color, lineStyle(extStyleInput), levelsWidthInput
+            )
+        if showLabels
+            fib.fibLabel := label.new(
+                na, na, "", xloc.bar_time, yloc.price, color(na), labelStyle, color, labelSizeInput
+            )
+        array.push(levels, value)
+        array.push(fibLevels, fib)
+
+setBg() =>
+    line temp1 = na
+    line temp2 = na
+    for sortedIndex in sortedArray
+        fibLevel fib = array.get(fibLevels, sortedIndex)
+        color fillColor = color.new(fib.fibColor, bgTranspInput)
+        if not na(temp1)
+            linefill.new(temp1, fib.fibLine, fillColor)
+            if extendRtInput
+                linefill.new(temp2, fib.extLine, fillColor)
+        temp1 := fib.fibLine
+        temp2 := fib.extLine
+
+labelText(series float value, series float price) =>
+    string levelString = showPercent ? str.tostring(value * 100, format.percent) : str.format("{0, number, #.###}", value)
+    switch
+        showPricesInput and showLevelsInput => str.format("{0}({1})", levelString, str.tostring(price, format.mintick))
+        showPricesInput                     => str.format("({0})", str.tostring(price, format.mintick))
+        showLevelsInput                     => levelString
+
+labelTime(series int leftTime, series int rightTime) =>
+    switch labelXInput
+        LB01 => leftTime
+        LB02 => int(math.avg(leftTime, extendRtInput ? chart.right_visible_bar_time : rightTime))
+        LB03 => extendRtInput ? chart.right_visible_bar_time : rightTime
+
+timeLabel(series int x, series float y, simple color color, series string style) =>
+    var label timeLabel = label.new(
+        na, na, na, xloc.bar_time, yloc.price, color.new(color, 80), style, color, tLabelSizeInput
+    )
+    label.set_xy(timeLabel, x, y)
+    label.set_text(
+        timeLabel, str.format("{0}\n{1}", str.tostring(y, format.mintick), str.format_time(x, "dd/MM/yy @ HH:mm:ss"))
+    )
+
+hiLoLine(series int x1, series float y1, series int x2, series float y2) =>
+    var line hiLoLine = line.new(
+        na, na, na, na, xloc.bar_time, extend.none, trendColorInput, lineStyle(trendStyleInput), trendWidthInput
+    )
+    line.set_xy1(hiLoLine, x1, y1)
+    line.set_xy2(hiLoLine, x2, y2)
+
+setLevels(series int leftTime, series int rightTime, series float hiPrice, series float loPrice, series bool isBull) =>
+    int labelTime = labelTime(leftTime, rightTime)
+    for fib in fibLevels
+        float fibPrice = getPrice(fib.level, hiPrice, loPrice, isBull, useLogScaleInput, invertFibInput)
+        line.set_xy1(fib.fibLine, leftTime,  fibPrice)
+        line.set_xy2(fib.fibLine, rightTime, fibPrice)
+        if extendRtInput
+            line.set_xy1(fib.extLine, rightTime, fibPrice)
+            line.set_xy2(fib.extLine, chart.right_visible_bar_time, fibPrice)
+        if showLabels
+            label.set_xy(fib.fibLabel, labelTime, fibPrice)
+            label.set_text(fib.fibLabel, labelText(fib.level, fibPrice))
+
+addToArray(id, simple int max, value) =>
+    array.unshift(id, value)
+    if array.size(id) > max
+        array.pop(id)
+
+addPivot(simple int length, array<pivotPoint> pivotArray, simple bool addPivots = true) =>
+    pivotPoint piv  = array.get(pivotArray, 0)
+    int   altLen    = math.max(piv.bars, 1)
+    int   hiBar     = ta.highestbars(length)
+    int   loBar     = ta.lowestbars(length)
+    int   altHiBar  = ta.highestbars(altLen)
+    int   altLoBar  = ta.lowestbars(altLen)
+    float altHi     = ta.highest(altLen)
+    float altLo     = ta.lowest(altLen)
+    bool  missedPiv = piv.bars >= length and addPivots and not
+         (hiBar == 0 and high > piv.end.y or loBar == 0 and low < piv.end.y)
+    var int dir = na
+    dir := switch
+        missedPiv => nz(dir, altHiBar < altLoBar ? 1 : -1) * -1
+        hiBar + loBar == 0 => dir * -1
+        hiBar == 0 =>  1
+        loBar == 0 => -1
+        => dir
+    if dir != dir[1] and time <= chart.right_visible_bar_time
+        [hiLo, altHiLo, offset, lineColor] = switch
+            dir > 0 => [high, altHi, altHiBar, zzBullColorInput]
+            =>         [low,  altLo, altLoBar, zzBearColorInput]
+        [pivY, bars] = switch
+            missedPiv => [altHiLo, math.abs(offset)]
+            =>           [hiLo, 0]
+        point newPoint   = point.new(pivY, time[bars])
+        pivotPoint pivot = pivotPoint.new(piv.end, newPoint, dir, bars = bars)
+        if showZZInput and time >= chart.left_visible_bar_time
+            pivot.ln := line.new(piv.end.x, piv.end.y, time[bars], pivY,
+              xloc.bar_time, extend.none, lineColor, lineStyle(zzStyleInput), zzwidthInput)
+        addToArray(pivotArray, math.max(3, pivotInput + 1), pivot)
+
+updatePivot(simple int length, array<pivotPoint> pivotArray) =>
+    if time <= chart.right_visible_bar_time
+        pivotPoint piv = array.get(pivotArray, 0)
+        int   dir  = piv.dir
+        float hiLo = dir > 0 ? high : low
+        piv.bars  += 1
+        if hiLo * dir > piv.end.y * dir
+            piv.end.y := hiLo
+            piv.end.x := time
+            piv.bars  := 0
+            if showZZInput and time >= chart.left_visible_bar_time
+                if na(piv.ln)
+                    color lineColor = dir > 0 ? zzBullColorInput : zzBearColorInput
+                    piv.ln := line.new(piv.start.x, piv.start.y, time, hiLo,
+                     xloc.bar_time, extend.none, lineColor, lineStyle(zzStyleInput), zzwidthInput)
+            line.set_xy2(piv.ln, time, hiLo)
+
+zigZag(simple int length, simple bool addPivots = true) =>
+    var array<pivotPoint> pivots = array.new<pivotPoint>(1, pivotPoint.new(point.new(close), point.new(close)))
+    updatePivot(length, pivots)
+    addPivot(length, pivots, addPivots)
+    pivots
+
+findHiLo(simple int nthPivot) =>
+    int   lX  = na
+    float lY  = na
+    int   rX = na
+    float rY = na
+    if isZigZag
+        array<pivotPoint> pivotArray = zigZag(lengthInput, addPivotInput)
+        if barstate.islast
+            pivotPoint pivot = array.get(pivotArray, nthPivot)
+            lX  := pivot.start.x
+            lY  := pivot.start.y
+            rX := pivot.end.x
+            rY := pivot.end.y
+            if showZZInput
+                line.set_style(pivot.ln, lineStyle(trendStyleInput))
+    [lX, lY, rX, rY]
+
+// ———————————————————— Time Points Functions
+
+getTargetTimestamp(int tDay, int tMonth, int tYear, int tHour, int tMinute) =>
+    timestamp(tYear, tMonth, tDay, tHour, tMinute)
+
+findBarOffsetByTimestamp(int targetTimestamp) =>
+    int result = na
+    if targetTimestamp <= time[0]
+        for i = 0 to math.min(10000, bar_index)
+            if time[i] <= targetTimestamp
+                result := i
+                break
+    result
+
+// Helper: Draw a single TP fib level
+drawTPLevel(int leftTime, int rightTime, float levelVal, color levelColor, float hiP, float loP, bool isBull, bool useLog, bool invert, array<line> lineArray) =>
+    float levelPrice = getPrice(levelVal, hiP, loP, isBull, useLog, invert)
+    array.push(lineArray, line.new(
+        x1 = leftTime, 
+        y1 = levelPrice, 
+        x2 = rightTime, 
+        y2 = levelPrice, 
+        xloc = xloc.bar_time, 
+        extend = extend.none, 
+        color = levelColor, 
+        style = lineStyle(fibStyleInput), 
+        width = levelsWidthInput
+    ))
+
+drawTimePointFibCustom(
+    int offset, 
+    int extendCandles, 
+    float barHigh, 
+    float barLow, 
+    float barOpen, 
+    float barClose,
+    bool useBody,
+    color defaultColor,
+    array<line> lineArray,
+    // TP-specific level settings (22 levels)
+    bool sN70, float lN70, color cN70,
+    bool sN60, float lN60, color cN60,
+    bool sN50, float lN50, color cN50,
+    bool sN40, float lN40, color cN40,
+    bool sN30, float lN30, color cN30,
+    bool s000, float l000, color c000,
+    bool s050, float l050, color c050,
+    bool s100, float l100, color c100,
+    bool s130, float l130, color c130,
+    bool s140, float l140, color c140,
+    bool s150, float l150, color c150,
+    bool s160, float l160, color c160,
+    bool sN65, float lN65, color cN65,
+    bool sN55, float lN55, color cN55,
+    bool sN45, float lN45, color cN45,
+    bool sN35, float lN35, color cN35,
+    bool sN25, float lN25, color cN25,
+    bool s010, float l010, color c010,
+    bool s090, float l090, color c090,
+    bool s125, float l125, color c125,
+    bool s135, float l135, color c135,
+    bool s145, float l145, color c145,
+    bool s155, float l155, color c155,
+    bool s165, float l165, color c165
+    ) =>
+    if not na(offset)
+        int leftTime = time[offset]
+        int rightTime = na
+        if offset - extendCandles >= 0
+            rightTime := time[offset - extendCandles]
+        else
+            int barDuration = time[0] - time[1]
+            rightTime := leftTime + (barDuration * extendCandles)
+        
+        // Clear old lines
+        for ln in lineArray
+            line.delete(ln)
+        array.clear(lineArray)
+        
+        // Determine hi/lo based on useBody setting
+        float hiP = useBody ? math.max(barOpen, barClose) : barHigh
+        float loP = useBody ? math.min(barOpen, barClose) : barLow
+        bool isBull = barClose > barOpen
+        
+        // Draw enabled levels - CORRECTED SYNTAX
+        if sN70
+            drawTPLevel(leftTime, rightTime, lN70, cN70, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN60
+            drawTPLevel(leftTime, rightTime, lN60, cN60, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN50
+            drawTPLevel(leftTime, rightTime, lN50, cN50, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN40
+            drawTPLevel(leftTime, rightTime, lN40, cN40, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN30
+            drawTPLevel(leftTime, rightTime, lN30, cN30, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s000
+            drawTPLevel(leftTime, rightTime, l000, c000, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s050
+            drawTPLevel(leftTime, rightTime, l050, c050, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s100
+            drawTPLevel(leftTime, rightTime, l100, c100, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s130
+            drawTPLevel(leftTime, rightTime, l130, c130, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s140
+            drawTPLevel(leftTime, rightTime, l140, c140, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s150
+            drawTPLevel(leftTime, rightTime, l150, c150, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s160
+            drawTPLevel(leftTime, rightTime, l160, c160, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN65
+            drawTPLevel(leftTime, rightTime, lN65, cN65, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN55
+            drawTPLevel(leftTime, rightTime, lN55, cN55, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN45
+            drawTPLevel(leftTime, rightTime, lN45, cN45, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN35
+            drawTPLevel(leftTime, rightTime, lN35, cN35, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if sN25
+            drawTPLevel(leftTime, rightTime, lN25, cN25, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s010
+            drawTPLevel(leftTime, rightTime, l010, c010, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s090
+            drawTPLevel(leftTime, rightTime, l090, c090, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s125
+            drawTPLevel(leftTime, rightTime, l125, c125, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s135
+            drawTPLevel(leftTime, rightTime, l135, c135, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s145
+            drawTPLevel(leftTime, rightTime, l145, c145, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s155
+            drawTPLevel(leftTime, rightTime, l155, c155, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+        if s165
+            drawTPLevel(leftTime, rightTime, l165, c165, hiP, loP, isBull, useLogScaleInput, invertFibInput, lineArray)
+//#endregion
+
+//#region ———————————————————— Calculations
+
+// Fib high and low values
+float chartHigh = na
+float chartLow  = na
+int   hiTime    = na
+int   loTime    = na
+bool  isBull    = false
+
+if isLastClosed
+    float cHigh = useBodyInput ? math.max(open[1], close[1]) : high[1]
+    float cLow  = useBodyInput ? math.min(open[1], close[1]) : low[1]
+    chartHigh := cHigh
+    chartLow  := cLow
+    hiTime    := time[1]
+    loTime    := time[1]
+    isBull    := close[1] > open[1]
+else if not isTimePoints
+    [gLeftX, gLeftY, gRightX, gRightY] = findHiLo(pivotInput)
+    bool  zzBull    = gLeftY < gRightY
+    chartHigh       := isZigZag ? math.max(gLeftY,   gRightY) : chart.high()
+    chartLow        := isZigZag ? math.min(gLeftY,   gRightY) : chart.low()
+    hiTime          := isZigZag ? zzBull ? gRightX : gLeftX   : chart.highBarTime()
+    loTime          := isZigZag ? zzBull ? gLeftX  : gRightX  : chart.lowBarTime()
+    isBull          := isZigZag ? zzBull : loTime < hiTime
+
+int   leftTime  = math.min(hiTime, loTime)
+int   rightTime = math.max(hiTime, loTime)
+
+string hiTimeStyle = isBull ? label.style_label_lower_right : label.style_label_lower_left
+string loTimeStyle = isBull ? label.style_label_upper_left  : label.style_label_upper_right
+
+// Create fibLevel objects on first bar (for global modes)
+if barstate.isfirst
+    populate(showNeg70Input, levelNeg70Input, colorNeg70Input)
+    populate(showNeg60Input, levelNeg60Input, colorNeg60Input)
+    populate(showNeg50Input, levelNeg50Input, colorNeg50Input)
+    populate(showNeg40Input, levelNeg40Input, colorNeg40Input)
+    populate(showNeg30Input, levelNeg30Input, colorNeg30Input)
+    populate(show000Input, level000Input, color000Input)
+    populate(show050Input, level050Input, color050Input)
+    populate(show100Input, level100Input, color100Input)
+    populate(show130Input, level130Input, color130Input)
+    populate(show140Input, level140Input, color140Input)
+    populate(show150Input, level150Input, color150Input)
+    populate(show160Input, level160Input, color160Input)
+    
+    populate(showNeg65Input, levelNeg65Input, colorNeg65Input)
+    populate(showNeg55Input, levelNeg55Input, colorNeg55Input)
+    populate(showNeg45Input, levelNeg45Input, colorNeg45Input)
+    populate(showNeg35Input, levelNeg35Input, colorNeg35Input)
+    populate(showNeg25Input, levelNeg25Input, colorNeg25Input)
+    populate(show010Input, level010Input, color010Input)
+    populate(show090Input, level090Input, color090Input)
+    populate(show125Input, level125Input, color125Input)
+    populate(show135Input, level135Input, color135Input)
+    populate(show145Input, level145Input, color145Input)
+    populate(show155Input, level155Input, color155Input)
+    populate(show165Input, level165Input, color165Input)
+    
+    sortedArray := array.sort_indices(levels)
+    if useFillInput
+        setBg()
+
+// Draw on last bar
+var array<line> tp1Lines = array.new<line>()
+var array<line> tp2Lines = array.new<line>()
+var array<line> tp3Lines = array.new<line>()
+
+if barstate.islast
+    if isTimePoints
+        if enableTP1
+            int ts1 = getTargetTimestamp(tp1Day, tp1Month, tp1Year, tp1Hour, tp1Minute)
+            int off1 = findBarOffsetByTimestamp(ts1)
+            if not na(off1)
+                drawTimePointFibCustom(
+                    off1, extend1, high[off1], low[off1], open[off1], close[off1],
+                    useBodyTP1, colorTP1, tp1Lines,
+                    showNeg70TP1, levelNeg70TP1, colorNeg70TP1,
+                    showNeg60TP1, levelNeg60TP1, colorNeg60TP1,
+                    showNeg50TP1, levelNeg50TP1, colorNeg50TP1,
+                    showNeg40TP1, levelNeg40TP1, colorNeg40TP1,
+                    showNeg30TP1, levelNeg30TP1, colorNeg30TP1,
+                    show000TP1, level000TP1, color000TP1,
+                    show050TP1, level050TP1, color050TP1,
+                    show100TP1, level100TP1, color100TP1,
+                    show130TP1, level130TP1, color130TP1,
+                    show140TP1, level140TP1, color140TP1,
+                    show150TP1, level150TP1, color150TP1,
+                    show160TP1, level160TP1, color160TP1,
+                    showNeg65TP1, levelNeg65TP1, colorNeg65TP1,
+                    showNeg55TP1, levelNeg55TP1, colorNeg55TP1,
+                    showNeg45TP1, levelNeg45TP1, colorNeg45TP1,
+                    showNeg35TP1, levelNeg35TP1, colorNeg35TP1,
+                    showNeg25TP1, levelNeg25TP1, colorNeg25TP1,
+                    show010TP1, level010TP1, color010TP1,
+                    show090TP1, level090TP1, color090TP1,
+                    show125TP1, level125TP1, color125TP1,
+                    show135TP1, level135TP1, color135TP1,
+                    show145TP1, level145TP1, color145TP1,
+                    show155TP1, level155TP1, color155TP1,
+                    show165TP1, level165TP1, color165TP1
+                )
+        if enableTP2
+            int ts2 = getTargetTimestamp(tp2Day, tp2Month, tp2Year, tp2Hour, tp2Minute)
+            int off2 = findBarOffsetByTimestamp(ts2)
+            if not na(off2)
+                drawTimePointFibCustom(
+                    off2, extend2, high[off2], low[off2], open[off2], close[off2],
+                    useBodyTP2, colorTP2, tp2Lines,
+                    showNeg70TP2, levelNeg70TP2, colorNeg70TP2,
+                    showNeg60TP2, levelNeg60TP2, colorNeg60TP2,
+                    showNeg50TP2, levelNeg50TP2, colorNeg50TP2,
+                    showNeg40TP2, levelNeg40TP2, colorNeg40TP2,
+                    showNeg30TP2, levelNeg30TP2, colorNeg30TP2,
+                    show000TP2, level000TP2, color000TP2,
+                    show050TP2, level050TP2, color050TP2,
+                    show100TP2, level100TP2, color100TP2,
+                    show130TP2, level130TP2, color130TP2,
+                    show140TP2, level140TP2, color140TP2,
+                    show150TP2, level150TP2, color150TP2,
+                    show160TP2, level160TP2, color160TP2,
+                    showNeg65TP2, levelNeg65TP2, colorNeg65TP2,
+                    showNeg55TP2, levelNeg55TP2, colorNeg55TP2,
+                    showNeg45TP2, levelNeg45TP2, colorNeg45TP2,
+                    showNeg35TP2, levelNeg35TP2, colorNeg35TP2,
+                    showNeg25TP2, levelNeg25TP2, colorNeg25TP2,
+                    show010TP2, level010TP2, color010TP2,
+                    show090TP2, level090TP2, color090TP2,
+                    show125TP2, level125TP2, color125TP2,
+                    show135TP2, level135TP2, color135TP2,
+                    show145TP2, level145TP2, color145TP2,
+                    show155TP2, level155TP2, color155TP2,
+                    show165TP2, level165TP2, color165TP2
+                )
+        if enableTP3
+            int ts3 = getTargetTimestamp(tp3Day, tp3Month, tp3Year, tp3Hour, tp3Minute)
+            int off3 = findBarOffsetByTimestamp(ts3)
+            if not na(off3)
+                drawTimePointFibCustom(
+                    off3, extend3, high[off3], low[off3], open[off3], close[off3],
+                    useBodyTP3, colorTP3, tp3Lines,
+                    showNeg70TP3, levelNeg70TP3, colorNeg70TP3,
+                    showNeg60TP3, levelNeg60TP3, colorNeg60TP3,
+                    showNeg50TP3, levelNeg50TP3, colorNeg50TP3,
+                    showNeg40TP3, levelNeg40TP3, colorNeg40TP3,
+                    showNeg30TP3, levelNeg30TP3, colorNeg30TP3,
+                    show000TP3, level000TP3, color000TP3,
+                    show050TP3, level050TP3, color050TP3,
+                    show100TP3, level100TP3, color100TP3,
+                    show130TP3, level130TP3, color130TP3,
+                    show140TP3, level140TP3, color140TP3,
+                    show150TP3, level150TP3, color150TP3,
+                    show160TP3, level160TP3, color160TP3,
+                    showNeg65TP3, levelNeg65TP3, colorNeg65TP3,
+                    showNeg55TP3, levelNeg55TP3, colorNeg55TP3,
+                    showNeg45TP3, levelNeg45TP3, colorNeg45TP3,
+                    showNeg35TP3, levelNeg35TP3, colorNeg35TP3,
+                    showNeg25TP3, levelNeg25TP3, colorNeg25TP3,
+                    show010TP3, level010TP3, color010TP3,
+                    show090TP3, level090TP3, color090TP3,
+                    show125TP3, level125TP3, color125TP3,
+                    show135TP3, level135TP3, color135TP3,
+                    show145TP3, level145TP3, color145TP3,
+                    show155TP3, level155TP3, color155TP3,
+                    show165TP3, level165TP3, color165TP3
+                )
+    else
+        setLevels(leftTime, rightTime, chartHigh, chartLow, isBull)
+        if tLabelsInput
+            timeLabel(hiTime, chartHigh, LIME,    hiTimeStyle)
+            timeLabel(loTime, chartLow,  FUCHSIA, loTimeStyle)
+        if trendLineInput and not (showZZInput and isZigZag) and not isLastClosed
+            hiLoLine(hiTime, chartHigh, loTime, chartLow)
+//#endregion

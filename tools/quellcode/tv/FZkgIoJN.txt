@@ -1,0 +1,39 @@
+//@version=5
+indicator("RSI & Stochastic Crossover", overlay=true)
+
+// RSI settings
+rsiLength = input.int(14, title="RSI Length")
+rsiSource = input(close, title="RSI Source")
+rsi = ta.rsi(rsiSource, rsiLength)
+
+// Stochastic settings
+kLength = input.int(14, title="Stochastic K Length")
+kSmoothing = input.int(3, title="Stochastic K Smoothing")
+dSmoothing = input.int(3, title="Stochastic D Smoothing")
+stochK = ta.sma(ta.stoch(close, high, low, kLength), kSmoothing)
+stochD = ta.sma(stochK, dSmoothing)
+
+// Stochastic Crosses
+bullishCross = ta.crossover(stochK, stochD)
+bearishCross = ta.crossunder(stochK, stochD)
+
+// RSI Direction
+rsiUp = ta.change(rsi) > 0
+rsiDown = ta.change(rsi) < 0
+
+// Buy Signal
+buySignal = bullishCross and rsiUp
+
+// Sell Signal
+sellSignal = bearishCross and rsiDown
+
+// Plot Buy and Sell Labels
+plotshape(series=buySignal, location=location.belowbar, color=color.new(color.green, 0), style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellSignal, location=location.abovebar, color=color.new(color.red, 0), style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Plot RSI and Stochastic for reference
+plot(rsi, title="RSI", color=color.blue)
+hline(70, "Overbought", color=color.red)
+hline(30, "Oversold", color=color.green)
+plot(stochK, title="Stochastic %K", color=color.aqua)
+plot(stochD, title="Stochastic %D", color=color.red)

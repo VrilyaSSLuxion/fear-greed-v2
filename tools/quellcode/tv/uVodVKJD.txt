@@ -1,0 +1,35 @@
+//@version=5
+indicator("-WMA-1+WMA-26+Awesome Oscillator-", overlay=true)
+
+// Inputs für WMAs
+wmaShortLength = input.int(13, title="WMA Short Length", minval=1)
+wmaLongLength = input.int(26, title="WMA Long Length", minval=1)
+
+// Berechnung der WMAs
+wmaShort = ta.wma(close, wmaShortLength)
+wmaLong = ta.wma(close, wmaLongLength)
+
+// Plotte WMAs
+plot(wmaShort, color=color.aqua, linewidth=2, title="13 WMA")
+plot(wmaLong, color=color.yellow, linewidth=2, title="26 WMA")
+
+// Inputs für Awesome Oscillator
+aoShortLength = input.int(4, title="Awesome Oscillator Short Length", minval=1)
+aoLongLength = input.int(24, title="Awesome Oscillator Long Length", minval=1)
+
+// Berechnung des Awesome Oscillators
+ao = ta.sma(hl2, aoShortLength) - ta.sma(hl2, aoLongLength)
+
+// Plotte Awesome Oscillator
+hline(0, "Zero Line", color=color.gray, linestyle=hline.style_dotted)
+plot(ao, color=color.red, title="Awesome Oscillator", style=plot.style_histogram, linewidth=2)
+
+// Alarme für Awesome Oscillator Kreuzungen
+aoCrossAboveZero = ta.crossover(ao, 0)
+aoCrossBelowZero = ta.crossunder(ao, 0)
+
+plotshape(series=aoCrossAboveZero, title="AO Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", textcolor=color.white, size=size.small)
+plotshape(series=aoCrossBelowZero, title="AO Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", textcolor=color.white, size=size.small)
+
+alertcondition(aoCrossAboveZero, title="AO Buy Signal Alert", message="Awesome Oscillator Buy Signal")
+alertcondition(aoCrossBelowZero, title="AO Sell Signal Alert", message="Awesome Oscillator Sell Signal")

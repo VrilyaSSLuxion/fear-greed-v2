@@ -1,0 +1,57 @@
+//@version=5
+strategy("RSI & Stochastic Cross Strategy", overlay=true)
+
+// Inputs for RSI
+rsi_length = input.int(title="RSI Period-14-", defval=1)
+rsi_src = input.source(title="RSI Source-close-", defval=ohlc4)
+
+// Inputs for Stochastic
+k_length = input.int(title="Stochastic %K Length-14-", defval=2)
+d_length = input.int(title="Stochastic %D Length-3-", defval=8)
+smooth_k = input.int(title="Stochastic Smoothing-3-", defval=8)
+
+// Options to display RSI and Stochastic Oscillator
+show_rsi = input.bool(false, title="Show RSI")
+show_stoch = input.bool(false, title="Show Stochastic Oscillator")
+
+// Calculate RSI
+rsi = ta.rsi(rsi_src, rsi_length)
+
+// Calculate Stochastic
+k = ta.sma(ta.stoch(close, high, low, k_length), smooth_k)
+d = ta.sma(k, d_length)
+
+// Define Stochastic cross conditions
+bullish_stoch_cross = ta.crossover(k, d)
+bearish_stoch_cross = ta.crossunder(k, d)
+
+// Define RSI cross conditions
+rsi_cross_50_from_below = ta.crossover(rsi, 50)
+rsi_cross_50_from_above = ta.crossunder(rsi, 50)
+
+// Define buy and sell conditions
+buy_condition = bullish_stoch_cross and rsi_cross_50_from_below
+sell_condition = bearish_stoch_cross and rsi_cross_50_from_above
+
+// Execute trades
+if (buy_condition)
+    strategy.entry("Buy", strategy.long)
+if (sell_condition)
+    strategy.entry("Sell", strategy.short)
+
+// Plot Buy and Sell signals
+plotshape(series=buy_condition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", size=size.small)
+plotshape(series=sell_condition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", size=size.small)
+
+// Plot RSI
+plot(rsi, title="RSI", color=show_rsi ? color.yellow : na, linewidth=2)
+hline(50, title="RSI 50 Level", color=show_rsi ? color.white : na, linestyle=hline.style_solid, linewidth=2)
+
+// Plot Stochastic
+plot(k, title="%K", color=show_stoch ? color.aqua : na, linewidth=2)
+plot(d, title="%D", color=show_stoch ? color.red : na, linewidth=3)
+hline(20, title="Stochastic 20 Level", color=show_stoch ? color.green : na, linestyle=hline.style_solid)
+hline(80, title="Stochastic 80 Level", color=show_stoch ? color.red : na, linestyle=hline.style_solid)
+
+// Set background color based on visibility
+bgcolor(show_rsi or show_stoch ? na : color.new(color.black, 100))

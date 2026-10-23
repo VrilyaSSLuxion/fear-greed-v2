@@ -1,0 +1,100 @@
+//@version=4
+study("-VrilyaSS-Trend Trader Buy/Sell Signals-", shorttitle = "-VrilyaSS-Trend Trader Buy/Sell Signals-", overlay = true)
+
+// Inputs
+showBuySell = input(defval = true, title="Show Buy/Sell Labels")
+
+// MACD settings
+fast_length = input(12, title="MACD Fast Length")
+slow_length = input(26, title="MACD Slow Length")
+signal_length = input(9, title="MACD Signal Length")
+src = close
+
+// ADX settings
+adxlen = input(14, title="ADX Length")
+dilen = input(14, title="DI Length")
+
+// Function to calculate ADX and DI
+dirmov(len) =>
+    up = change(close)
+    down = -change(close)
+    plusDM = na(up) ? na : (up > down and up > 0 ? up : 0)
+    minusDM = na(down) ? na : (down > up and down > 0 ? down : 0)
+    truerange = rma(tr, len)
+    plus = fixnan(100 * rma(plusDM, len) / truerange)
+    minus = fixnan(100 * rma(minusDM, len) / truerange)
+    [plus, minus]
+
+adx(dilen, adxlen) =>
+    [plus, minus] = dirmov(dilen)
+    sum = plus + minus
+    adx = 100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), adxlen)
+    [plus, minus, adx]
+
+[plus, minus, sig] = adx(dilen, adxlen)
+
+// Plot colors
+col_grow_above = #26A69A
+col_grow_below = #FFCDD2
+col_fall_above = #B2DFDB
+col_fall_below = #EF5350
+col_macd = #0094ff
+col_signal = #ff6a00
+
+// Calculating MACD
+fast_ma = ema(src, fast_length)
+slow_ma = ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = ema(macd, signal_length)
+hist = macd - signal
+
+// Check buy/sell conditions
+macd_crossup = macd < 0 and crossover(macd, signal)
+macd_crossdown = macd > 0 and crossover(signal, macd)
+bullish = sig > 25 and macd_crossup
+bearish = sig > 25 and macd_crossdown
+
+plotshape(bullish and showBuySell, title="Buy", text="Buy", color=#00FF00, style=shape.labelup, location=location.belowbar, size=size.small, textcolor=#000000, transp = 0) //plot for buy icon
+plotshape(bearish and showBuySell, title="Sell", text="Sell", color=#FF0000, style=shape.labeldown, location=location.abovebar, size=size.small, textcolor=#000000, transp = 0)  //plot for sell icon
+
+// Bar color based on EMA
+ema1 = input(50, title="EMA Length")
+usedEma = ema(close, ema1)
+
+emaUpColor = hlc3 >= usedEma
+emaDownColor = hlc3 < usedEma
+
+barcolor(emaUpColor ? color.lime : emaDownColor ? color.red : na)
+
+// MA Ribbon
+pricetype = close
+useCurrentRes = input(true, title="Use Current Resolution")
+resC = input("W", title="Resolution")
+res = useCurrentRes ? timeframe.period : resC
+price = security(syminfo.tickerid, res, pricetype)
+
+// MA period input
+shortperiod = input(50, title="Short Period")
+longperiod = input(100, title="Long Period")
+
+// MA calculation
+smoothinput = input(2, title="Smoothing Type (1=SMA, 2=EMA, 3=WMA, 4=LinReg)")
+
+short = smoothinput == 1 ? sma(price, shortperiod) : na
+short := smoothinput == 2 ? ema(price, shortperiod) : short
+short := smoothinput == 3 ? wma(price, shortperiod) : short
+short := smoothinput == 4 ? linreg(price, shortperiod, 0) : short
+    
+long = smoothinput == 1 ? sma(price, longperiod) : na
+long := smoothinput == 2 ? ema(price, longperiod) : long
+long := smoothinput == 3 ? wma(price, longperiod) : long
+long := smoothinput == 4 ? linreg(price, longperiod, 0) : long
+
+// MA trend direction color
+shortcolor = short > short[1] ? color.lime : short < short[1] ? color.red : color.blue
+longcolor = long > long[1] ? color.lime : long < long[1] ? color.red : color.blue
+
+// MA output
+MA1 = plot(short, title="Short Period", style=plot.style_linebr, linewidth=2, color=shortcolor)
+MA2 = plot(long, title="Long Period", style=plot.style_linebr, linewidth=4, color=longcolor)
+fill(MA1, MA2, color=color.silver, transp=50)

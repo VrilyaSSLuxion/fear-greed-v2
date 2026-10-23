@@ -1,0 +1,178 @@
+// This Pine Script™ code is subject to the terms of the Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © UAlgo
+//@version=5
+indicator(title="-VrilyaSS-Volumetric Volatility Blocks [UAlgo]-",shorttitle="-VrilyaSS-Volumetric Volatility Blocks [UAlgo]-", overlay=true)
+
+volatilityLength = input.int(21,title = "Volatility Measurement Length",group = "Volumetric Volatility Blocks [UAlgo] Settings",minval = 1, maxval = 400)
+smaLength = input.int(5,title = "Smooth Length Of Volatility",group = "Volumetric Volatility Blocks [UAlgo] Settings",minval = 1, maxval = 400)
+multiplier = input.float(1.06,title = "Multiplier of SMA",group = "Volumetric Volatility Blocks [UAlgo] Settings",tooltip = "ATR must be higher than Smooth Length of ATR x Multiplier",minval = 1.02,maxval = 5)
+showLastBlocks = input.int(3,title = "Show Last X Volatility Blocks",group = "Volumetric Volatility Blocks [UAlgo] Settings",maxval = 15)
+mitigationMethod = input.string("Close",title = "Mitigation Method ",options = ["Close","Wick"],group = "Volumetric Volatility Blocks [UAlgo] Settings")
+showVolume = input.bool(true,title = "Show Volume Info",group = "Volumetric Volatility Blocks [UAlgo] Settings")
+upColor = input.color(color.new(#089981,50),title = "Up/Down Block Color",inline = "visual",group = "Volumetric Volatility Blocks [UAlgo] Settings")
+downColor = input.color(color.new(#f23645,50),title = " ",inline = "visual",group = "Volumetric Volatility Blocks [UAlgo] Settings")
+volatilityTextSize = input.string("Normal",title = "Order Block Info Text Size", options = ["Tiny","Small","Normal","Large","Huge","Auto"],group = "Visual Settings")
+
+textSizeLabel = switch volatilityTextSize
+    "Tiny" => size.tiny
+    "Small" => size.small
+    "Normal" => size.normal
+    "Large" => size.large
+    "Huge" => size.huge
+    "Auto" => size.auto
+
+type volatilityBlock 
+    int barStart
+    float top
+    float bottom
+    float vol
+    box block
+    string t
+    float bullishStr
+    float bearishStr
+    box bullishBox
+    box bearishBox
+
+var array<volatilityBlock> bullishVolatilityArray = array.new<volatilityBlock>()
+var array<volatilityBlock> bearishVolatilityArray= array.new<volatilityBlock>()
+
+atr = ta.atr(volatilityLength)
+smoothAtr = ta.sma(atr,smaLength)
+
+bullVolCond = atr[1] > smoothAtr[1]*multiplier and close[1] > open[1]
+bearVolCond = atr[1] > smoothAtr[1]*multiplier and close[1] < open[1]
+
+calculateStrengths(openn, highh, loww, closee, volumee) =>
+    bullishStrength = (highh - openn)*volumee
+    bearishStrength = (openn-loww)*volumee
+    [bullishStrength, bearishStrength]
+
+isOverlapping(newBlock, existingArray) =>
+    bool flag = false
+    if existingArray.size() > 0
+        for i = 0 to existingArray.size() - 1
+            existingBlock = array.get(existingArray, i)
+            if (newBlock.top >= existingBlock.bottom and newBlock.top <= existingBlock.top) or
+             (newBlock.bottom >= existingBlock.bottom and newBlock.bottom <= existingBlock.top)
+                flag := true
+    flag
+
+drawBox(volatilityBlock volatilityBlock) =>
+    volatilityBlock.block := box.new(left = volatilityBlock.barStart,right = time,top = volatilityBlock.top,bottom = volatilityBlock.bottom,bgcolor = color.new(color.gray,80),
+     border_color = na,xloc = xloc.bar_time,text= showVolume ? str.tostring(volatilityBlock.vol,format=format.volume) : na,text_halign = text.align_right,
+      text_size =textSizeLabel,text_color = color.new(color.white,50) )
+
+    volatilityBlock.bullishBox := box.new(left = volatilityBlock.barStart,right = time,top = volatilityBlock.top,bottom = volatilityBlock.bottom+((volatilityBlock.top - volatilityBlock.bottom)/2),
+     bgcolor = upColor,border_color = na,xloc = xloc.bar_time )
+
+    volatilityBlock.bearishBox := box.new(left = volatilityBlock.barStart,right = time,top = volatilityBlock.bottom+((volatilityBlock.top - volatilityBlock.bottom)/2),bottom = volatilityBlock.bottom,
+     bgcolor = downColor,border_color = na,xloc = xloc.bar_time )
+
+if bullVolCond 
+    [bullishStrength, bearishStrength] = calculateStrengths(open[1], high[1], low[1], close[1], volume[1])
+
+    newBull = volatilityBlock.new(time[1], high[1], low[1], volume[1], na, "bull",bullishStrength,bearishStrength,na,na)
+    if not isOverlapping(newBull, bullishVolatilityArray)
+        bullishVolatilityArray.push(newBull)
+        if bullishVolatilityArray.size() > 15
+            oldBlock = bullishVolatilityArray.shift()
+            box.delete(oldBlock.block)
+            box.delete(oldBlock.bullishBox)
+            box.delete(oldBlock.bearishBox)
+
+if bearVolCond 
+    [bullishStrength, bearishStrength] = calculateStrengths(open[1], high[1], low[1], close[1], volume[1])
+    newBear = volatilityBlock.new(time[1], high[1], low[1], volume[1], na, "bear",bullishStrength,bearishStrength,na,na)
+    if not isOverlapping(newBear, bearishVolatilityArray)
+        bearishVolatilityArray.push(newBear)
+        if bearishVolatilityArray.size() > 15
+            oldBlock = bearishVolatilityArray.shift()
+            box.delete(oldBlock.block)
+            box.delete(oldBlock.bullishBox)
+            box.delete(oldBlock.bearishBox)
+
+calcVolumePercentages(array<volatilityBlock> blocks, int showLast) =>
+    float totalVolume = 0.0
+    array<float> percentages = array.new<float>()
+    
+    for i = 0 to math.min(showLast - 1, blocks.size() - 1)
+        totalVolume += blocks.get(blocks.size() - 1 - i).vol
+    
+    for i = 0 to math.min(showLast - 1, blocks.size() - 1)
+        block = blocks.get(blocks.size() - 1 - i)
+        percentage = (block.vol / totalVolume) * 100
+        percentages.push(percentage)
+    
+    [totalVolume, percentages]
+
+
+if bearishVolatilityArray.size() > 0
+    [totalBearVolume, bearPercentages] = calcVolumePercentages(bearishVolatilityArray, showLastBlocks)
+
+    int counter = 0
+    mitigationVal = mitigationMethod == "Close" ? close : high
+    for i = bearishVolatilityArray.size() - 1 to 0
+        volBlock = array.get(bearishVolatilityArray,i)
+        if counter < showLastBlocks
+            if na(volBlock.block)
+                drawBox(volBlock)
+                counter := counter + 1
+                continue
+            if mitigationVal > volBlock.top
+                box.delete(volBlock.block)
+                bearishVolatilityArray.remove(i)
+                box.delete(volBlock.bearishBox)
+                box.delete(volBlock.bullishBox)
+                break
+            percentage = array.get(bearPercentages, counter)
+            volBlock.block.set_text(str.tostring(volBlock.vol, format.volume) + " | " + str.tostring(percentage, "#.##") + "%")
+            counter := counter + 1
+            volBlock.block.set_right(time)
+             
+            totalStr = volBlock.bullishStr + volBlock.bearishStr
+            bullishBoxWidth = (volBlock.bullishStr / totalStr) * (time - volBlock.barStart)
+            bearishBoxWidth = (volBlock.bearishStr / totalStr) * (time - volBlock.barStart)
+            volBlock.bullishBox.set_right(math.round(volBlock.barStart + bullishBoxWidth))
+            volBlock.bearishBox.set_right(math.round(volBlock.barStart + bearishBoxWidth))
+        else 
+            box.delete(volBlock.block)
+            volBlock.block := na
+            box.delete(volBlock.bullishBox)
+            volBlock.bullishBox := na
+            box.delete(volBlock.bearishBox)
+            volBlock.bearishBox := na
+
+if bullishVolatilityArray.size() > 0
+    [totalBullVolume, bullPercentages] = calcVolumePercentages(bullishVolatilityArray, showLastBlocks)
+
+    int counter = 0
+    mitigationVal = mitigationMethod == "Close" ? close : low
+    for i = bullishVolatilityArray.size() - 1 to 0
+        volBlock = array.get(bullishVolatilityArray,i)
+        if counter < showLastBlocks
+            if na(volBlock.block)
+                drawBox(volBlock)
+                counter := counter + 1
+                continue
+            if mitigationVal < volBlock.bottom
+                box.delete(volBlock.block)
+                box.delete(volBlock.bearishBox)
+                box.delete(volBlock.bullishBox)
+                bullishVolatilityArray.remove(i)
+                break
+            percentage = array.get(bullPercentages, counter)
+            volBlock.block.set_text(str.tostring(volBlock.vol, format.volume) + " | " + str.tostring(percentage, "#.##") + "%")
+            counter := counter + 1
+            volBlock.block.set_right(time)
+            totalStr = volBlock.bullishStr + volBlock.bearishStr
+            bullishBoxWidth = (volBlock.bullishStr / totalStr) * (time - volBlock.barStart)
+            bearishBoxWidth = (volBlock.bearishStr / totalStr) * (time - volBlock.barStart)
+            volBlock.bullishBox.set_right(math.round(volBlock.barStart + bullishBoxWidth))
+            volBlock.bearishBox.set_right(math.round(volBlock.barStart + bearishBoxWidth))
+        else 
+            box.delete(volBlock.block)
+            volBlock.block := na
+            box.delete(volBlock.bullishBox)
+            volBlock.bullishBox := na
+            box.delete(volBlock.bearishBox)
+            volBlock.bearishBox := na

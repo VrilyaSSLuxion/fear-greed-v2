@@ -1,0 +1,26 @@
+//@version=5
+indicator("Volume Delta Buy/Sell with Alerts", overlay=true)
+
+// Berechnung des Volume Delta
+upVol = volume * (close > open ? 1 : 0)
+downVol = volume * (close < open ? 1 : 0)
+delta = upVol - downVol
+
+// Kaufsignal, wenn das Volume Delta von negativ zu positiv wechselt
+buySignal = ta.crossover(delta, 0)
+
+// Verkaufssignal, wenn das Volume Delta von positiv zu negativ wechselt
+sellSignal = ta.crossunder(delta, 0)
+
+// Zeichnen der Signale auf dem Chart mit schwarzem Text
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", size=size.small, textcolor=color.black)
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", size=size.small, textcolor=color.black)
+
+// Optional: Anzeige des Volume Delta als Histogramm
+plot(delta, color=color.blue, style=plot.style_histogram, title="Volume Delta")
+
+// Alarm für Kaufsignal
+alertcondition(buySignal, title="Buy Signal", message="Volume Delta Buy Signal")
+
+// Alarm für Verkaufssignal
+alertcondition(sellSignal, title="Sell Signal", message="Volume Delta Sell Signal")

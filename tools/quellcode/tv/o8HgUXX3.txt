@@ -1,0 +1,25 @@
+//@version=5
+indicator("-VrilyaSS-CCI Extreme Points Indicator-14-", overlay=true)
+
+// Inputs
+length = input(14, title="-CCI-Period-14-")
+threshold = input(100, title="-Overbought-Threshold-100-")
+oversold = input(-100, title="-Oversold-Threshold--100-")
+
+// Calculate CCI
+cciValue = ta.cci(close, length)
+
+// Plot CCI
+plot(cciValue, title="CCI", color=color.blue, linewidth=2, display=display.none)
+
+// Generate buy/sell signals at extreme points only
+buySignal = cciValue < oversold and cciValue[1] >= oversold
+sellSignal = cciValue > threshold and cciValue[1] <= threshold
+
+// Plot buy/sell arrows
+plotshape(series=buySignal, title="-Buy-Signal-", style=shape.labelup, location=location.belowbar, color=color.green, textcolor=color.black, text="Buy", size=size.tiny)
+plotshape(series=sellSignal, title="-Sell-Signal-", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.black, text="Sell", size=size.tiny)
+
+// Alert conditions
+alertcondition(buySignal, title="-Buy-Signal-VrilyaSS-CCI-Extreme-Points-Indicator-14-", message="-Buy-CCI-Extreme-Points-Indicator-14-")
+alertcondition(sellSignal, title="-Sell-Signal-VrilyaSS-CCI-Extreme-Points-Indicator-14-", message="-Sell-CCI-Extreme-Points-Indicator-14-")

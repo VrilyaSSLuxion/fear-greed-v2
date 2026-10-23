@@ -1,0 +1,21 @@
+//@version=5
+indicator("-VrilyaSS-1-Minute Trade Indicator with CCI-", overlay=true)
+
+// Eingabefelder für Indikator-Einstellungen
+lengthCCI = input.int(14, title="CCI Length")
+overboughtCCI = input.int(100, title="CCI Overbought Level")
+oversoldCCI = input.int(-100, title="CCI Oversold Level")
+
+// Berechnung des CCI
+cci = ta.cci(close, lengthCCI)
+
+// Kauf- und Verkaufssignale
+buySignal = cci < oversoldCCI
+sellSignal = cci > overboughtCCI
+
+// Kauf- und Verkaufssignale anzeigen
+plotshape(series=buySignal, location=location.belowbar, color=color.green, textcolor = color.black, style=shape.labelup, text="Buy", title="Buy Signal")
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, textcolor = color.black, style=shape.labeldown, text="Sell", title="Sell Signal")
+
+// Hintergrundfarbe für Kauf- und Verkaufssignale
+bgcolor(buySignal ? color.new(color.green, 70) : sellSignal ? color.new(color.red, 70) : na, title="Trade Background")

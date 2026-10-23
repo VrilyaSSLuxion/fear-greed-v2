@@ -1,0 +1,24 @@
+//@version=5
+indicator(title="Stochastic", shorttitle="Stoch", format=format.price, precision=2, timeframe="", timeframe_gaps=true)
+periodK = input.int(5, title="%K Length-5-default-14", minval=1)
+smoothK = input.int(3, title="%K Smoothing-3-default-1", minval=1)
+periodD = input.int(2, title="%D Smoothing-2-default-3", minval=1)
+k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
+d = ta.sma(k, periodD)
+plot(k, title="%K-Color-16-Solid-Line-3-100%-", color=#2962FF)
+plot(d, title="%D-Color-11-Solid-Line-4-100%-", color=#FF6D00)
+
+h0 = hline(89, "UPPER TOP-Band-TOP-90-89,11-Color-11-Solid Line-2-100%", color=#787B86)
+hline(79, "UPPER TOP-Band-MIDDLE-79-78,6-Color-16-Solid-Line-3-100%", color=color.new(#787B86, 50))
+h1 = hline(70, "UPPER TOP-Band-BOTTOM-70-70,0-The Middle of 61,8 and 78,6-Color-13-Solid-Line-2-100%", color=#787B86)
+fill(h0, h1, color=color.rgb(33, 150, 243, 90), title="Background-UPPER TOP-Band-Color-11-50%")
+
+h0_2 = hline(61, "NTZ-BAND-NoTradeZone-BAND-MIDDLE NEUTRAL CONSOLIDATION AVOID MOST TIMES ONLY USE SOMETIMES FOR SUPPORT OR BREAKTROUGH CONFIRMATION MOST TIMES THIS IS A ABSOLUTE NO-TRADE-ZONE AND SHOULD BE AVOIDED TO TRADE-Band-TOP-61-61,8-Color-14-Solid-Line-2-100%", color=#787B86)
+hline(50, "NTZ-BAND-NoTradeZone-BAND-MIDDLE NEUTRAL CONSOLIDATION AVOID MOST TIMES ONLY USE SOMETIMES FOR SUPPORT OR BREAKTROUGH CONFIRMATION MOST TIMES THIS IS A ABSOLUTE NO-TRADE-ZONE AND SHOULD BE AVOIDED TO TRADE-Band-MIDDLE ZONE-AGARTHA INNER EARTH-MIDDLE-50-50,0-Color-3-Solid-Line-1-100%", color=color.new(#787B86, 50))
+h1_2 = hline(38, "NTZ_BAND-NoTradeZone-BAND-MIDDLE NEUTRAL CONSOLIDATION AVOID MOST TIMES ONLY USE SOMETIMES FOR SUPPORT OR BREAKTROUGH CONFIRMATION MOST TIMES THIS IS A ABSOLUTE NO-TRADE-ZONE AND SHOULD BE AVOIDED TO TRADE-Band-BOTTOM-38-38,0-Color-11-Solid-Line-2-100%", color=#787B86)
+fill(h0_2, h1_2, color=color.rgb(33, 150, 243, 90), title="Background-NTZ-MIDDLE-BAND-NoTradeZone-BAND-MIDDLE NEUTRAL CONSOLIDATION AVOID MOST TIMES ONLY USE SOMETIMES FOR SUPPORT OR BREAKTROUGH CONFIRMATION MOST TIMES THIS IS A ABSOLUTE NO-TRADE-ZONE AND SHOULD BE AVOIDED TO TRADE-Band-Color-5-50%")
+
+h0_3 = hline(29, "LOWER BOTTOM-Band-TOP-29-29,0-Color-11-Solid-Line-2-100%", color=#787B86)
+hline(20, "LOWER BOTTOM-Band-MIDDLE-20-20,0-Color-10-Solid-Line-3-100%", color=color.new(#787B86, 50))
+h1_3 = hline(9, "LOWER BOTTOM-Band-BOTTOM-9-9,0-Color-16-Solid-Line-2-100%", color=#787B86)
+fill(h0_3, h1_3, color=color.rgb(33, 150, 243, 90), title="Background-LOWER BOTTOM-Band-Color-14-50%")

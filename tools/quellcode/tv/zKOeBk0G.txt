@@ -1,0 +1,561 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// @ Trader_Morry
+
+//@version=5
+indicator("-VrilyaSS-ICT HTF Liquidity Levels /w Alert [MsF]-Trader_Morry-", "-VrilyaSS-ICT HTF Liquidity Levels /w Alert [MsF]-Trader_Morry-", overlay=true, max_lines_count=500)
+
+//--------------------------------------------------------------------
+//                             Constants
+//--------------------------------------------------------------------
+
+// var START_OFFSET                =  0
+// var END_OFFSET                  = 25
+
+
+//--------------------------------------------------------------------
+//                               Inputs
+//--------------------------------------------------------------------
+
+var g_htf                       = "-HTF Liquidity-"
+var g_intraday                  = "-Intraday Liquidity-"
+var g_purged                    = "-Purged Liquidity-"
+var g_luquidityline             = "-Liquidity line-"
+
+i_isDailyEnabled                = input         (true,                          "-Daily-default-65%-65%-Width-2-",    inline="Daily",                 group=g_htf)
+i_dailyAboveLiquidityColor      = input         (color.new(#8931ac, 0),  "",             inline="Daily",                 group=g_htf)
+i_dailyBelowLiquidityColor      = input         (color.new(#8931ac, 0),  "",             inline="Daily",                 group=g_htf)
+i_dailyWidth                    = input         (2,                             "Width",    inline="Daily",                 group=g_htf)
+
+i_isWeeklyEnabled               = input         (true,                          "-Weekly-default-54%-54%-Width-5-",   inline="Weekly",                group=g_htf)
+i_weeklyAboveLiquidityColor     = input         (color.new(#3e76d6, 0),   "",            inline="Weekly",                group=g_htf)
+i_weeklyBelowLiquidityColor     = input         (color.new(#3e76d6, 0),    "",           inline="Weekly",                group=g_htf)
+i_weeklyWidth                   = input         (3,                             "Width",    inline="Weekly",                group=g_htf)
+
+i_isMonthlyEnabled              = input         (true,                          "-Monthly-def.-54%-54%-Width-10-",  inline="Monthly",               group=g_htf)
+i_monthlyAboveLiquidityColor    = input         (color.rgb(102, 33, 33, 0),  "",         inline="Monthly",               group=g_htf)
+i_monthlyBelowLiquidityColor    = input         (color.rgb(102, 33, 33, 0), "",          inline="Monthly",               group=g_htf)
+i_monthlyWidth                  = input         (5,                            "Width",    inline="Monthly",               group=g_htf)
+
+i_is1HEnabled                   = input         (true,                         "-1H-default-68%-68%-Width-1-",        inline="1H",                    group=g_intraday)
+i_1HAboveLiquidityColor         = input         (color.rgb(231, 173, 74, 0),   "",       inline="1H",                    group=g_intraday)
+i_1HBelowLiquidityColor         = input         (color.rgb(231, 173, 74, 0),  "",        inline="1H",                    group=g_intraday)
+i_1HWidth                       = input         (2,                             "Width",    inline="1H",                    group=g_intraday)
+
+i_is4HEnabled                   = input         (true,                         "-4H-default-68%-68%-Width-1-",        inline="4H",                    group=g_intraday)
+i_4HAboveLiquidityColor         = input         (color.rgb(29, 90, 47, 0),  "",          inline="4H",                    group=g_intraday)
+i_4HBelowLiquidityColor         = input         (color.rgb(29, 90, 47, 0), "",           inline="4H",                    group=g_intraday)
+i_4HWidth                       = input         (3,                             "Width",    inline="4H",                    group=g_intraday)
+
+i_purgedLevelColor              = input         (color.new(color.gray, 0),   "-Color-default-Color-gray-5-30%-",                                    group=g_purged)
+i_purgedLevelStyle              = input.string  ("Dashed",                      "-Style-default-Dashed-",    ["Solid", "Dashed", "Dotted"],  group=g_purged)
+i_showPurgeDaily                = input         (false,                         "-Show Purge Daily-default-false-",                         group=g_purged)
+i_showPurgeWeekly               = input         (false,                         "-Show Purge Weekly-default-false-",                        group=g_purged)
+i_showPurgeMonthly              = input         (false,                         "-Show Purge Monthly-default-false-",                       group=g_purged)
+i_showPurge1H                   = input         (false,                         "-Show Purge 1H-default-false-",                            group=g_purged)
+i_showPurge4H                   = input         (false,                         "-Show Purge 4H-false-",                            group=g_purged)
+i_purgedCleanUpTiming           = input.timeframe("D",                          "-Clean Up-default-1Day-",                                 group=g_purged, tooltip = "Select when to clean up the purge line")
+
+START_OFFSET                    = input         (-5,                             "-START OFFSET-default-0-",                             group=g_luquidityline, tooltip = "Liquidity line drawing start position. Enter the offset from the latest bar.")
+END_OFFSET                      = input         (10,                            "-END OFFSET-default-25-",                               group=g_luquidityline, tooltip = "Liquidity line drawing end position. Enter the offset from the latest bar.")
+
+disp_line_max                   = input.int     (10,                             "-Max Number of Lines-default-3-", minval=1, maxval=10, group=g_luquidityline, tooltip = "Enter the maximum number of liquidity lines.")
+
+//--------------------------------------------------------------------
+//                        Variables declarations
+//--------------------------------------------------------------------
+
+var highsArray                  = array.new_float()
+var lowsArray                   = array.new_float()
+var highLinesArray              = array.new_line()
+var lowLinesArray               = array.new_line()
+var purgedLinesArray            = array.new_line()
+var float dayHigh               = na
+var float dayLow                = na
+
+var highsTFnumArray             = array.new_int()
+var lowsTFnumArray              = array.new_int()
+var purgedTFnumArray            = array.new_int()
+int TF_D   = 1
+int TF_W   = 2
+int TF_M   = 3
+int TF_240 = 4
+int TF_60  = 5
+
+[prevDayHigh, prevDayLow]       = request.security(syminfo.tickerid, "D",   [high[1], low[1]], lookahead=barmerge.lookahead_on)
+[prevWeekHigh, prevWeekLow]     = request.security(syminfo.tickerid, "W",   [high[1], low[1]], lookahead=barmerge.lookahead_on)
+[prevMonthHigh, prevMonthLow]   = request.security(syminfo.tickerid, "M",   [high[1], low[1]], lookahead=barmerge.lookahead_on)
+[prev4HHigh, prev4HLow]         = request.security(syminfo.tickerid, "240", [high[1], low[1]], lookahead=barmerge.lookahead_on)
+[prev1HHigh, prev1HLow]         = request.security(syminfo.tickerid, "60",  [high[1], low[1]], lookahead=barmerge.lookahead_on)
+
+
+//--------------------------------------------------------------------
+//                              Functions 
+//--------------------------------------------------------------------
+
+f_drawLine(float _y, color _c, int _w=1) => line.new(bar_index, _y, bar_index, _y, color=_c, width=_w)
+
+f_create(float _high, float _low, color _upperColor, color _lowerColor, int _linewidth, int aTFnum) =>
+    array.push(highsArray, _high)
+    array.push(lowsArray, _low)
+    array.push(highLinesArray, f_drawLine(_high, _upperColor, _linewidth))
+    array.push(lowLinesArray, f_drawLine(_low, _lowerColor, _linewidth))
+    array.push(highsTFnumArray, aTFnum)
+    array.push(lowsTFnumArray, aTFnum)
+
+f_updateStickyLevels(array<line> _levels) =>
+    for _line in _levels
+        line.set_x1(_line, bar_index + START_OFFSET)
+        line.set_x2(_line, bar_index + END_OFFSET)
+
+f_moveLevel(array<line> _from, array<line> _to, line _level, int _index) =>
+    array.push(_to, _level)
+    array.remove(_from, _index)
+
+f_highlightPurgedLevel(line _level) =>
+    _style = i_purgedLevelStyle == "Solid" ? line.style_solid : i_purgedLevelStyle == "Dashed" ? line.style_dashed : line.style_dotted
+    line.set_color(_level, i_purgedLevelColor)
+    line.set_style(_level, _style)
+
+f_updateUpperLevels(float _high, array<float> _highs, array<line> _levels, array<line> _purgedLevels) =>
+    while array.min(_highs) < _high
+        for [_index, _value] in _highs
+            if _high > _value
+                _line = array.get(_levels, _index)
+                f_highlightPurgedLevel(_line)
+                f_moveLevel(_levels, _purgedLevels, _line, _index)
+                array.push(purgedTFnumArray, array.get(highsTFnumArray, _index))
+                array.remove(_highs, _index)
+                array.remove(highsTFnumArray, _index)
+
+f_updateLowerLevels(float _low, array<float> _lows, array<line> _levels, array<line> _purgedLevels) =>
+    while array.max(_lows) > _low
+        for [_index, _value] in _lows
+            if _low < _value
+                _line = array.get(_levels, _index)
+                f_highlightPurgedLevel(_line)
+                f_moveLevel(_levels, _purgedLevels, _line, _index) 
+                array.push(purgedTFnumArray, array.get(lowsTFnumArray, _index))
+                array.remove(_lows, _index)
+                array.remove(lowsTFnumArray, _index)
+
+f_clearLevels(array<line> _levels) =>
+    while array.size(_levels) > 0
+        for [_index, _line] in _levels
+            line.delete(array.remove(_levels, _index))
+            array.remove(purgedTFnumArray, _index)
+
+f_isHigherTimeframe(string _timeframe) => timeframe.in_seconds() <= timeframe.in_seconds(_timeframe)
+
+
+//--------------------------------------------------------------------
+//                                Logic
+//--------------------------------------------------------------------
+
+// Create levels on historical bars
+
+if i_is1HEnabled and f_isHigherTimeframe("60") and ta.change(time("60"))
+    f_create(prev1HHigh, prev1HLow, i_1HAboveLiquidityColor, i_1HBelowLiquidityColor, i_1HWidth, TF_60)
+
+if i_is4HEnabled and f_isHigherTimeframe("240") and ta.change(time("240"))
+    f_create(prev4HHigh, prev4HLow, i_4HAboveLiquidityColor, i_4HBelowLiquidityColor, i_4HWidth, TF_240)
+
+if i_isDailyEnabled and f_isHigherTimeframe("D") and ta.change(time("D"))
+    f_create(prevDayHigh, prevDayLow, i_dailyAboveLiquidityColor, i_dailyBelowLiquidityColor, i_dailyWidth, TF_D)
+
+if i_isWeeklyEnabled and f_isHigherTimeframe("W") and ta.change(time("W"))
+    f_create(prevWeekHigh, prevWeekLow, i_weeklyAboveLiquidityColor, i_weeklyBelowLiquidityColor, i_weeklyWidth, TF_W)
+
+if i_isMonthlyEnabled and f_isHigherTimeframe("M") and ta.change(time("M"))
+    f_create(prevMonthHigh, prevMonthLow, i_monthlyAboveLiquidityColor, i_monthlyBelowLiquidityColor, i_monthlyWidth, TF_M)
+
+
+// Update levels positions to "stick" at the right of the latest bar
+
+if barstate.islast
+    f_updateStickyLevels(highLinesArray)
+    f_updateStickyLevels(lowLinesArray)
+    f_updateStickyLevels(purgedLinesArray)
+
+
+// Set and highlight, immediately, levels that got their liquidity taken
+
+f_updateUpperLevels(high, highsArray, highLinesArray, purgedLinesArray)
+f_updateLowerLevels(low, lowsArray, lowLinesArray, purgedLinesArray)
+
+
+// Clean up, at the end of each day, levels that had their liquidity taken
+
+if ta.change(time(i_purgedCleanUpTiming))
+    f_clearLevels(purgedLinesArray)
+
+
+//--------------------------------------------------------------------
+//                             Alerts
+//--------------------------------------------------------------------
+var crossedAboveDaily = false
+var crossedBelowDaily = false
+var crossedAboveWeekly = false
+var crossedBelowWeekly = false
+var crossedAboveMonthly = false
+var crossedBelowMonthly = false
+var crossedAbove4H = false
+var crossedBelow4H = false
+var crossedAbove1H = false
+var crossedBelow1H = false
+
+var _diffHighDaily = 0.0
+var _diffLowDaily = 0.0
+var _diffHighWeekly = 0.0
+var _diffLowWeekly = 0.0
+var _diffHighMonthly = 0.0
+var _diffLowMonthly = 0.0
+var _diffHigh4H = 0.0
+var _diffLow4H = 0.0
+var _diffHigh1H = 0.0
+var _diffLow1H = 0.0
+
+// Daily Line Crossed Alert
+crossedAboveDaily   := i_isDailyEnabled  and _diffHighDaily   > 0.0 ? ta.crossover(high, _diffHighDaily)      : false
+crossedBelowDaily   := i_isDailyEnabled  and _diffLowDaily    > 0.0 ? ta.crossunder(low, _diffLowDaily)       : false
+// Weekly Line Crossed Alert
+crossedAboveWeekly  := i_isWeeklyEnabled  and _diffHighWeekly > 0.0 ? ta.crossover(high, _diffHighWeekly)     : false
+crossedBelowWeekly  := i_isWeeklyEnabled  and _diffLowWeekly  > 0.0 ? ta.crossunder(low, _diffLowWeekly)      : false
+// Monthly Line Crossed Alert
+crossedAboveMonthly := i_isMonthlyEnabled and _diffHighMonthly  > 0.0 ? ta.crossover(high, _diffHighMonthly)  : false
+crossedBelowMonthly := i_isMonthlyEnabled and _diffLowMonthly   > 0.0 ? ta.crossunder(low, _diffLowMonthly)   : false
+// 4H Line Crossed Alert
+crossedAbove4H      := i_is4HEnabled      and _diffHigh4H     > 0.0 ? ta.crossover(high, _diffHigh4H)         : false
+crossedBelow4H      := i_is4HEnabled      and _diffLow4H      > 0.0 ? ta.crossunder(low, _diffLow4H)          : false
+// 1H Line Crossed Alert
+crossedAbove1H      := i_is1HEnabled      and _diffHigh1H     > 0.0 ? ta.crossover(high, _diffHigh1H)         : false
+crossedBelow1H      := i_is1HEnabled      and _diffLow1H      > 0.0 ? ta.crossunder(low, _diffLow1H)          : false
+
+alertcondition(crossedAboveDaily,title='-Daily Liquidity Line Crossed Above-',message='Daily Liquidity Line Crossed Above!')
+alertcondition(crossedBelowDaily,title='-Daily Liquidity Line Crossed Below-',message='Daily Liquidity Line Crossed Below!')
+alertcondition(crossedAboveWeekly,title='-Weekly Liquidity Line Crossed Above-',message='Weekly Liquidity Line Crossed Above!')
+alertcondition(crossedBelowWeekly,title='-Weekly Liquidity Line Crossed Below-',message='Weekly Liquidity Line Crossed Below!')
+alertcondition(crossedAboveMonthly,title='-Monthly Liquidity Line Crossed Above-',message='Monthly Liquidity Line Crossed Above!')
+alertcondition(crossedBelowMonthly,title='-Monthly Liquidity Line Crossed Below-',message='Monthly Liquidity Line Crossed Below!')
+alertcondition(crossedAbove4H,title='-4H Liquidity Line Crossed Above-',message='4H Liquidity Line Crossed Above!')
+alertcondition(crossedBelow4H,title='-4H Liquidity Line Crossed Below-',message='4H Liquidity Line Crossed Below!')
+alertcondition(crossedAbove1H,title='-1H Liquidity Line Crossed Above-',message='1H Liquidity Line Crossed Above!')
+alertcondition(crossedBelow1H,title='-1H Liquidity Line Crossed Below-',message='1H Liquidity Line Crossed Below!')
+
+// High/Low‚ªpivot‚ðBreak‚·‚éŽžA”z—ñ“à‚ÌHigh/Low‚à•Ï‚í‚Á‚Ä‚µ‚Ü‚¢‰i‰“‚É’Ç‚¢‚Â‚¯‚È‚¢
+// ‚»‚Ìˆ×AŠeTF‚ÌƒAƒ‰[ƒg”äŠr‘ÎÛ’l‚ÍƒAƒ‰[ƒg”»’èŒã‚És‚¤¨ƒAƒ‰[ƒg”»’è‚ÍHigh/lowXV‘O‚Ì’l‚Ås‚¤B
+f_getDiffHigh(int aTFnum) =>
+    oDiffHighVal = 0.0
+    if array.size(highsTFnumArray) > 2 and array.size(highsArray) > 2
+        for i = 0 to array.size(highsTFnumArray)-1
+            // ÅV‚©‚ç‚È‚ß‚Ä‚¢‚­
+            _index = array.size(highsTFnumArray)-1-i
+            if array.get(highsTFnumArray, _index) == aTFnum
+                oDiffHighVal := array.get(highsArray, _index)
+                break
+    oDiffHighVal
+
+f_getDiffLow(int aTFnum) =>
+    oDiffLowVal = 0.0
+    if array.size(lowsTFnumArray) > 2 and array.size(lowsArray) > 2
+        for i = 0 to array.size(lowsTFnumArray)-1
+            // ÅV‚©‚ç‚È‚ß‚Ä‚¢‚­
+            _index = array.size(lowsTFnumArray)-1-i
+            if array.get(lowsTFnumArray, _index) == aTFnum
+                oDiffLowVal := array.get(lowsArray, _index)
+                break
+    oDiffLowVal
+
+// ŠeTF‚ÌƒAƒ‰[ƒg”äŠr‘ÎÛ’l
+_diffHighDaily := f_getDiffHigh(TF_D)
+_diffLowDaily := f_getDiffLow(TF_D)
+_diffHighWeekly := f_getDiffHigh(TF_W)
+_diffLowWeekly := f_getDiffLow(TF_W)
+_diffHighMonthly := f_getDiffHigh(TF_M)
+_diffLowMonthly := f_getDiffLow(TF_M)
+_diffHigh4H := f_getDiffHigh(TF_240)
+_diffLow4H := f_getDiffLow(TF_240)
+_diffHigh1H := f_getDiffHigh(TF_60)
+_diffLow1H := f_getDiffLow(TF_60)
+
+//--------------------------------------------------------------------
+//                    Limiting last 3 liquidity
+//--------------------------------------------------------------------
+// var disp_line_max =3 // last 3
+_cntHighDaily = 0
+_cntLowDaily = 0
+_cntHighWeekly = 0
+_cntLowWeekly = 0
+_cntHighMonthly = 0
+_cntLowMonthly = 0
+_cntHigh4H = 0
+_cntLow4H = 0
+_cntHigh1H = 0
+_cntLow1H = 0
+
+if array.size(highsTFnumArray) > 2 and array.size(highLinesArray) > 2
+    for i = 0 to array.size(highsTFnumArray)-1
+        // ÅV‚©‚ç‚È‚ß‚Ä‚¢‚­
+        _index = array.size(highsTFnumArray)-1-i
+        if array.get(highsTFnumArray, _index) == TF_D
+            _cntHighDaily := _cntHighDaily + 1
+            if _cntHighDaily <= disp_line_max
+                line.set_color(array.get(highLinesArray, _index), i_dailyAboveLiquidityColor)
+            else
+                line.set_color(array.get(highLinesArray, _index), color.new(i_dailyAboveLiquidityColor, 100))
+        if array.get(highsTFnumArray, _index) == TF_W
+            _cntHighWeekly := _cntHighWeekly + 1
+            if _cntHighWeekly <= disp_line_max
+                line.set_color(array.get(highLinesArray, _index), i_weeklyAboveLiquidityColor)
+            else
+                line.set_color(array.get(highLinesArray, _index), color.new(i_weeklyAboveLiquidityColor, 100))
+        if array.get(highsTFnumArray, _index) == TF_M
+            _cntHighMonthly := _cntHighMonthly + 1
+            if _cntHighMonthly <= disp_line_max
+                line.set_color(array.get(highLinesArray, _index), i_monthlyAboveLiquidityColor)
+            else
+                line.set_color(array.get(highLinesArray, _index), color.new(i_monthlyAboveLiquidityColor, 100))
+        if array.get(highsTFnumArray, _index) == TF_240
+            _cntHigh4H := _cntHigh4H + 1
+            if _cntHigh4H <= disp_line_max
+                line.set_color(array.get(highLinesArray, _index), i_4HAboveLiquidityColor)
+            else
+                line.set_color(array.get(highLinesArray, _index), color.new(i_4HAboveLiquidityColor, 100))
+        if array.get(highsTFnumArray, _index) == TF_60
+            _cntHigh1H := _cntHigh1H + 1
+            if _cntHigh1H <= disp_line_max
+                line.set_color(array.get(highLinesArray, _index), i_1HAboveLiquidityColor)
+            else
+                line.set_color(array.get(highLinesArray, _index), color.new(i_1HAboveLiquidityColor, 100))
+if array.size(lowsTFnumArray) > 2 and array.size(lowLinesArray) > 2
+    for i = 0 to array.size(lowsTFnumArray)-1
+        // ÅV‚©‚ç‚È‚ß‚Ä‚¢‚­
+        _index = array.size(lowsTFnumArray)-1-i
+        if array.get(lowsTFnumArray, _index) == TF_D
+            _cntLowDaily := _cntLowDaily + 1
+            if _cntLowDaily <= disp_line_max
+                line.set_color(array.get(lowLinesArray, _index), i_dailyBelowLiquidityColor)
+            else
+                line.set_color(array.get(lowLinesArray, _index), color.new(i_dailyBelowLiquidityColor, 100))
+        if array.get(lowsTFnumArray, _index) == TF_W
+            _cntLowWeekly := _cntLowWeekly + 1
+            if _cntLowWeekly <= disp_line_max
+                line.set_color(array.get(lowLinesArray, _index), i_weeklyBelowLiquidityColor)
+            else
+                line.set_color(array.get(lowLinesArray, _index), color.new(i_weeklyBelowLiquidityColor, 100))
+        if array.get(lowsTFnumArray, _index) == TF_M
+            _cntLowMonthly := _cntLowMonthly + 1
+            if _cntLowMonthly <= disp_line_max
+                line.set_color(array.get(lowLinesArray, _index), i_monthlyBelowLiquidityColor)
+            else
+                line.set_color(array.get(lowLinesArray, _index), color.new(i_monthlyBelowLiquidityColor, 100))
+        if array.get(lowsTFnumArray, _index) == TF_240
+            _cntLow4H := _cntLow4H + 1
+            if _cntLow4H <= disp_line_max
+                line.set_color(array.get(lowLinesArray, _index), i_4HBelowLiquidityColor)
+            else
+                line.set_color(array.get(lowLinesArray, _index), color.new(i_4HBelowLiquidityColor, 100))
+        if array.get(lowsTFnumArray, _index) == TF_60
+            _cntLow1H := _cntLow1H + 1
+            if _cntLow1H <= disp_line_max
+                line.set_color(array.get(lowLinesArray, _index), i_1HBelowLiquidityColor)
+            else
+                line.set_color(array.get(lowLinesArray, _index), color.new(i_1HBelowLiquidityColor, 100))
+
+//--------------------------------------------------------------------
+//                       Show/Hide Purged Lines
+//--------------------------------------------------------------------
+if array.size(purgedTFnumArray) > 2 and array.size(purgedLinesArray) > 2
+    for _index = 0 to array.size(purgedTFnumArray)-1
+        if array.get(purgedTFnumArray, _index) == TF_D
+            if i_showPurgeDaily
+                line.set_color(array.get(purgedLinesArray, _index), color.new(#8931ac, 35))
+            else
+                line.set_color(array.get(purgedLinesArray, _index), color.new(color.new(#8931ac, 35), 100))
+        if array.get(purgedTFnumArray, _index) == TF_W
+            if i_showPurgeWeekly
+                line.set_color(array.get(purgedLinesArray, _index), color.new(#3e76d6, 46))
+            else
+                line.set_color(array.get(purgedLinesArray, _index), color.new(color.new(#3e76d6, 46), 100))
+        if array.get(purgedTFnumArray, _index) == TF_M
+            if i_showPurgeMonthly
+                line.set_color(array.get(purgedLinesArray, _index),color.rgb(102, 33, 33, 46))
+            else
+                line.set_color(array.get(purgedLinesArray, _index), color.new(color.rgb(102, 33, 33, 46), 100))
+        if array.get(purgedTFnumArray, _index) == TF_240
+            if i_showPurge4H
+                line.set_color(array.get(purgedLinesArray, _index), color.rgb(29, 90, 47, 32))
+            else
+                line.set_color(array.get(purgedLinesArray, _index), color.new(color.rgb(29, 90, 47, 32), 100))
+        if array.get(purgedTFnumArray, _index) == TF_60
+            if i_showPurge1H
+                line.set_color(array.get(purgedLinesArray, _index), color.rgb(231, 173, 74, 32))
+            else
+                line.set_color(array.get(purgedLinesArray, _index), color.new(color.rgb(231, 173, 74, 32), 100))
+
+
+
+// // Market Structure Break - MBS //
+
+// // User inputs
+// var g_msb = "Market Structure Break - MBS"
+// var len = input.int(20, minval=1, title='Loopback', group = g_msb)
+// var mult = 1 //input.float(1, minval=0.1, title='Multipler', group = g_msb)
+// bullish_MSB_Color = input.color(color.green, title='Bullish MSB Color', inline='Bullish MSB Style', group = g_msb)
+// bearish_MSB_Color = input.color(color.red, title='Bearish MSB Color', inline='Bearish MSB Style', group = g_msb)
+// bullish_MSB_Width = input.int(1, minval=1, maxval = 5, title='Line Width', inline='Bullish MSB Style', group = g_msb)
+// bearish_MSB_Width = input.int(1, minval=1, maxval = 5, title='Line Width', inline='Bearish MSB Style', group = g_msb)
+
+// // 2nd script Function to detect swing highs and lows
+// f_swingHighLow(_src, _len) =>
+//     _sw = high >= ta.highest(high, _len)
+//     _lw = low <= ta.lowest(low, _len)
+//     [_sw, _lw]
+
+// // Calculation of swing highs and lows
+// [sh, sl] = f_swingHighLow(close, len)
+
+// // Identify market structure break
+// break_up = sh and sh[1] == false and close > high[1] * mult
+// break_down = sl and sl[1] == false and close < low[1] * mult
+
+// // Draw lines on market structure break
+// var line bullish_MSB = na
+// var line bearish_MSB = na
+// var float highest_MSB = na
+// var float lowest_MSB = na
+
+// if break_up
+//     // Find the bar_index where the swing high is and draw a line until the candle CLOSES ABOVE the market structure
+//     for i = 1 to 100 by 1
+//         if sh[i]
+//             bullish_MSB := line.new(bar_index[i], high[i], bar_index, high[i], color=bullish_MSB_Color, width=bullish_MSB_Width)
+//             highest_MSB := high[i]
+//             break
+
+// if break_down
+//     // Find the bar_index where the swing low is and draw a line until the candle CLOSES BELOW the market structure
+//     for i = 1 to 100 by 1
+//         if sl[i]
+//             bearish_MSB := line.new(bar_index[i], low[i], bar_index, low[i], color=bearish_MSB_Color, width=bearish_MSB_Width)
+//             lowest_MSB := low[i]
+//             break
+
+// User input
+var g_msb = "-Market Structure Break - MBS-"
+msb_fvg            = input.bool(true, "-show MSB-default-true-", group = g_msb)
+point_method       = input.string(title = "-Pivot Method-default-Candle Wicks-", defval = "Candle Wicks", options = ["Candle Wicks", "Candle Body"], group = g_msb)
+left_bars          = input.int(title = "-Sensitivity-default-16-", defval = 16, minval = 2, inline = "Pivot Length", group = g_msb)
+right_bars         = left_bars//input.int(title = "Rightbars", defval = 5, minval = 2, inline = "Pivot Length", group = g_msb)
+line_width         = input.int(title = "-Line Width-default-1-", defval = 3, group = g_msb)
+
+
+// Global variables/arrays
+high_source        = point_method == "Candle Body" ? (close > open ? close : open) : high
+low_source         = point_method == "Candle Body" ? (close < open ? close : open) : low
+
+fixed_pivot_high   = fixnan(ta.pivothigh(high_source, left_bars, right_bars))
+fixed_pivot_low    = fixnan(ta.pivotlow(low_source, left_bars, right_bars))
+
+green_candle       = close > open
+red_candle         = close < open
+
+green_engulf       = green_candle and red_candle[1] and close > open[1]
+red_engulf         = red_candle and green_candle[1] and close < open[1]
+
+var red_lines      = array.new_line()
+var red_breakout   = array.new_int()
+var red_bounce     = array.new_int()
+
+var green_lines    = array.new_line()
+var green_breakout = array.new_int()
+var green_bounce   = array.new_int()
+
+green_breakout_trigger     = false
+green_rejection_trigger    = false
+red_breakout_trigger       = false
+red_rejection_trigger      = false
+
+
+// Main operation
+if barstate.isconfirmed and msb_fvg
+    if array.size(red_lines) > 0
+        for i = array.size(red_lines) - 1 to 0
+            line.set_x2(array.get(red_lines, i), bar_index)
+            
+            if high >= line.get_y1(array.get(red_lines, i)) and close > line.get_y1(array.get(red_lines, i)) and array.get(red_breakout, i) == 0
+                red_breakout_trigger := true
+                array.set(red_breakout, i, 1)
+            else
+                if high >= line.get_y1(array.get(red_lines, i)) and close < line.get_y1(array.get(red_lines, i)) and red_engulf and array.get(red_bounce, i) == 0 and array.get(red_breakout, i) == 0
+                    red_rejection_trigger := true
+                    array.set(red_bounce, i, 1)
+    
+    if array.size(green_lines) > 0
+        for i = array.size(green_lines) - 1 to 0
+            line.set_x2(array.get(green_lines, i), bar_index)
+            
+            if low <= line.get_y1(array.get(green_lines, i)) and close < line.get_y1(array.get(green_lines, i)) and array.get(green_breakout, i) == 0
+                green_breakout_trigger := true
+                array.set(green_breakout, i, 1)
+            
+            else
+                if low <= line.get_y1(array.get(green_lines, i)) and close > line.get_y1(array.get(green_lines, i)) and green_engulf and array.get(green_bounce, i) == 0 and array.get(green_breakout, i) == 0
+                    green_rejection_trigger := true
+                    array.set(green_bounce, i, 1)
+
+
+    if ta.change(fixed_pivot_high) != 0
+        if array.size(red_lines) > 0
+            line.set_x2(array.get(red_lines, 0), bar_index - right_bars)
+            array.clear(red_lines)
+            array.clear(red_breakout)
+            array.clear(red_bounce)
+        array.unshift(red_lines, line.new(x1 = bar_index - right_bars, y1 = fixed_pivot_high, x2 = bar_index, y2 = fixed_pivot_high, xloc = xloc.bar_index, color = color.red, width = line_width))
+        array.unshift(red_breakout, 0)
+        array.unshift(red_bounce, 0)
+
+    if ta.change(fixed_pivot_low) != 0
+        if array.size(green_lines) > 0
+            line.set_x2(array.get(green_lines, 0), bar_index - right_bars)
+            array.clear(green_lines)
+            array.clear(green_breakout)
+            array.clear(green_bounce)
+        array.unshift(green_lines, line.new(x1 = bar_index - right_bars, y1 = fixed_pivot_low, x2 = bar_index, y2 = fixed_pivot_low, xloc = xloc.bar_index, color = color.green, width = line_width))
+        array.unshift(green_breakout, 0)
+        array.unshift(green_bounce, 0)
+
+
+// Shapes
+plotshape(series = red_breakout_trigger, title = "-Red Breakout-default-true-", style = shape.xcross, location = location.belowbar, color = color.red, text = "Break", textcolor = color.red, size = size.tiny, show_last = 20000)
+plotshape(series = red_rejection_trigger, title = "-Red Rejection-default-true-", style = shape.xcross, location = location.abovebar, color = color.red, text = "Bounce", textcolor = color.red, size = size.tiny, show_last = 20000)
+
+plotshape(series = green_breakout_trigger, title = "-Green Breakout-default-true-", style = shape.xcross, location = location.abovebar, color = color.green, text = "Break", textcolor = color.green, size = size.tiny, show_last = 20000)
+plotshape(series = green_rejection_trigger, title = "-Green Rejection-default-true-", style = shape.xcross, location = location.belowbar, color = color.green, text = "Bounce", textcolor = color.green, size = size.tiny, show_last = 20000)
+
+
+// Alert conditions
+alertcondition(condition = red_breakout_trigger, title = "-Red Breakout-")
+alertcondition(condition = red_rejection_trigger, title = "-Red Rejection/Bounce-")
+alertcondition(condition = green_breakout_trigger, title = "-Green Breakout-")
+alertcondition(condition = green_rejection_trigger, title = "-Green Rejection/Bounce-")
+
+
+
+// Displacement //
+
+var g_displacement = "-Displacement for FVG-"
+displacement_fvg = input.bool(true, "-show Displacement-default-true-", group = g_displacement)
+require_fvg = input.bool(true, "-Require FVG-default-true-", group = g_displacement)
+disp_type = input.string("Open to Close", "-Displacement Type-default-Open to Close-", options = ['Open to Close', 'High to Low'], group = g_displacement)
+std_len = input.int(100, minval = 1, title = "-Displacement Length-default-100-", tooltip = "How far back the script will look to determine the candle range standard deviation", group = g_displacement)
+std_x = input.int(4, minval = 0, title = "-Displacement Strength-default-4-", group = g_displacement)
+disp_color = input.color(color.yellow, "-Bar Color-default-true-Color-yellow-13-100%-", group = g_displacement)
+
+candle_range = disp_type == "Open to Close" ? math.abs(open - close) : high - low
+std = ta.stdev(candle_range, std_len) * std_x
+fvg = close[1] > open[1] ? high[2] < low[0] : low[2] > high[0]
+
+displacement = require_fvg ? candle_range[1] > std[1] and fvg : candle_range > std
+
+barcolor(displacement and displacement_fvg? disp_color : na, offset = require_fvg ? -1 : na)
+alertcondition(displacement and displacement_fvg, title = "-Displacement occured-")

@@ -1,0 +1,47 @@
+//@version=5
+indicator("-VrilyaSS-2-Minute Trade Signals with STC-11072024-", overlay=true)
+
+// Schaff Trend Cycle (STC) calculation
+stcFastLength = input.int(23, title="STC Fast Length")
+stcSlowLength = input.int(50, title="STC Slow Length")
+stcCycle = input.int(10, title="STC Cycle Length")
+
+macdLine = ta.ema(close, stcFastLength) - ta.ema(close, stcSlowLength)
+signalLine = ta.ema(macdLine, stcCycle)
+stc = 100 * (macdLine - ta.lowest(macdLine, stcCycle)) / (ta.highest(macdLine, stcCycle) - ta.lowest(macdLine, stcCycle))
+
+stcOverbought = input.float(75, title="STC Overbought Level", minval=50, maxval=100)
+stcOversold = input.float(25, title="STC Oversold Level", minval=0, maxval=50)
+
+// Moving Average settings
+maLength = input.int(50, title="Moving Average Length", minval=1)
+ma = ta.sma(close, maLength)
+plot(ma, title="Moving Average", color=color.white, linewidth=2)
+
+// RSI settings
+rsiPeriod = input.int(14, title="RSI Period", minval=1)
+rsiOverbought = input.int(70, title="RSI Overbought Level", minval=50, maxval=100)
+rsiOversold = input.int(30, title="RSI Oversold Level", minval=0, maxval=50)
+
+// RSI calculation
+rsi = ta.rsi(close, rsiPeriod)
+
+// Buy and Sell conditions
+buyCondition = (stc < stcOversold and ta.crossover(rsi, rsiOversold)) or ta.crossover(close, ma)
+sellCondition = (stc > stcOverbought and ta.crossunder(rsi, rsiOverbought)) or ta.crossunder(close, ma)
+
+// Plot Buy and Sell signals with tiny labels
+plotshape(series=buyCondition, title="Buy Signal", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy", size=size.tiny)
+plotshape(series=sellCondition, title="Sell Signal", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell", size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Alert", message="Buy Signal Detected")
+alertcondition(sellCondition, title="Sell Alert", message="Sell Signal Detected")
+
+// Optional: Plots with default visibility off
+plot(stc, title="STC", color=color.blue, display=display.none)
+hline(stcOverbought, "STC Overbought", color=color.red, display=display.none)
+hline(stcOversold, "STC Oversold", color=color.green, display=display.none)
+plot(rsi, title="RSI", color=color.purple, display=display.none)
+hline(rsiOverbought, "RSI Overbought", color=color.red, display=display.none)
+hline(rsiOversold, "RSI Oversold", color=color.green, display=display.none)

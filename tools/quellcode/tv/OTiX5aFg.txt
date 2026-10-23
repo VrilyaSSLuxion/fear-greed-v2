@@ -1,0 +1,26 @@
+//@version=5
+indicator("-Fast Breakout Indicator-(FBI)-Keltner-Channel-", shorttitle="-Fast Breakout Indicator-(FBI)-Keltner-Channel-", overlay=true)
+
+// Einstellungen für den Keltner Channel
+length = input.int(20, title="-MA-Length-20-", minval=1)
+mult = input.float(1.5, title="-ATR-Multiplier-1.5-", minval=0.1)
+src = input.source(close, title="-Source-close-")
+
+// Berechnung des Keltner Channels
+ma = ta.sma(src, length)
+atr = ta.atr(length)
+upperBand = ma + mult * atr
+lowerBand = ma - mult * atr
+
+// Bedingungen für Long- und Short-Signale
+bullish_crossover = close > upperBand
+bearish_crossover = close < lowerBand
+
+// Plotten des Keltner Channels mit den angegebenen Farben und Dicken
+plot(upperBand, color=color.red, title="-Upper-Band-", linewidth=3)
+plot(ma, color=color.white, title="-Middle-Line-", linewidth=2)
+plot(lowerBand, color=color.green, title="-Lower-Band-", linewidth=3)
+
+// Plot Buy and Sell signals
+plotshape(series=bullish_crossover, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=bearish_crossover, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)

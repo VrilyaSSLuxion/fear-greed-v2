@@ -1,0 +1,132 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © YourName
+
+//@version=5
+indicator("-VrilyaSS-Enhanced Buy Sell Strategy-", overlay=true, max_lines_count=500)
+
+// Input parameters
+lb = input.int(5, title="Left Bars", minval=1)
+rb = input.int(5, title="Right Bars", minval=1)
+ma_period = input.int(50, title="MA Period", minval=1)
+rsi_period = input.int(14, title="RSI Period", minval=1)
+rsi_overbought = input.int(70, title="RSI Overbought Level", minval=50)
+rsi_oversold = input.int(30, title="RSI Oversold Level", minval=0)
+
+// Support/Resistance settings
+showsupres = input.bool(true, title="Support/Resistance", inline="srcol")
+supcol = input.color(color.lime, title="", inline="srcol")
+rescol = input.color(color.red, title="", inline="srcol")
+srlinestyle = input.string("dotted", title="Line Style/Width", options=["solid", "dashed", "dotted"], inline="style")
+srlinewidth = input.int(3, title="", minval=1, maxval=5, inline="style")
+
+// Change Bar Color settings
+changebarcol = input.bool(true, title="Change Bar Color", inline="bcol")
+bcolup = input.color(color.blue, title="", inline="bcol")
+bcoldn = input.color(color.black, title="", inline="bcol")
+
+// Calculate pivot highs and lows
+ph = ta.pivothigh(high, lb, rb)
+pl = ta.pivotlow(low, lb, rb)
+
+// Calculate moving average and RSI
+ma = ta.sma(close, ma_period)
+rsi = ta.rsi(close, rsi_period)
+
+// Determine trend direction
+hl = na(ph) ? na(pl) ? na : -1 : 1
+zz = na(ph) ? na(pl) ? na : pl : ph
+
+// Determine previous points
+findprevious() =>
+    ehl = hl == 1 ? -1 : 1
+    var float loc1 = na
+    var float loc2 = na
+    var float loc3 = na
+    var float loc4 = na
+    xx = 0
+    for x = 1 to 1000 by 1
+        if hl[x] == ehl and not na(zz[x])
+            loc1 := zz[x]
+            xx := x + 1
+            break
+    ehl := hl
+    for x = xx to 1000 by 1
+        if hl[x] == ehl and not na(zz[x])
+            loc2 := zz[x]
+            xx := x + 1
+            break
+    ehl := hl == 1 ? -1 : 1
+    for x = xx to 1000 by 1
+        if hl[x] == ehl and not na(zz[x])
+            loc3 := zz[x]
+            xx := x + 1
+            break
+    ehl := hl
+    for x = xx to 1000 by 1
+        if hl[x] == ehl and not na(zz[x])
+            loc4 := zz[x]
+            break
+    [loc1, loc2, loc3, loc4]
+
+var float a = na
+var float b = na
+var float c = na
+var float d = na
+var float e = na
+
+float loc1 = na
+float loc2 = na
+float loc3 = na
+float loc4 = na
+if not na(hl)
+    [loc1, loc2, loc3, loc4] = findprevious()
+    a := zz
+    b := loc1
+    c := loc2
+    d := loc3
+    e := loc4
+
+_hh = zz and (a > b and a > c and c > b and c > d)
+_ll = zz and (a < b and a < c and c < b and c < d)
+_hl = zz and ((a >= c and (b > c and b > d and d > c and d > e)) or (a < b and a > c and b < d))
+_lh = zz and ((a <= c and (b < c and b < d and d < c and d < e)) or (a > b and a < c and b > d))
+
+plotshape(_hl, text="HL", title="Higher Low", style=shape.labelup, color=color.lime, textcolor=color.black, location=location.belowbar, offset=-rb)
+plotshape(_hh, text="HH", title="Higher High", style=shape.labeldown, color=color.lime, textcolor=color.black, location=location.abovebar, offset=-rb)
+plotshape(_ll, text="LL", title="Lower Low", style=shape.labelup, color=color.red, textcolor=color.white, location=location.belowbar, offset=-rb)
+plotshape(_lh, text="LH", title="Lower High", style=shape.labeldown, color=color.red, textcolor=color.white, location=location.abovebar, offset=-rb)
+
+var float res = na
+var float sup = na
+res := _lh ? zz : res[1]
+sup := _hl ? zz : sup[1]
+
+var int trend = na
+trend := close > res ? 1 : close < sup ? -1 : nz(trend[1])
+
+res := (trend == 1 and _hh) or (trend == -1 and _lh) ? zz : res
+sup := (trend == 1 and _hl) or (trend == -1 and _ll) ? zz : sup
+rechange = res != res[1]
+suchange = sup != sup[1]
+
+var line resline = na
+var line supline = na
+if showsupres
+    if rechange
+        line.set_x2(resline, bar_index)
+        line.set_extend(resline, extend.none)
+        resline := line.new(x1=bar_index-rb, y1=res, x2=bar_index, y2=res, color=rescol, extend=extend.right, style=srlinestyle == "solid" ? line.style_solid : srlinestyle == "dashed" ? line.style_dashed : line.style_dotted, width=srlinewidth)
+    if suchange
+        line.set_x2(supline, bar_index)
+        line.set_extend(supline, extend.none)
+        supline := line.new(x1=bar_index-rb, y1=sup, x2=bar_index, y2=sup, color=supcol, extend=extend.right, style=srlinestyle == "solid" ? line.style_solid : srlinestyle == "dashed" ? line.style_dashed : line.style_dotted, width=srlinewidth)
+
+// Buy and Sell signals based on MA, RSI and pivots
+buy_signal = trend == 1 and close > ma and rsi < rsi_oversold
+sell_signal = trend == -1 and close < ma and rsi > rsi_overbought
+
+plotshape(series=buy_signal, title="Buy Signal", location=location.belowbar, color=color.green, textcolor = color.black, style=shape.labelup, text="BUY")
+plotshape(series=sell_signal, title="Sell Signal", location=location.abovebar, color=color.red, textcolor = color.black, style=shape.labeldown, text="SELL")
+
+// Change bar color based on trend
+barcolor(color=changebarcol ? (trend == 1 ? bcolup : bcoldn) : na)

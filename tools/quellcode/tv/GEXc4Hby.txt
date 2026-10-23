@@ -1,0 +1,67 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © knowledge's Joe
+//USE 1MINUTE TIME FRAME OR GREATER
+//@version=5
+indicator('-VrilyaSS-Candle Break with Crossing MA Signals', overlay=true)
+
+Signal_Key = input.string("")
+
+// Define input variables for candle count
+candleCount = input.int(title='Candle Count', defval=3, minval=1, maxval=100)
+
+// Define input variables for moving averages
+fastMA = input.int(9, title='Fast MA Period', minval=1)
+slowMA = input.int(21, title='Slow MA Period', minval=1)
+
+// Calculate moving averages (SMA)
+fastMAValue = ta.sma(close, fastMA)
+slowMAValue = ta.sma(close, slowMA)
+
+// Calculate candle counts
+bullishCount = 0
+bearishCount = 0
+lastCandleBullish = close > open
+lastCandleBearish = close < open
+
+for i = 1 to candleCount
+    if close[i] > open[i]
+        bullishCount += 1
+    else
+        bearishCount += 1
+
+// Moving Average Crossings (SMA)
+maCrossUp = ta.crossover(ta.sma(close, fastMA), ta.sma(close, slowMA))
+maCrossDown = ta.crossunder(ta.sma(close, fastMA), ta.sma(close, slowMA))
+
+// Buy/Sell Signals
+buySignal = bullishCount == candleCount and lastCandleBearish and maCrossUp
+sellSignal = bearishCount == candleCount and lastCandleBullish and maCrossDown
+
+// Plot signals on chart
+plotshape(buySignal, style=shape.triangleup, location=location.belowbar, color=color.new(color.green, 0), size=size.small, text='Buy')
+plotshape(sellSignal, style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), size=size.small, text='Sell')
+
+// Plot moving averages
+plot(fastMAValue, color=color.blue, title='Fast MA')
+plot(slowMAValue, color=color.orange, title='Slow MA')
+
+// Create alerts
+alertcondition(buySignal, title='Buy Signal', message='Buy signal detected!')
+alertcondition(sellSignal, title='Sell Signal', message='Sell signal detected!')
+
+
+if buySignal
+    msg_longCondition = '{'
+             + '"side":"call", '
+             + '"symbol":"' + syminfo.ticker + '", ' 
+             + '"key":"' + Signal_Key + '" '
+             + '}'
+    alert(msg_longCondition, alert.freq_once_per_bar_close)
+    
+if sellSignal
+    msg_shortCondition = '{'
+             + '"side":"put", ' 
+             + '"symbol":"' + syminfo.ticker + '", ' 
+             + '"key":"' + Signal_Key + '" '
+             + '}'
+    alert(msg_shortCondition, alert.freq_once_per_bar_close)

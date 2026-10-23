@@ -1,0 +1,104 @@
+//@version=6
+indicator('Daily Open, Previous Open & Close Markers', overlay = true)
+
+// === INPUTS ===
+tz = input.string('UTC+5', 'Daily timezone')
+
+// Vertikale Linien
+vLineColor = input.color(color.black, 'Vertical Line Color')
+vLineWidth = input.int(2, 'Vertical Line Width', minval = 1, maxval = 5)
+vLineStyle = input.string('solid', 'Vertical Line Style', options = ['solid', 'dotted', 'dashed'])
+
+// Horizontale Linien
+hLineColor = input.color(color.blue, 'Horizontal Line Color')
+hLineWidth = input.int(2, 'Horizontal Line Width', minval = 1, maxval = 5)
+hLineStyle = input.string('solid', 'Horizontal Line Style', options = ['solid', 'dotted', 'dashed'])
+
+// Transparenz
+transparency = input.int(80, 'Transparency (0-100)', minval = 0, maxval = 100)
+
+// === STYLE ===
+f_getLineStyle(style) =>
+    style == 'solid' ? line.style_solid : style == 'dotted' ? line.style_dotted : line.style_dashed
+
+// === TIME ===
+dailyTime = time('D', tz)
+prevDailyTime = time('D', tz)[1]
+
+isNewDay = ta.change(dailyTime) != 0
+showLines = timeframe.isintraday and timeframe.multiplier <= 240
+
+// ✅ FIX: request.security IMMER HIER OBEN
+openPrice = request.security(syminfo.tickerid, 'D', open)
+closePrice = request.security(syminfo.tickerid, 'D', close[1])
+prevOpenPrice = request.security(syminfo.tickerid, 'D', open[1])
+
+// === VARS ===
+var line openLineV = na
+var line closeLineV = na
+var line prevOpenLineV = na
+
+var line openLineH = na
+var line closeLineH = na
+var line prevOpenLineH = na
+
+// === DELETE ===
+if not showLines
+    if not na(openLineV)
+        line.delete(openLineV)
+    if not na(closeLineV)
+        line.delete(closeLineV)
+    if not na(prevOpenLineV)
+        line.delete(prevOpenLineV)
+    if not na(openLineH)
+        line.delete(openLineH)
+    if not na(closeLineH)
+        line.delete(closeLineH)
+    if not na(prevOpenLineH)
+        line.delete(prevOpenLineH)
+
+    openLineV := na
+    closeLineV := na
+    prevOpenLineV := na
+    openLineH := na
+    closeLineH := na
+    prevOpenLineH := na
+    prevOpenLineH
+
+// === CREATE ===
+if showLines and isNewDay
+    if not na(openLineV)
+        line.delete(openLineV)
+    if not na(closeLineV)
+        line.delete(closeLineV)
+    if not na(prevOpenLineV)
+        line.delete(prevOpenLineV)
+    if not na(openLineH)
+        line.delete(openLineH)
+    if not na(closeLineH)
+        line.delete(closeLineH)
+    if not na(prevOpenLineH)
+        line.delete(prevOpenLineH)
+
+    dayMs = 24 * 60 * 60 * 1000
+
+    openTs = dailyTime
+    closeTs = dailyTime + dayMs
+    prevOpenTs = prevDailyTime
+
+    vColor = color.new(vLineColor, transparency)
+    hColor = color.new(hLineColor, transparency)
+
+    vStyle = f_getLineStyle(vLineStyle)
+    hStyle = f_getLineStyle(hLineStyle)
+
+    // VERTICAL
+    openLineV := line.new(openTs, low, openTs, high, xloc = xloc.bar_time, extend = extend.both, color = vColor, width = vLineWidth, style = vStyle)
+    closeLineV := line.new(closeTs, low, closeTs, high, xloc = xloc.bar_time, extend = extend.both, color = vColor, width = vLineWidth, style = vStyle)
+    prevOpenLineV := line.new(prevOpenTs, low, prevOpenTs, high, xloc = xloc.bar_time, extend = extend.both, color = vColor, width = vLineWidth, style = vStyle)
+
+    // HORIZONTAL
+    openLineH := line.new(bar_index, openPrice, bar_index + 1, openPrice, extend = extend.right, color = hColor, width = hLineWidth, style = hStyle)
+    closeLineH := line.new(bar_index, closePrice, bar_index + 1, closePrice, extend = extend.right, color = hColor, width = hLineWidth, style = hStyle)
+    prevOpenLineH := line.new(bar_index, prevOpenPrice, bar_index + 1, prevOpenPrice, extend = extend.right, color = hColor, width = hLineWidth, style = hStyle)
+    prevOpenLineH

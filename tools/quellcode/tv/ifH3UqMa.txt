@@ -1,0 +1,64 @@
+//@version=5
+indicator("-VrilyaSS-Midpoint of Movements with Projections-", overlay=true)
+
+// Eingabe für die Anzahl der Kerzen, die analysiert werden sollen
+len = input.int(50, title="Number of Candles", minval=1)
+
+// Checkbox zur Steuerung der Projektionen
+showProjections = input.bool(true, title="Show Projections", tooltip="Toggle to show or hide the projected lines above and below the midpoint")
+
+// Funktion zur Berechnung des Mittelpunktes der Bewegung
+var line up_line = na
+var line down_line = na
+var line up_projection_line = na
+var line down_projection_line = na
+
+// Berechnung des höchsten und niedrigsten Punktes der letzten 'len' Kerzen
+highPrice = ta.highest(high, len)
+lowPrice = ta.lowest(low, len)
+
+// Berechnung der Bewegung (Unterschied zwischen dem höchsten und niedrigsten Punkt)
+moveUp = highPrice - low[len]
+moveDown = high[len] - lowPrice
+
+// Mittelpunkt der Aufwärts- und Abwärtsbewegung berechnen
+midpointUp = low[len] + (moveUp / 2)
+midpointDown = high[len] - (moveDown / 2)
+
+// Projizierte Linien berechnen
+projectionUpUp = midpointUp + (moveUp / 2)
+projectionUpDown = midpointUp - (moveUp / 2)
+projectionDownUp = midpointDown + (moveDown / 2)
+projectionDownDown = midpointDown - (moveDown / 2)
+
+// Linie für die Aufwärtsbewegung zeichnen
+if not na(up_line)
+    line.delete(up_line)
+up_line := line.new(x1=bar_index - len, y1=midpointUp, x2=bar_index, y2=midpointUp, color=color.green, width=2)
+
+// Linie für die Abwärtsbewegung zeichnen
+if not na(down_line)
+    line.delete(down_line)
+down_line := line.new(x1=bar_index - len, y1=midpointDown, x2=bar_index, y2=midpointDown, color=color.red, width=2)
+
+// Projizierte Linien zeichnen, wenn die Checkbox aktiviert ist
+if showProjections
+    // Projizierte Linie für die Aufwärtsbewegung nach oben zeichnen
+    if not na(up_projection_line)
+        line.delete(up_projection_line)
+    up_projection_line := line.new(x1=bar_index - len, y1=projectionUpUp, x2=bar_index, y2=projectionUpUp, color=color.green, width=2, style=line.style_dashed)
+    
+    // Projizierte Linie für die Aufwärtsbewegung nach unten zeichnen
+    if not na(down_projection_line)
+        line.delete(down_projection_line)
+    down_projection_line := line.new(x1=bar_index - len, y1=projectionUpDown, x2=bar_index, y2=projectionUpDown, color=color.green, width=2, style=line.style_dashed)
+    
+    // Projizierte Linie für die Abwärtsbewegung nach oben zeichnen
+    if not na(up_projection_line)
+        line.delete(up_projection_line)
+    up_projection_line := line.new(x1=bar_index - len, y1=projectionDownUp, x2=bar_index, y2=projectionDownUp, color=color.red, width=2, style=line.style_dashed)
+    
+    // Projizierte Linie für die Abwärtsbewegung nach unten zeichnen
+    if not na(down_projection_line)
+        line.delete(down_projection_line)
+    down_projection_line := line.new(x1=bar_index - len, y1=projectionDownDown, x2=bar_index, y2=projectionDownDown, color=color.red, width=2, style=line.style_dashed)

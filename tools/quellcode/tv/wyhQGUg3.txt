@@ -1,0 +1,43 @@
+//@version=5
+indicator("1-Minute Trade Indicator-MACD+Stochastic-", overlay=true)
+
+// Input settings
+macdFastLength = input.int(12, title="MACD Fast Length")
+macdSlowLength = input.int(26, title="MACD Slow Length")
+macdSignalSmoothing = input.int(9, title="MACD Signal Smoothing")
+stochK = input.int(14, title="Stochastic %K Length")
+stochD = input.int(3, title="Stochastic %D Length")
+stochSmoothing = input.int(3, title="Stochastic Smoothing")
+stochOverbought = input.int(80, title="Stochastic Overbought Level", minval=50, maxval=100)
+stochOversold = input.int(20, title="Stochastic Oversold Level", minval=0, maxval=50)
+
+// MACD Calculations
+[macdLine, signalLine, _] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalSmoothing)
+macdHist = macdLine - signalLine
+
+// Stochastic Calculations
+k = ta.sma(ta.stoch(close, high, low, stochK), stochSmoothing)
+d = ta.sma(k, stochD)
+
+// Buy Condition
+buyCondition = ta.crossover(macdLine, signalLine) and k < stochOversold and ta.crossover(k, d)
+
+// Sell Condition
+sellCondition = ta.crossunder(macdLine, signalLine) and k > stochOverbought and ta.crossunder(k, d)
+
+// Plot Buy and Sell Signals
+plotshape(series=buyCondition, location=location.belowbar, color=color.new(color.green, 0), style=shape.labelup, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, location=location.abovebar, color=color.new(color.red, 0), style=shape.labeldown, text="SELL", textcolor=color.black, size=size.tiny)
+
+// Alerts
+alertcondition(buyCondition, title="Buy Signal", message="Buy Signal: MACD crosses above Signal Line and Stochastic is oversold with %K crossing above %D.")
+alertcondition(sellCondition, title="Sell Signal", message="Sell Signal: MACD crosses below Signal Line and Stochastic is overbought with %K crossing below %D.")
+
+// Plot MACD and Stochastic for reference (default visibility off)
+plot(macdLine, title="MACD Line", color=color.blue, linewidth=2, display=display.none)
+plot(signalLine, title="Signal Line", color=color.orange, linewidth=2, display=display.none)
+plot(macdHist, title="MACD Histogram", color=color.red, style=plot.style_histogram, linewidth=2, display=display.none)
+plot(k, title="%K", color=color.green, linewidth=2, display=display.none)
+plot(d, title="%D", color=color.red, linewidth=2, display=display.none)
+hline(stochOversold, "Stochastic Oversold Level", color=color.green, linewidth=2, linestyle=hline.style_solid, display=display.none)
+hline(stochOverbought, "Stochastic Overbought Level", color=color.red, linewidth=2, linestyle=hline.style_solid, display=display.none)

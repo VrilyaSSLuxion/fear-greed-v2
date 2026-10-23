@@ -1,0 +1,73 @@
+//@version=5
+indicator("Custom RSI Buy/Sell Signal", overlay=true)
+
+// Einstellbare Parameter für Buy-Signale
+rsi_length = input.int(14, title="RSI Length")
+rsi_threshold_low_buy = input.float(19, title="RSI Threshold Low (Buy)")
+rsi_threshold_high_buy = input.float(21, title="RSI Threshold High (Buy)")
+rsi_buy_level = input.float(21.1, title="RSI Buy Level")
+
+// Einstellbare Parameter für Sell-Signale
+rsi_threshold_high_sell = input.float(70, title="RSI Threshold High (Sell)")
+rsi_threshold_low_sell = input.float(30, title="RSI Threshold Low (Sell)")
+rsi_sell_level = input.float(29.9, title="RSI Sell Level")
+
+// Einstellbare Quelle für RSI-Berechnung
+rsi_source_type = input.string(title="RSI Source Type", defval="close", options=["close", "open", "high", "low", "ohlc4", "hl2", "hlc3", "ohlc3", "close[1]"])
+
+// RSI-Berechnung
+rsi_source = close
+if rsi_source_type == "open"
+    rsi_source := open
+if rsi_source_type == "high"
+    rsi_source := high
+if rsi_source_type == "low"
+    rsi_source := low
+if rsi_source_type == "ohlc4"
+    rsi_source := ohlc4
+if rsi_source_type == "hl2"
+    rsi_source := (high + low) / 2
+if rsi_source_type == "hlc3"
+    rsi_source := (high + low + close) / 3
+if rsi_source_type == "ohlc3"
+    rsi_source := (open + high + low + close) / 4
+if rsi_source_type == "close[1]"
+    rsi_source := close[1]
+
+rsi = ta.rsi(rsi_source, rsi_length)
+
+// Zustandsvariablen für Buy
+var bool below_threshold_buy = false
+var bool buy_signal = na
+
+// Zustandsvariablen für Sell
+var bool above_threshold_sell = false
+var bool sell_signal = na
+
+// Zustandsübergänge für Buy
+if (rsi < rsi_threshold_low_buy and not below_threshold_buy)
+    below_threshold_buy := true
+if (rsi > rsi_threshold_high_buy and below_threshold_buy)
+    below_threshold_buy := false
+    if (rsi >= rsi_buy_level)
+        buy_signal := true
+
+// Zustandsübergänge für Sell
+if (rsi > rsi_threshold_high_sell and not above_threshold_sell)
+    above_threshold_sell := true
+if (rsi < rsi_threshold_low_sell and above_threshold_sell)
+    above_threshold_sell := false
+    if (rsi <= rsi_sell_level)
+        sell_signal := true
+
+// Kaufsignal plotten
+plotshape(series=buy_signal, location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+
+// Verkaufssignal plotten
+plotshape(series=sell_signal, location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Reset des Signals nach Plot
+if (buy_signal)
+    buy_signal := na
+if (sell_signal)
+    sell_signal := na

@@ -1,0 +1,91 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © @NoCreditsLeft, X: @0creditsleft
+
+//@version=5
+indicator('-VrilyaSS-Pi Cycle Bitcoin High/Low-', shorttitle='-VrilyaSS-Pi Cycle Bitcoin High/Low-', overlay=true)
+
+//Create Inputs for the 4 MAs, and Visuals 
+
+lowma_long = input.int(471, minval=1, title='BTC Low - Long SMA')
+is_show_lowma1 = input(true, title='Show Low Long SMA?')
+
+lowema_short = input.int(150, minval=1, title='BTC Low - Short EMA')
+is_show_lowma2 = input(true, title='Show Low Short EMA?')
+
+hima_long = input.int(350, minval=1, title='BTC High - Long SMA')
+is_show_hima1 = input(true, title='Show High Long SMA?')
+
+hima_short = input.int(111, minval=1, title='BTC High - Short SMA')
+is_show_hima2 = input(true, title='Show High Short SMA?')
+
+//Set resolution to the Daily Chart
+resolution = input('D', title='Time interval')
+
+//Run the math for the 4 MAs
+ma_long_low = request.security(syminfo.tickerid, resolution, ta.sma(close, lowma_long) * 745) / 1000
+ema_short_low = request.security(syminfo.tickerid, resolution, ta.ema(close, lowema_short))
+ma_long_hi = request.security(syminfo.tickerid, resolution, ta.sma(close, hima_long) * 2)
+ma_short_hi = request.security(syminfo.tickerid, resolution, ta.sma(close, hima_short))
+
+//Set SRC
+src = request.security(syminfo.tickerid, resolution, close)
+
+//Plot the 4 MAs
+plot(is_show_lowma1 ? ma_long_low : na, color=color.new(color.red, 0), linewidth=2, title='Low Long MA')
+var lowma_long_label = label.new(x=bar_index, y=lowma_long, color=color.rgb(0, 0, 0, 100), style=label.style_label_left, textcolor=color.red, text='BTC Low - Long SMA')
+label.set_xy(lowma_long_label, x=bar_index, y=ma_long_low)
+
+plot(is_show_lowma2 ? ema_short_low : na, color=color.new(color.green, 0), linewidth=2, title='Low Short EMA')
+var lowema_short_label = label.new(x=bar_index, y=lowema_short, color=color.rgb(0, 0, 0, 100), style=label.style_label_left, textcolor=color.green, text='BTC Low - Short EMA')
+label.set_xy(lowema_short_label, x=bar_index, y=ema_short_low)
+
+plot(is_show_hima1 ? ma_long_hi : na, color=color.new(color.white, 0), linewidth=2, title='High Long MA')
+var hima_long_label = label.new(x=bar_index, y=hima_long, color=color.rgb(0, 0, 0, 100), style=label.style_label_left, textcolor=color.white, text='BTC High - Long MA')
+label.set_xy(hima_long_label, x=bar_index, y=ma_long_hi)
+
+plot(is_show_hima2 ? ma_short_hi : na, color=color.new(color.yellow, 0), linewidth=2, title='High Short MA')
+var hima_short_label = label.new(x=bar_index, y=hima_short, color=color.rgb(0, 0, 0, 100), style=label.style_label_left, textcolor=color.yellow, text='BTC High - Short MA')
+label.set_xy(hima_short_label, x=bar_index, y=ma_short_hi)
+
+//Find where the MAs cross each other
+PiCycleLow = ta.crossunder(ema_short_low, ma_long_low) ? src + src / 100 * 10 : na
+PiCycleHi = ta.crossunder(ma_long_hi, ma_short_hi) ? src + src / 100 * 10 : na
+
+//Create Labels
+plotshape(PiCycleLow, text='Pi Cycle Low', color=color.new(color.navy, 0), textcolor=color.new(color.white, 0), style=shape.labelup, size=size.normal, location=location.belowbar, title='Cycle Low')
+plotshape(PiCycleHi, text='Pi Cycle High', color=color.new(color.teal, 0), textcolor=color.new(color.white, 0), style=shape.labeldown, size=size.normal, location=location.abovebar, title='Cycle High')
+
+//Generate vertical lines at the BTC Halving Dates
+isDate(y, m, d) =>
+    val = timestamp(y, m, d)
+    if val <= time and val > time[1]
+        true
+    else
+        false
+
+// First Bitcoin Halving
+if isDate(2012, 11, 28)
+    line.new(bar_index, low, bar_index, high, xloc.bar_index, extend.both, style=line.style_dashed, color=color.yellow)
+    label.new(bar_index, low, text='1st Bitcoin Halving - Nov 28, 2012', style=label.style_label_upper_left, textcolor=color.yellow, color=color.black, textalign=text.align_right, yloc=yloc.belowbar)
+
+// Second Bitcoin Halving
+if isDate(2016, 7, 9)
+    line.new(bar_index, low, bar_index, high, xloc.bar_index, extend.both, style=line.style_dashed, color=color.yellow)
+    label.new(bar_index, low, text='2nd Bitcoin Halving - Jul 9, 2016', style=label.style_label_upper_left, textcolor=color.yellow, color=color.black, textalign=text.align_right, yloc=yloc.belowbar)
+
+// Third Bitcoin Halving
+if isDate(2020, 5, 11)
+    line.new(bar_index, low, bar_index, high, xloc.bar_index, extend.both, style=line.style_dashed, color=color.yellow)
+    label.new(bar_index, low, text='3rd Bitcoin Halving - May 11, 2020', style=label.style_label_upper_left, textcolor=color.yellow, color=color.black, textalign=text.align_right, yloc=yloc.belowbar)
+
+// Fourth Halving
+if isDate(2024, 4, 20)
+    line.new(bar_index, low, bar_index, high, xloc.bar_index, extend.both, style=line.style_dashed, color=color.yellow)
+    label.new(bar_index, low, text='4th Bitcoin Halving - April 20, 2024', style=label.style_label_upper_left, textcolor=color.yellow, color=color.black, textalign=text.align_right, yloc=yloc.belowbar)
+
+// Fifth Halving
+//if isDate(2028, 3, 8)
+//    line.new(bar_index, low, bar_index, high, xloc.bar_index, extend.both, style=line.style_dashed, color=color.yellow)
+//    label.new(bar_index, low, text="5th Bitcoin Halving - March 8, 2028", style=label.style_label_upper_left, textcolor=color.yellow, color=color.black, textalign=text.align_right, yloc=yloc.belowbar)    
+
+

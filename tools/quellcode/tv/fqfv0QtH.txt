@@ -1,0 +1,105 @@
+//@version=5
+indicator("-VrilyaSS-TC-Triple Candle Patterns-small-", overlay=true)
+
+// Funktionen zur Überprüfung der Muster
+isBullishMorningStar(o1, c1, o2, c2, o3, c3) =>
+    c1 < o1 and c2 < o2 and c3 > o3 and c3 > (o1 + c1) / 2 and o2 < c1 and o2 > c2
+
+isBullishAbandonedBaby(o1, c1, h2, l2, o3, c3) =>
+    c1 < o1 and c3 > o3 and l2 > c1 and h2 < o3
+
+isBullishThreeWhiteSoldiers(o1, c1, o2, c2, o3, c3) =>
+    c1 > o1 and c2 > o2 and c3 > o3 and o2 > c1 and o3 > c2
+
+isBullishThreeLineStrike(o1, c1, o2, c2, o3, c3, o4, c4) =>
+    c1 > o1 and c2 > o2 and c3 > o3 and c4 < o4 and c4 < o3 and c4 > o1
+
+isBullishMorningDojiStar(o1, c1, o2, c2, o3, c3) =>
+    c1 < o1 and o2 == c2 and c3 > o3 and c3 > (o1 + c1) / 2 and o2 < c1
+
+isBearishAbandonedBaby(o1, c1, h2, l2, o3, c3) =>
+    c1 > o1 and c3 < o3 and h2 < c1 and l2 > o3
+
+isBearishThreeBlackCrows(o1, c1, o2, c2, o3, c3) =>
+    c1 < o1 and c2 < o2 and c3 < o3 and o2 < c1 and o3 < c2
+
+isBearishEveningDojiStar(o1, c1, o2, c2, o3, c3) =>
+    c1 > o1 and o2 == c2 and c3 < o3 and c3 < (o1 + c1) / 2 and o2 > c1
+
+isBearishEveningStar(o1, c1, o2, c2, o3, c3) =>
+    c1 > o1 and c2 > o2 and c3 < o3 and c3 < (o1 + c1) / 2 and o2 > c1
+
+// Checkboxen und Beschreibungen
+showBullishMorningStar = input(true, title="Bullish Morning Star anzeigen")
+showBullishAbandonedBaby = input(true, title="Bullish Abandoned Baby anzeigen")
+showBullishThreeWhiteSoldiers = input(true, title="Bullish Three White Soldiers anzeigen")
+showBullishThreeLineStrike = input(true, title="Bullish Three Line Strike anzeigen")
+showBullishMorningDojiStar = input(true, title="Bullish Morning Doji Star anzeigen")
+
+showBearishAbandonedBaby = input(true, title="Bearish Abandoned Baby anzeigen")
+showBearishThreeBlackCrows = input(true, title="Bearish Three Black Crows anzeigen")
+showBearishEveningDojiStar = input(true, title="Bearish Evening Doji Star anzeigen")
+showBearishEveningStar = input(true, title="Bearish Evening Star anzeigen")
+
+// Beschreibungs-Labels
+var label bullishMorningStarLabel = na
+var label bullishAbandonedBabyLabel = na
+var label bullishThreeWhiteSoldiersLabel = na
+var label bullishThreeLineStrikeLabel = na
+var label bullishMorningDojiStarLabel = na
+
+var label bearishAbandonedBabyLabel = na
+var label bearishThreeBlackCrowsLabel = na
+var label bearishEveningDojiStarLabel = na
+var label bearishEveningStarLabel = na
+
+if bar_index == 0
+    bullishMorningStarLabel := label.new(bar_index, high, text="Zeigt einen Bullish Morning Star an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+    bullishAbandonedBabyLabel := label.new(bar_index, high, text="Zeigt ein Bullish Abandoned Baby an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+    bullishThreeWhiteSoldiersLabel := label.new(bar_index, high, text="Zeigt drei weiße Soldaten an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+    bullishThreeLineStrikeLabel := label.new(bar_index, high, text="Zeigt einen Bullish Three Line Strike an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+    bullishMorningDojiStarLabel := label.new(bar_index, high, text="Zeigt einen Bullish Morning Doji Star an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+
+    bearishAbandonedBabyLabel := label.new(bar_index, high, text="Zeigt ein Bearish Abandoned Baby an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+    bearishThreeBlackCrowsLabel := label.new(bar_index, high, text="Zeigt drei schwarze Krähen an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+    bearishEveningDojiStarLabel := label.new(bar_index, high, text="Zeigt einen Bearish Evening Doji Star an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+    bearishEveningStarLabel := label.new(bar_index, high, text="Zeigt einen Bearish Evening Star an.", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.black, size=size.small)
+
+// Berechnung der Muster
+bullishMorningStar = isBullishMorningStar(open[2], close[2], open[1], close[1], open, close)
+bullishAbandonedBaby = isBullishAbandonedBaby(open[2], close[2], high[1], low[1], open, close)
+bullishThreeWhiteSoldiers = isBullishThreeWhiteSoldiers(open[2], close[2], open[1], close[1], open, close)
+bullishThreeLineStrike = isBullishThreeLineStrike(open[3], close[3], open[2], close[2], open[1], close[1], open, close)
+bullishMorningDojiStar = isBullishMorningDojiStar(open[2], close[2], open[1], close[1], open, close)
+
+bearishAbandonedBaby = isBearishAbandonedBaby(open[2], close[2], high[1], low[1], open, close)
+bearishThreeBlackCrows = isBearishThreeBlackCrows(open[2], close[2], open[1], close[1], open, close)
+bearishEveningDojiStar = isBearishEveningDojiStar(open[2], close[2], open[1], close[1], open, close)
+bearishEveningStar = isBearishEveningStar(open[2], close[2], open[1], close[1], open, close)
+
+// Plots für Alarme
+plotshape(series=showBullishMorningStar and bullishMorningStar, location=location.belowbar, color=color.green, style=shape.labelup, text="MS", title="Bullish Morning Star", textcolor=color.black, size=size.small)
+plotshape(series=showBullishAbandonedBaby and bullishAbandonedBaby, location=location.belowbar, color=color.green, style=shape.labelup, text="AB", title="Bullish Abandoned Baby", textcolor=color.black, size=size.small)
+plotshape(series=showBullishThreeWhiteSoldiers and bullishThreeWhiteSoldiers, location=location.belowbar, color=color.green, style=shape.labelup, text="TWS", title="Bullish Three White Soldiers", textcolor=color.black, size=size.small)
+plotshape(series=showBullishThreeLineStrike and bullishThreeLineStrike, location=location.belowbar, color=color.green, style=shape.labelup, text="TLS", title="Bullish Three Line Strike", textcolor=color.black, size=size.small)
+plotshape(series=showBullishMorningDojiStar and bullishMorningDojiStar, location=location.belowbar, color=color.green, style=shape.labelup, text="MDS", title="Bullish Morning Doji Star", textcolor=color.black, size=size.small)
+
+plotshape(series=showBearishAbandonedBaby and bearishAbandonedBaby, location=location.abovebar, color=color.red, style=shape.labeldown, text="AB", title="Bearish Abandoned Baby", textcolor=color.black, size=size.small)
+plotshape(series=showBearishThreeBlackCrows and bearishThreeBlackCrows, location=location.abovebar, color=color.red, style=shape.labeldown, text="TBC", title="Bearish Three Black Crows", textcolor=color.black, size=size.small)
+plotshape(series=showBearishEveningDojiStar and bearishEveningDojiStar, location=location.abovebar, color=color.red, style=shape.labeldown, text="EDS", title="Bearish Evening Doji Star", textcolor=color.black, size=size.small)
+plotshape(series=showBearishEveningStar and bearishEveningStar, location=location.abovebar, color=color.red, style=shape.labeldown, text="ES", title="Bearish Evening Star", textcolor=color.black, size=size.small)
+
+// Alarmbedingungen für individuelle Muster
+alertcondition(showBullishMorningStar and bullishMorningStar, title="Bullish Morning Star Alarm", message="Bullish Morning Star erkannt")
+alertcondition(showBullishAbandonedBaby and bullishAbandonedBaby, title="Bullish Abandoned Baby Alarm", message="Bullish Abandoned Baby erkannt")
+alertcondition(showBullishThreeWhiteSoldiers and bullishThreeWhiteSoldiers, title="Bullish Three White Soldiers Alarm", message="Bullish Three White Soldiers erkannt")
+alertcondition(showBullishThreeLineStrike and bullishThreeLineStrike, title="Bullish Three Line Strike Alarm", message="Bullish Three Line Strike erkannt")
+alertcondition(showBullishMorningDojiStar and bullishMorningDojiStar, title="Bullish Morning Doji Star Alarm", message="Bullish Morning Doji Star erkannt")
+
+alertcondition(showBearishAbandonedBaby and bearishAbandonedBaby, title="Bearish Abandoned Baby Alarm", message="Bearish Abandoned Baby erkannt")
+alertcondition(showBearishThreeBlackCrows and bearishThreeBlackCrows, title="Bearish Three Black Crows Alarm", message="Bearish Three Black Crows erkannt")
+alertcondition(showBearishEveningDojiStar and bearishEveningDojiStar, title="Bearish Evening Doji Star Alarm", message="Bearish Evening Doji Star erkannt")
+alertcondition(showBearishEveningStar and bearishEveningStar, title="Bearish Evening Star Alarm", message="Bearish Evening Star erkannt")
+
+// Alarmbedingung für alle Muster
+alertcondition(showBullishMorningStar and bullishMorningStar or showBullishAbandonedBaby and bullishAbandonedBaby or showBullishThreeWhiteSoldiers and bullishThreeWhiteSoldiers or showBullishThreeLineStrike and bullishThreeLineStrike or showBullishMorningDojiStar and bullishMorningDojiStar or showBearishAbandonedBaby and bearishAbandonedBaby or showBearishThreeBlackCrows and bearishThreeBlackCrows or showBearishEveningDojiStar and bearishEveningDojiStar or showBearishEveningStar and bearishEveningStar, title="Triple Candle Pattern Alarm", message="-Triple Candle Pattern erkannt-VrilyaSS-TC-Triple Candle Patterns-")

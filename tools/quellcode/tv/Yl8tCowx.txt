@@ -1,0 +1,31 @@
+//@version=5
+indicator(title="-VrilyaSS-CCI Extreme Points Indicator-14-+MA-20-", overlay=true)
+
+// Inputs
+maLength = input.int(20, title="-MA-Length-20-")
+srcMA = input(close, title="-MA-Source-close-")
+cciLength = input.int(14, title="-CCI-Period-14-")
+threshold = input.int(100, title="-Overbought-Threshold-100-")
+oversold = input.int(-100, title="-Oversold-Threshold--100-")
+
+// Calculate CCI
+cciValue = ta.cci(close, cciLength)
+
+// Calculate MA with selectable source
+maValue = ta.sma(srcMA, maLength)
+
+// Plot CCI and MA
+plot(cciValue, title="-CCI-", color=color.blue, linewidth=2, display = display.none)
+plot(maValue, title="-MA-", color=color.green, linewidth=2)
+
+// Generate buy/sell signals at extreme points with MA confirmation
+buySignal = cciValue < oversold and cciValue[1] >= oversold and close > maValue
+sellSignal = cciValue > threshold and cciValue[1] <= threshold and close < maValue
+
+// Plot buy/sell arrows
+plotshape(series=buySignal, title="-Buy-Signal-", style=shape.labelup, location=location.belowbar, color=color.green, textcolor=color.black, text="Buy", size=size.tiny)
+plotshape(series=sellSignal, title="-Sell-Signal-", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.black, text="Sell", size=size.tiny)
+
+// Alert conditions
+alertcondition(buySignal, title="-Buy-Signal-VrilyaSS-CCI-Extreme-Points-Indicator-14-+MA-20-", message="-Buy-CCI-Extreme-Points-Indicator-14-+MA-20-")
+alertcondition(sellSignal, title="-Sell-Signal-VrilyaSS-CCI-Extreme-Points-Indicator-14-+MA-20-", message="-Sell-CCI-Extreme-Points-Indicator-14-+MA-20-")

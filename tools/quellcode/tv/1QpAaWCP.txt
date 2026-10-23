@@ -1,0 +1,36 @@
+//@version=5
+indicator("RSI, AO, MACD Combined Indicator", overlay=false)
+
+// Input-Parameter für Indikatoren
+rsiLength = input.int(14, title="RSI Length")
+aoShortLength = input.int(5, title="AO Short Length")
+aoLongLength = input.int(34, title="AO Long Length")
+macdFastLength = input.int(12, title="MACD Fast Length")
+macdSlowLength = input.int(26, title="MACD Slow Length")
+macdSignalSmoothing = input.int(9, title="MACD Signal Smoothing")
+
+// Berechnung der Indikatoren
+// RSI
+rsi = ta.rsi(close, rsiLength)
+
+// Awesome Oscillator
+aoShort = ta.sma(close, aoShortLength)
+aoLong = ta.sma(close, aoLongLength)
+ao = aoShort - aoLong
+
+// MACD
+[macdLine, signalLine, _] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalSmoothing)
+
+// Logik für Buy- und Sell-Signale
+bool buySignal = (rsi < 30 and ao > 0 and macdLine > signalLine)
+bool sellSignal = (rsi > 70 and ao < 0 and macdLine < signalLine)
+
+// Plot der Signale
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Plot der Indikatoren
+plot(rsi, title="RSI", color=color.blue)
+plot(ao, title="Awesome Oscillator", color=color.orange)
+plot(macdLine, title="MACD Line", color=color.green)
+plot(signalLine, title="MACD Signal Line", color=color.red)

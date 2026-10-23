@@ -1,0 +1,33 @@
+//@version=5
+indicator("True Williams Alligator (SMMA) with Buy/Sell Labels", overlay=true)
+
+// Function to calculate Smoothed Moving Average (SMMA)
+smma(src, length) =>
+    smma = ta.sma(src, length)
+    smma
+
+// Input settings
+jawLength = input.int(13, "Jaw Length")
+teethLength = input.int(8, "Teeth Length")
+lipsLength = input.int(5, "Lips Length")
+jawOffset = input.int(8, "Jaw Offset")
+teethOffset = input.int(5, "Teeth Offset")
+lipsOffset = input.int(3, "Lips Offset")
+
+// Calculate Jaw, Teeth, Lips using SMMA function
+jaw = smma(hl2, jawLength)
+teeth = smma(hl2, teethLength)
+lips = smma(hl2, lipsLength)
+
+// Plot Jaw, Teeth, Lips lines
+plot(jaw, "Jaw", color.blue, offset=jawOffset)
+plot(teeth, "Teeth", color.red, offset=teethOffset)
+plot(lips, "Lips", color.green, offset=lipsOffset)
+
+// Determine Buy and Sell Conditions based on Alligator rules
+buyCondition = ta.crossover(jaw, teeth) and jaw > lips
+sellCondition = ta.crossunder(jaw, teeth) and jaw < lips
+
+// Plot Buy and Sell Signals using plotshape
+plotshape(series=buyCondition, title="Buy Signal", style=shape.labelup, location=location.belowbar, color=color.green, text="BUY", textcolor=color.black, size=size.tiny)
+plotshape(series=sellCondition, title="Sell Signal", style=shape.labeldown, location=location.abovebar, color=color.red, text="SELL", textcolor=color.black, size=size.tiny)

@@ -1,0 +1,29 @@
+//@version=5
+indicator("Bullish Hammer after 3 Bearish Candles", overlay=true)
+
+// Beschreibung des Signals
+signalDescription = "Zeigt einen bullischen Hammer nach drei bärischen Kerzen an."
+
+// Checkbox zur Steuerung der Signalanzeige
+showSignal = input(true, title="Bullish Hammer Signal anzeigen") // Checkbox
+var label signalDescriptionLabel = na
+if bar_index == 0
+    signalDescriptionLabel := label.new(bar_index, high, text=signalDescription, xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_none, textcolor=color.white, size=size.small)
+
+// Funktion zur Überprüfung, ob eine Kerze ein Hammer ist
+isHammer(open, high, low, close) =>
+    bodySize = math.abs(close - open)
+    lowerShadow = math.min(open, close) - low
+    upperShadow = high - math.max(open, close)
+    isGreen = close > open
+    lowerShadow > 2 * bodySize and upperShadow < bodySize and isGreen
+
+// Berechnung
+threeBearishCandles = close[3] < open[3] and close[2] < open[2] and close[1] < open[1]
+hammer = isHammer(open, high, low, close)
+
+// Signale auf dem Chart anzeigen, wenn Checkbox aktiviert ist
+if showSignal and threeBearishCandles and hammer
+    label.new(x=bar_index, y=low, text="Bullish Hammer", style=label.style_label_up, color=color.green, textcolor=color.black, size=size.small)
+
+plotshape(series=showSignal and threeBearishCandles and hammer, location=location.belowbar, color=color.green, style=shape.labeldown, text="Hammer")

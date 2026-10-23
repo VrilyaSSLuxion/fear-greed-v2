@@ -1,0 +1,50 @@
+//@version=5
+indicator(title="-Quick RSI+ADX-Indicator-(QRADI)-", shorttitle="-Quick RSI+ADX-Indicator-(QRADI)-", overlay=true)
+
+// Input parameters for RSI
+rsi_source = input.source(close, title="-RSI-Source-Close-")
+rsi_period = input.int(14, title="-RSI-Period-14-")
+rsi_overbought = input.int(70, title="-RSI-Overbought-Level-70-")
+rsi_oversold = input.int(30, title="-RSI-Oversold-Level-30-")
+
+// Calculation of RSI
+rsi = ta.rsi(rsi_source, rsi_period)
+
+// Input parameters for ADX
+adx_period = input.int(14, title="-ADX-Period-14-")
+adx_threshold = input.float(25, title="-ADX-Threshold-25-", minval=0)
+
+// True Range Calculation
+true_range = ta.atr(1)
+
+// Directional Movement Calculation
+high_diff = high - high[1]
+low_diff = low[1] - low
+
+plus_dm = math.max(high_diff, 0)
+minus_dm = math.max(low_diff, 0)
+
+// Smoothed Directional Indicators
+smoothed_plus_dm = ta.sma(plus_dm, adx_period)
+smoothed_minus_dm = ta.sma(minus_dm, adx_period)
+
+// Directional Movement Index (DX)
+dx = 100 * math.abs(smoothed_plus_dm - smoothed_minus_dm) / (smoothed_plus_dm + smoothed_minus_dm)
+
+// Average Directional Index (ADX)
+adx_value = ta.sma(dx, adx_period)
+
+// Buy and Sell Signals
+buy_signal = ta.crossover(rsi, rsi_oversold) and adx_value > adx_threshold
+sell_signal = ta.crossunder(rsi, rsi_overbought) and adx_value > adx_threshold
+
+// Plots for Buy and Sell Signals
+plotshape(series=buy_signal, title="-Buy-Signal-", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="BUY", size=size.tiny)
+plotshape(series=sell_signal, title="-Sell-Signal-", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="SELL", size=size.tiny)
+
+// Plot for RSI
+plot(rsi, title="-RSI-", color=color.yellow, linewidth=2, display=display.none)
+
+// Plot for ADX and its Threshold
+plot(adx_value, title="-ADX-", color=color.white, linewidth=2, display=display.none)
+hline(adx_threshold, title="-ADX-Threshold-", color=color.red, linewidth=3, linestyle=hline.style_solid, display=display.none)

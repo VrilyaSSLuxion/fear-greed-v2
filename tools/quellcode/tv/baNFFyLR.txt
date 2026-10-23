@@ -1,0 +1,66 @@
+//@version=6
+indicator("Fibonacci Levels Signal", overlay=true)
+
+// Eingabe-Einstellungen
+length = input.int(20, minval=1, title="Lookback-Periode für High/Low")
+
+// Berechnung der Fibonacci-Retracement-Level
+highestHigh = ta.highest(high, length)
+lowestLow = ta.lowest(low, length)
+priceRange = highestHigh - lowestLow
+
+fib_0_5 = lowestLow + priceRange * 0.5
+fib_0_559 = lowestLow + priceRange * 0.559
+fib_0_618 = lowestLow + priceRange * 0.618
+fib_0_677 = lowestLow + priceRange * 0.677
+
+// Überprüfen, ob Fibonacci-Level berührt wurden
+fib_0_5_touched = (low <= fib_0_5 and high >= fib_0_5)
+fib_0_559_touched = (low <= fib_0_559 and high >= fib_0_559)
+fib_0_618_touched = (low <= fib_0_618 and high >= fib_0_618)
+fib_0_677_touched = (low <= fib_0_677 and high >= fib_0_677)
+
+// Bestimmen, ob bullisch oder bärisch
+is_bullish_0_5 = close[1] > open[1] and close < fib_0_5 // Kurs geht von oben nach unten und trifft ein niedriges Fibonacci-Level
+is_bearish_0_5 = close[1] < open[1] and close > fib_0_5 // Kurs geht von unten nach oben und trifft ein höheres Fibonacci-Level
+
+is_bullish_0_559 = close[1] > open[1] and close < fib_0_559
+is_bearish_0_559 = close[1] < open[1] and close > fib_0_559
+
+is_bullish_0_618 = close[1] > open[1] and close < fib_0_618
+is_bearish_0_618 = close[1] < open[1] and close > fib_0_618
+
+is_bullish_0_677 = close[1] > open[1] and close < fib_0_677
+is_bearish_0_677 = close[1] < open[1] and close > fib_0_677
+
+// Fibonacci-Level-Linien zeichnen
+line.new(bar_index[length], fib_0_5, bar_index, fib_0_5, color=color.new(color.blue, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_559, bar_index, fib_0_559, color=color.new(color.green, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_618, bar_index, fib_0_618, color=color.new(color.orange, 0), width=1, style=line.style_solid)
+line.new(bar_index[length], fib_0_677, bar_index, fib_0_677, color=color.new(color.purple, 0), width=1, style=line.style_solid)
+
+// Signale mit den Level-Beschreibungen plotten
+plotshape(fib_0_5_touched and is_bullish_0_5, style=shape.labelup, location=location.belowbar, color=color.green, title="Fib 0.5 Bullisches Signal", text="Fib 0.5", textcolor=color.black)
+plotshape(fib_0_5_touched and is_bearish_0_5, style=shape.labeldown, location=location.abovebar, color=color.red, title="Fib 0.5 Bärisches Signal", text="Fib 0.5", textcolor=color.black)
+
+plotshape(fib_0_559_touched and is_bullish_0_559, style=shape.labelup, location=location.belowbar, color=color.green, title="Fib 0.559 Bullisches Signal", text="Fib 0.559", textcolor=color.black)
+plotshape(fib_0_559_touched and is_bearish_0_559, style=shape.labeldown, location=location.abovebar, color=color.red, title="Fib 0.559 Bärisches Signal", text="Fib 0.559", textcolor=color.black)
+
+plotshape(fib_0_618_touched and is_bullish_0_618, style=shape.labelup, location=location.belowbar, color=color.green, title="Fib 0.618 Bullisches Signal", text="Fib 0.618", textcolor=color.black)
+plotshape(fib_0_618_touched and is_bearish_0_618, style=shape.labeldown, location=location.abovebar, color=color.red, title="Fib 0.618 Bärisches Signal", text="Fib 0.618", textcolor=color.black)
+
+plotshape(fib_0_677_touched and is_bullish_0_677, style=shape.labelup, location=location.belowbar, color=color.green, title="Fib 0.677 Bullisches Signal", text="Fib 0.677", textcolor=color.black)
+plotshape(fib_0_677_touched and is_bearish_0_677, style=shape.labeldown, location=location.abovebar, color=color.red, title="Fib 0.677 Bärisches Signal", text="Fib 0.677", textcolor=color.black)
+
+// Alerts
+alertcondition(fib_0_5_touched and is_bullish_0_5, title="Bullisches Signal bei Fib 0.5", message="Der Preis hat das 0.5 Fibonacci-Level erreicht und ein bullisches Signal wurde generiert!")
+alertcondition(fib_0_5_touched and is_bearish_0_5, title="Bärisches Signal bei Fib 0.5", message="Der Preis hat das 0.5 Fibonacci-Level erreicht und ein bärisches Signal wurde generiert!")
+
+alertcondition(fib_0_559_touched and is_bullish_0_559, title="Bullisches Signal bei Fib 0.559", message="Der Preis hat das 0.559 Fibonacci-Level erreicht und ein bullisches Signal wurde generiert!")
+alertcondition(fib_0_559_touched and is_bearish_0_559, title="Bärisches Signal bei Fib 0.559", message="Der Preis hat das 0.559 Fibonacci-Level erreicht und ein bärisches Signal wurde generiert!")
+
+alertcondition(fib_0_618_touched and is_bullish_0_618, title="Bullisches Signal bei Fib 0.618", message="Der Preis hat das 0.618 Fibonacci-Level erreicht und ein bullisches Signal wurde generiert!")
+alertcondition(fib_0_618_touched and is_bearish_0_618, title="Bärisches Signal bei Fib 0.618", message="Der Preis hat das 0.618 Fibonacci-Level erreicht und ein bärisches Signal wurde generiert!")
+
+alertcondition(fib_0_677_touched and is_bullish_0_677, title="Bullisches Signal bei Fib 0.677", message="Der Preis hat das 0.677 Fibonacci-Level erreicht und ein bullisches Signal wurde generiert!")
+alertcondition(fib_0_677_touched and is_bearish_0_677, title="Bärisches Signal bei Fib 0.677", message="Der Preis hat das 0.677 Fibonacci-Level erreicht und ein bärisches Signal wurde generiert!")

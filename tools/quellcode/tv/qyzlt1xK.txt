@@ -1,0 +1,28 @@
+//@version=5
+indicator("30-Second Trading Strategy with AO")
+
+// Define input variables
+lookbackPeriod = input(5, "Lookback Period")
+
+// Calculate lowest and highest
+lowestLow = ta.lowest(low, lookbackPeriod)
+highestHigh = ta.highest(high, lookbackPeriod)
+
+// Calculate Awesome Oscillator (AO)
+sma5 = ta.sma((high + low) / 2, 5)
+sma34 = ta.sma((high + low) / 2, 34)
+aoValue = sma5 - sma34
+
+// Buy and sell signals
+buySignal = low == lowestLow and low[1] > lowestLow[1] and aoValue > 0
+sellSignal = high == highestHigh and high[1] < highestHigh[1] and aoValue < 0
+
+// Plot buy and sell signals
+plotshape(buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)
+
+// Plot Awesome Oscillator (AO)
+plot(aoValue, color=color.blue, title="Awesome Oscillator")
+
+// Plot zero line for AO
+hline(0, "Zero Line", color=color.gray)

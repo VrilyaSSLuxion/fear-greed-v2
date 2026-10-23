@@ -1,0 +1,38 @@
+//@version=5
+indicator("-VrilyaSS-Bullish and Bearish Candlestick Patterns-12072024-", overlay=true)
+
+// Eingaben für die Handelsdauer und gleitenden Durchschnitt
+tradeLength = input.int(1, "Trade Length (minutes)", minval=1, maxval=2)
+
+// Variablen initialisieren
+var bool canOpenTrade = true
+var int tradeOpenTime = na
+var int tradeCloseTime = na
+
+// Definition von bullischen und bärischen Kerzenformationen
+bullishEngulfing = (close > open) and (close[1] < open[1]) and (close > open[1]) and (open < close[1])
+bearishEngulfing = (close < open) and (close[1] > open[1]) and (close < open[1]) and (open > close[1])
+
+// Kaufbedingung: bullische Kerzenformation
+buySignal = bullishEngulfing
+
+// Verkaufsbedingung: bärische Kerzenformation
+sellSignal = bearishEngulfing
+
+if (time[1] < time)
+    // Schließe vorherigen Trade
+    if (not na(tradeOpenTime) and na(tradeCloseTime))
+        tradeCloseTime := time
+
+    // Neuer Trade
+    if (na(tradeOpenTime) and na(tradeCloseTime))
+        tradeOpenTime := time
+
+if (not na(tradeOpenTime) and not na(tradeCloseTime))
+    canOpenTrade := (timenow - tradeOpenTime) >= tradeLength * 60 * 1000
+
+bgcolor(canOpenTrade ? na : color.new(color.red, 90))
+
+// Kauf- und Verkaufssignale auf dem Chart anzeigen
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, textcolor=color.black, style=shape.labelup, text="Buy", size=size.small)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, textcolor=color.black, style=shape.labeldown, text="Sell", size=size.small)

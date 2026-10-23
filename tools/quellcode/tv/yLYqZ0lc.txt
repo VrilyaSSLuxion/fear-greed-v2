@@ -1,0 +1,28 @@
+//@version=5
+indicator("Schneller Trade Indikator", overlay=true)
+
+// Eingabefelder für Indikator-Einstellungen
+lengthRSI = input.int(14, title="RSI Length")
+overboughtRSI = input.int(70, title="RSI Overbought Level")
+oversoldRSI = input.int(30, title="RSI Oversold Level")
+
+lengthEMA = input.int(20, title="EMA Length")
+
+// Berechnungen für RSI und EMA
+rsi = ta.rsi(close, lengthRSI)
+ema = ta.ema(close, lengthEMA)
+
+// Kauf- und Verkaufssignale
+buySignal = rsi < oversoldRSI and close < ema
+sellSignal = rsi > overboughtRSI and close > ema
+
+// Plotten der Signallinien
+plot(rsi, color=color.blue, title="RSI")
+plot(ema, color=color.red, title="EMA")
+
+// Kauf- und Verkaufssignale anzeigen
+plotshape(series=buySignal, location=location.belowbar, color=color.green, style=shape.labelup, text="Buy", title="Buy Signal")
+plotshape(series=sellSignal, location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell", title="Sell Signal")
+
+// Hintergrundfarbe für Kauf- und Verkaufssignale
+bgcolor(buySignal ? color.new(color.green, 70) : sellSignal ? color.new(color.red, 70) : na, title="Trade Background")

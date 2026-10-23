@@ -1,0 +1,30 @@
+//@version=5
+strategy("Stochastic RSI Strategy", overlay=true)
+
+// Stochastic Oscillator
+lengthK = input(14, title="%K Length")
+lengthD = input(3, title="%D Smoothing")
+smoothK = input(3, title="Smoothing")
+k = ta.stoch(close, high, low, lengthK)
+d = ta.sma(k, lengthD)
+
+// RSI
+rsiLength = input(14, title="RSI Length")
+rsi = ta.rsi(close, rsiLength)
+
+// Kaufsignalbedingungen
+buySignal = (k < 20) and (k[1] < d[1]) and (k > d) and (rsi > 49)
+
+// Verkaufssignalbedingungen
+sellSignal = (k > 80) and (k[1] > d[1]) and (k < d) and (rsi < 51)
+
+// Handelslogik
+if (buySignal)
+    strategy.entry("Buy", strategy.long)
+    
+if (sellSignal)
+    strategy.close("Buy")
+
+// Plot der Signale
+plotshape(series=buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(series=sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)

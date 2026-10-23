@@ -1,0 +1,115 @@
+//@version=5
+indicator(title="-VrilyaSS-Stochastic+DIVERGENCE+3X-BANDS-+2x-Cross-Alarms-Chart-", shorttitle="-VrilyaSS-Stochastic+DIVERGENCE+3X-BANDS-+2x-Cross-Alarms-Chart-", format=format.price, precision=2, timeframe="", timeframe_gaps=true, overlay=true)
+
+// Stochastic Calculation
+periodK = input.int(21, title="-%K-Length-(A5)-(B21)-(C30)-(D38)-default-14-", minval=1)
+smoothK = input.int(5, title="-%K-Smoothing-(A3)-(B5)-(C1)-(D4)-default-1-", minval=1)
+periodD = input.int(5, title="-%D-Smoothing-(A2)-(B5)-(C3)-(D5)-default-3-", minval=1)
+k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
+d = ta.sma(k, periodD)
+// Die Standardlinien `%K` und `%D` werden nicht geplottet
+
+// Bullish and Bearish Crosses
+bullishCross = ta.crossover(k, d)
+bearishCross = ta.crossunder(k, d)
+
+// Checkbox Inputs (default enabled)
+activateBullSignal = input.bool(title="Activate Buy Signal - Bullish Stochastic Cross", defval=true)
+activateBearSignal = input.bool(title="Activate Sell Signal - Bearish Stochastic Cross", defval=true)
+
+// Plot Bullish and Bearish Cross Signals unterhalb des Charts
+plotshape(series=activateBullSignal and bullishCross ? low : na, title="Bullish Cross", location=location.belowbar, color=color.green, text="Buy", style=shape.labelup, textcolor=color.black)
+plotshape(series=activateBearSignal and bearishCross ? high : na, title="Bearish Cross", location=location.abovebar, color=color.red, text="Sell", style=shape.labeldown, textcolor=color.black)
+
+// Divergence Detection Logic
+lbR = input.int(title="-Pivot Lookback Right-5-", defval=5, display=display.data_window)
+lbL = input.int(title="-Pivot Lookback Left-5-", defval=5, display=display.data_window)
+rangeUpper = input.int(title="-Max of Lookback Range-60-", defval=60, display=display.data_window)
+rangeLower = input.int(title="-Min of Lookback Range-5-", defval=5, display=display.data_window)
+plotBull = input.bool(title="-Plot Bullish-true-", defval=true, display=display.data_window)
+plotHiddenBull = input.bool(title="-Plot Hidden-Bullish-true-", defval=true, display=display.data_window)
+plotBear = input.bool(title="-Plot Bearish-true-", defval=true, display=display.data_window)
+plotHiddenBear = input.bool(title="-Plot Hidden-Bearish-true-", defval=true, display=display.data_window)
+
+bullColor = input.color(title="-Regular-Bullish-Label-Color-", defval=color.green, group="Regular Bullish", inline="color")
+bullTextColor = input.color(title="-Regular-Bullish-Label-Text-Color-", defval=color.white, group="Regular Bullish", inline="textColor")
+
+hiddenBullColor = input.color(title="-Hidden-Bullish-Label-Color-", defval=color.new(color.green, 50), group="Hidden Bullish", inline="color")
+hiddenBullTextColor = input.color(title="-Hidden-Bullish-Label-Text-Color-", defval=color.white, group="Hidden Bullish", inline="textColor")
+
+bearColor = input.color(title="-Regular-Bearish-Label-Color-", defval=color.red, group="Regular Bearish", inline="color")
+bearTextColor = input.color(title="-Regular-Bearish-Label-Text-Color-", defval=color.white, group="Regular Bearish", inline="textColor")
+
+hiddenBearColor = input.color(title="-Hidden-Bearish-Label-Color-", defval=color.new(color.red, 50), group="Hidden Bearish", inline="color")
+hiddenBearTextColor = input.color(title="-Hidden-Bearish-Label-Text-Color-", defval=color.white, group="Hidden Bearish", inline="textColor")
+
+noneColor = color.new(color.white, 100)
+
+// Detect pivots
+plFound = na(ta.pivotlow(k, lbL, lbR)) ? false : true
+phFound = na(ta.pivothigh(k, lbL, lbR)) ? false : true
+_inRange(cond) =>
+    bars = ta.barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+
+// Regular Bullish Divergence
+oscHL = k[lbR] > ta.valuewhen(plFound, k[lbR], 1) and _inRange(plFound[1])
+priceLL = low[lbR] < ta.valuewhen(plFound, low[lbR], 1)
+bullCondAlert = priceLL and oscHL and plFound
+bullCond = plotBull and bullCondAlert
+
+plot(plFound ? k[lbR] : na, offset=-lbR, title="-Regular Bullish-", linewidth=2, color=(bullCond ? bullColor : noneColor), display=display.pane)
+plotshape(series=bullCond ? k[lbR] : na, offset=-lbR, title="-Regular Bullish-Label-", text=" Bull ", style=shape.labelup, location=location.belowbar, color=bullColor, textcolor=bullTextColor)
+
+// Hidden Bullish Divergence
+oscLL = k[lbR] < ta.valuewhen(plFound, k[lbR], 1) and _inRange(plFound[1])
+priceHL = low[lbR] > ta.valuewhen(plFound, low[lbR], 1)
+hiddenBullCondAlert = priceHL and oscLL and plFound
+hiddenBullCond = plotHiddenBull and hiddenBullCondAlert
+
+plot(plFound ? k[lbR] : na, offset=-lbR, title="-Hidden Bullish-", linewidth=2, color=(hiddenBullCond ? hiddenBullColor : noneColor), display=display.pane)
+plotshape(series=hiddenBullCond ? k[lbR] : na, offset=-lbR, title="-Hidden Bullish-Label-", text=" H Bull ", style=shape.labelup, location=location.belowbar, color=hiddenBullColor, textcolor=hiddenBullTextColor)
+
+// Regular Bearish Divergence
+oscLH = k[lbR] < ta.valuewhen(phFound, k[lbR], 1) and _inRange(phFound[1])
+priceHH = high[lbR] > ta.valuewhen(phFound, high[lbR], 1)
+bearCondAlert = priceHH and oscLH and phFound
+bearCond = plotBear and bearCondAlert
+
+plot(phFound ? k[lbR] : na, offset=-lbR, title="-Regular Bearish-", linewidth=2, color=(bearCond ? bearColor : noneColor), display=display.pane)
+plotshape(series=bearCond ? k[lbR] : na, offset=-lbR, title="-Regular Bearish-Label-", text=" Bear ", style=shape.labeldown, location=location.abovebar, color=bearColor, textcolor=bearTextColor)
+
+// Hidden Bearish Divergence
+oscHH = k[lbR] > ta.valuewhen(phFound, k[lbR], 1) and _inRange(phFound[1])
+priceLH = high[lbR] < ta.valuewhen(phFound, high[lbR], 1)
+hiddenBearCondAlert = priceLH and oscHH and phFound
+hiddenBearCond = plotHiddenBear and hiddenBearCondAlert
+
+plot(phFound ? k[lbR] : na, offset=-lbR, title="-Hidden Bearish-", linewidth=2, color=(hiddenBearCond ? hiddenBearColor : noneColor), display=display.pane)
+plotshape(series=hiddenBearCond ? k[lbR] : na, offset=-lbR, title="-Hidden Bearish-Label-", text=" H Bear ", style=shape.labeldown, location=location.abovebar, color=hiddenBearColor, textcolor=hiddenBearTextColor)
+
+// Alerts for Divergences
+alertcondition(bullCondAlert, title='Regular Bullish Divergence', message="Found a new Regular Bullish Divergence, Pivot Lookback Right number of bars to the left of the current bar")
+alertcondition(hiddenBullCondAlert, title='Hidden Bullish Divergence', message='Found a new Hidden Bullish Divergence, Pivot Lookback Right number of bars to the left of the current bar')
+alertcondition(bearCondAlert, title='Regular Bearish Divergence', message='Found a new Regular Bearish Divergence, Pivot Lookback Right number of bars to the left of the current bar')
+alertcondition(hiddenBearCondAlert, title='Hidden Bearish Divergence', message='Found a new Hidden Bearish Divergence, Pivot Lookback Right number of bars to the left of the current bar')
+
+// Alerts for Stochastic Crosses
+alertcondition(activateBullSignal and bullishCross, title='Buy Signal - Bullish Stochastic Cross', message='Buy signal detected from Bullish Stochastic Cross')
+alertcondition(activateBearSignal and bearishCross, title='Sell Signal - Bearish Stochastic Cross', message='Sell signal detected from Bearish Stochastic Cross')
+
+// Checkbox Inputs for U-Turn Signals (default enabled)
+activateUTurnBottom = input.bool(title="Activate Buy Signal - U-Turn Bottom", defval=true)
+activateUTurnTop = input.bool(title="Activate Sell Signal - U-Turn Top", defval=true)
+
+// Detect U-Turns in K Line
+uturnBottom = ta.pivotlow(k, lbL, lbR)
+uturnTop = ta.pivothigh(k, lbL, lbR)
+
+// Plot U-Turn Signals unterhalb des Charts
+plotshape(series=activateUTurnBottom and uturnBottom ? low : na, offset=-lbR, title="U-Turn Bottom", text="UT Buy", style=shape.labelup, location=location.belowbar, color=color.blue, textcolor=color.white)
+plotshape(series=activateUTurnTop and uturnTop ? high : na, offset=-lbR, title="U-Turn Top", text="UT Sell", style=shape.labeldown, location=location.abovebar, color=color.orange, textcolor=color.white)
+
+// Alerts for U-Turns
+alertcondition(activateUTurnBottom and uturnBottom, title='U-Turn Bottom - Buy Signal', message='Buy signal detected from U-Turn at the bottom of the K line')
+alertcondition(activateUTurnTop and uturnTop, title='U-Turn Top - Sell Signal', message='Sell signal detected from U-Turn at the top of the K line')
