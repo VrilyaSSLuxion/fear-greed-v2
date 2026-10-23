@@ -86,6 +86,11 @@
           "label": "Alle Versionen auf GitHub",
           "url": "https://github.com/VrilyaSSLuxion/fear-greed-v2/releases",
           "note": "Versionsverlauf"
+        },
+        {
+          "label": "Eigenes GitHub-Projekt",
+          "url": "https://github.com/VrilyaSSLuxion/fib-overlay",
+          "note": "Code + jede Version"
         }
       ],
       "hints": [

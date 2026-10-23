@@ -77,11 +77,13 @@
 <script>
 // Neue Kanäle einfach hier ergänzen. Ohne "url" führt die Karte zur YouTube-Suche nach dem Namen.
 const CHANNELS = [
-  { name: 'Trader Lifestyle', desc: 'XAU-Master (Gold), Binäre Optionen und KI-Nachbau.', tags: ['Gold / XAU', 'Binäre Optionen', 'KI'], url: '' },
+  { name: 'Trader Lifestyle', desc: 'XAU-Master (Gold), Binäre Optionen und KI-Nachbau.', tags: ['Gold / XAU', 'Binäre Optionen', 'KI'], url: 'https://www.youtube.com/@traderlifestyle' },
   { name: 'Smart Money Crypto', desc: 'Täglich Livestream. Original-Autor des Fear & Greed Index – das Vorbild für meinen Nachbau hier auf der Seite.', tags: ['Täglich live', 'Krypto', 'Fear & Greed'], url: 'https://www.youtube.com/@Smart_Money_Crypto' },
-  { name: 'Crypto Claudius', desc: 'Täglich Livestreams und Trading – mit LSOB-Indikator und GUS-Indikator.', tags: ['Täglich live', 'Trading', 'Indikatoren'], url: '' },
-  { name: 'Crypto Wall Street', desc: 'Täglich Update-Video, Livestreams, News und Markt-Updates, Trading-Livestream.', tags: ['Täglich', 'Livestream', 'News', 'Markt-Update'], url: '' },
-  { name: 'Didi Random', desc: 'Livestreams und tägliche Videos.', tags: ['Livestream', 'Täglich'], url: '' },
+  { name: 'Crypto Claudius (Deutsch)', desc: 'Täglich Livestreams und Trading – mit LSOB-Indikator und GUSS-Indikator.', tags: ['Täglich live', 'Trading', 'Indikatoren', 'Deutsch'], url: 'https://www.youtube.com/@CryptoClaudiusDeutsch' },
+  { name: 'Crypto Claudius (English)', desc: 'Der englische Kanal von Crypto Claudius – Livestreams und Trading mit LSOB- und GUSS-Indikator.', tags: ['Live', 'Trading', 'Indikatoren', 'English'], url: 'https://www.youtube.com/@CryptoClaudius' },
+  { name: 'Crypto Wall Street', desc: 'Täglich Update-Video, Livestreams, News und Markt-Updates, Trading-Livestream.', tags: ['Täglich', 'Livestream', 'News', 'Markt-Update'], url: 'https://www.youtube.com/@cryptowallstreet' },
+  { name: 'Didi Random', desc: 'Livestreams und tägliche Videos.', tags: ['Livestream', 'Täglich'], url: 'https://www.youtube.com/@didirandom' },
+  { name: 'Robyn HD', desc: 'Tägliche Bitcoin- und Markt-News.', tags: ['Täglich', 'Bitcoin', 'News'], url: 'https://www.youtube.com/@RobynHD' },
 ];
 const YT = '<svg width="30" height="30" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="#ff3b3b"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg>';
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

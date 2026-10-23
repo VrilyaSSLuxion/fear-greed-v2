@@ -5490,19 +5490,22 @@ livePrice();
 // Neue Daten holen: am PC jede Minute (Programm-Intervall), online alle 2 Minuten, Einzeldatei alle 10 Minuten neu berechnen
 setInterval(() => { if (Date.now() - lastLoad > (window.FG_STANDALONE ? 600000 : SRV ? Math.max(1, SRV.intervals?.data || 1) * 60000 - 5000 : 115000)) load(false); }, 15000);
 </script>
-<!-- ===== Testkopie V2: Ticker-Aussehen zum Durchschalten (Original / B1 / B2 / B3) und Zahlen ausgeschrieben oder in Mio. ===== -->
+<!-- ===== Testkopie V2: Ticker-Aussehen zum Durchschalten (Original / B1 / B2 / B3), Zahlen ausgeschrieben oder in Mio.,
+     Feineinstellung (🔧): alle Größen und Abstände mit Schiebereglern – je Stil und Bildschirmgröße gespeichert ===== -->
 <style id="tkv">
-  /* gemeinsam für B1–B3 */
+  /* gemeinsam für B1–B3 – das dreispaltige Layout nur ab 900 px; schmaler (Tablet hochkant, Handy) bleibt der Ticker gestapelt */
   html.tkv-on .ticker .arr.tick b{font-size:var(--tk-arr,clamp(44px,3.4vw,68px))!important}
   html.tkv-on #arrTick::after{display:none!important}
   html.tkv-on #liqCur{display:none!important}
   html.tkv-on .tkvcur{height:28px!important;padding:0 26px 0 10px!important;font-size:13px!important;margin-left:12px;vertical-align:3px}
   html:not(.tkv-on) .tkvcur{display:none}
-  html.tkv-on .ticker{grid-template-columns:auto minmax(0,1fr) auto!important}
-  html.tkv-on .liqtitle{justify-content:space-between!important;padding:6px 16px 9px!important;min-width:0;overflow:hidden;align-items:stretch!important}
-  html.tkv-on .tk4{flex:1;justify-content:space-between!important;margin-top:6px;line-height:1.15!important;min-width:0;width:100%}
+  @media (min-width:900px){
+    html.tkv-on .ticker{grid-template-columns:auto minmax(0,1fr) auto!important}
+    html.tkv-on .liqtitle{justify-content:space-between!important;padding:6px 16px 9px!important;min-width:0;overflow:hidden;align-items:stretch!important}
+    html.tkv-on .tk4{flex:1;justify-content:space-between!important;margin-top:6px;line-height:1.15!important;min-width:0;width:100%}
+    html.tkv-on .liq{justify-content:space-between!important;padding:9px 16px 6px!important;gap:0!important;width:auto!important}
+  }
   html.tkv-on .tk4>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  html.tkv-on .liq{justify-content:space-between!important;padding:9px 16px 6px!important;gap:0!important;width:auto!important}
   html.tkv-on .liq .sd,html.tkv-on .liq .sd span,html.tkv-on .liq .sd small{white-space:nowrap!important}
   html.tkv-on .liq .sd{gap:5px!important}
   html.tkv-on .segbar{height:14px!important}
@@ -5523,12 +5526,63 @@ setInterval(() => { if (Date.now() - lastLoad > (window.FG_STANDALONE ? 600000 :
   html.tkv-b3 .liq .sd{font-size:17px!important} html.tkv-b3 .liq .sd small{font-size:11.5px!important}
   html.tkv-b3 .pcts{font-size:21px!important}
   html.tkv-b3{--tkv-liq:16px}
+  /* Tablet quer (900–1279 px) in B1–B3: Schrift wächst mit der Bildschirmbreite statt fester Pixel */
+  @media (min-width:900px) and (max-width:1279px){
+    html.tkv-on #tPrice,html.tkv-on #tEur{font-size:clamp(24px,2.7vw,36px)!important}
+    html.tkv-on .liq .sd{font-size:clamp(13px,1.35vw,17px)!important}
+    html.tkv-on .liq .sd small{font-size:clamp(9px,.9vw,11.5px)!important}
+    html.tkv-on .pcts{font-size:clamp(15px,1.6vw,22px)!important}
+    html.tkv-on .liqtitle>span:first-child{font-size:clamp(14px,1.6vw,21px)!important}
+  }
+  /* schmale Bildschirme in B1–B3: Preise und Liquidationen kleiner, damit nichts abgeschnitten wird */
+  @media (max-width:899px){
+    html.tkv-on #tPrice,html.tkv-on #tEur{font-size:clamp(20px,4.2vw,30px)!important}
+    html.tkv-on .liq .sd{font-size:clamp(13px,2.6vw,18px)!important}
+    html.tkv-on .liq .sd small{font-size:clamp(9px,1.6vw,11.5px)!important}
+    html.tkv-on .pcts{font-size:clamp(14px,2.6vw,20px)!important}
+  }
   /* Tasten am Ticker (neben ⇅ und ▾) */
   .tcol.tkvb{right:114px;width:auto;min-width:64px;padding:0 9px!important;font-size:12px;font-weight:800;color:#f6c453}
   .tcol.tknb{right:186px;width:auto;min-width:64px;padding:0 9px!important;font-size:12px;font-weight:800}
+  .tcol.tkfb{right:258px;width:auto;min-width:64px;padding:0 9px!important;font-size:12px;font-weight:800;color:#f6c453}
+  .tcol.tkfb.on{background:#3a2a05;border-color:#f6c453}
+  @media (max-width:560px){ .tcol.tkvb,.tcol.tknb,.tcol.tkfb{min-width:0;font-size:11px;padding:0 6px!important} .tcol.tknb{right:166px} .tcol.tkfb{right:216px} }
+  /* Feineinstellung */
+  #tkfPanel{position:fixed;z-index:120;width:min(390px,calc(100vw - 16px));overflow:auto;overscroll-behavior:contain;background:#140a18f7;
+    border:2px solid #f6c453;border-radius:14px;padding:10px 12px 12px;color:#f4eef8;font:13px/1.35 'Plus Jakarta Sans',system-ui,sans-serif;box-shadow:0 12px 34px #000b}
+  #tkfPanel[hidden]{display:none}
+  #tkfPanel .hd{display:flex;align-items:center;gap:6px;position:sticky;top:-10px;margin:-10px -12px 8px;padding:9px 12px 8px;background:#140a18;border-bottom:1px solid #3a2747;z-index:1}
+  #tkfPanel .hd b{font-size:15px;color:#f6c453;flex:1}
+  #tkfPanel button{background:#241530;border:1px solid #4a3556;color:#f4eef8;border-radius:8px;padding:4px 9px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700}
+  #tkfPanel button:hover{border-color:#f6c453}
+  #tkfPanel .info{font-size:12px;color:#a397ae;margin:0 0 8px}
+  #tkfPanel .info b{color:#f4eef8}
+  #tkfPanel details{border:1.5px solid #3a2747;border-radius:10px;margin:6px 0;padding:2px 10px}
+  #tkfPanel details[open]{border-color:#6b5578;padding-bottom:8px}
+  #tkfPanel summary{cursor:pointer;font-weight:800;padding:6px 0;color:#f6c453;list-style:none}
+  #tkfPanel summary::-webkit-details-marker{display:none}
+  #tkfPanel summary::before{content:'▸ ';color:#a397ae}
+  #tkfPanel details[open]>summary::before{content:'▾ '}
+  #tkfPanel summary small{color:#a397ae;font-weight:600}
+  #tkfPanel .rw{display:grid;grid-template-columns:minmax(0,1fr) 62px 26px;gap:3px 6px;align-items:center;margin:7px 0 0}
+  #tkfPanel .rw label{grid-column:1/-1;font-size:12.5px;color:#e9dcf3}
+  #tkfPanel .rw label i{font-style:normal;color:#a397ae;font-size:11.5px}
+  #tkfPanel .rw input[type=range]{width:100%;accent-color:#f6c453}
+  #tkfPanel .rw input[type=number]{width:62px;background:#120916;border:1px solid #4a3556;color:#f4eef8;border-radius:7px;padding:3px 4px;font:inherit;font-size:12.5px}
+  #tkfPanel .rw button{padding:2px 0;width:26px}
+  #tkfPanel .rw.auto input[type=number]{color:#8d7f99}
+  #tkfPanel .rw.auto input[type=range]{opacity:.55}
+  #tkfPanel .rw.auto button{visibility:hidden}
+  #tkfPanel .rw.off{opacity:.45;pointer-events:none}
+  #tkfPanel .ck{display:flex;gap:8px;align-items:center;margin:8px 0 0;font-size:12.5px}
+  #tkfPanel .ft{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  #tkfPanel .ft button{flex:1 1 auto}
+  #tkfPanel .ft .rot{border-color:#7a2a3a;color:#ffb3c1}
+  #tkfPanel textarea{width:100%;height:70px;margin-top:8px;background:#120916;border:1px solid #4a3556;color:#f4eef8;border-radius:8px;font:11px monospace;padding:6px}
+  #tkfPanel .msg{font-size:12px;color:#5ee0b0;min-height:16px;margin-top:6px}
 </style>
 <script>
-/* Ticker-Varianten der Testkopie. Wahl merkt sich der Browser (tkv_stil, tkv_zahlen). */
+/* Ticker-Varianten der Testkopie. Wahl merkt sich der Browser (tkv_stil, tkv_zahlen, Feineinstellung: tkf_sets). */
 (function () {
   var STILE = ['orig', 'b1', 'b2', 'b3'], NAMEN = { orig: 'Original', b1: 'B1', b2: 'B2', b3: 'B3' };
   var get = function (k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
@@ -5542,6 +5596,81 @@ setInterval(() => { if (Date.now() - lastLoad > (window.FG_STANDALONE ? 600000 :
   var $ = function (id) { return document.getElementById(id); };
   var busy = false;
 
+  /* ===== Feineinstellung: jede Zeile = ein Regler. css: Selektor + Eigenschaften; js: wird beim Ausrichten verrechnet ===== */
+  var GRUPPEN = [
+    ['gesamt', 'Ticker gesamt', 'Höhe und Spaltenbreiten'],
+    ['btc', '₿-Zeichen', 'Größe und Lage'],
+    ['arr', 'TICK und 24 H', 'Beschriftung, Pfeile, Prozent'],
+    ['preis', 'Preis $ / €', 'Schrift und Lage der Zeilen'],
+    ['tf', 'Zeitrahmen 4H · 1H · 15M · 5M', 'Liste neben dem Preis'],
+    ['liq', 'Liquidationen (Mitte)', 'Titel und Zeilen'],
+    ['ls', 'Longs / Shorts (rechts)', 'Zahlen, Kreis, Balken, Prozent']
+  ];
+  var F = [
+    { k: 'g_minh', g: 'gesamt', l: 'Mindesthöhe des Tickers', css: '.ticker:not(.collapsed)', p: ['min-height'], min: 0, max: 400 },
+    { k: 'g_pw', g: 'gesamt', l: 'Breite Preis-Bereich (links)', i: 'mindestens', css: '.ticker>div.price', p: ['min-width'], min: 0, max: 1000 },
+    { k: 'g_lw', g: 'gesamt', l: 'Breite Longs/Shorts (rechts)', i: 'die Mitte bekommt den Rest', css: '.ticker>div.liq', p: ['width', 'min-width', 'max-width'], min: 120, max: 1100 },
+    { k: 'b_scale', g: 'btc', l: '₿ Größe', i: '% – 100 = bündig mit „TICK“ und 24h-Prozent', js: 1, def: 100, min: 30, max: 170, u: '%' },
+    { k: 'b_dy', g: 'btc', l: '₿ hoch/runter', i: '– = höher', js: 1, def: 0, min: -80, max: 80 },
+    { k: 'b_pl', g: 'btc', l: 'Abstand links', css: '.ticker .price>.b', p: ['padding-left'], min: 0, max: 80 },
+    { k: 'b_pr', g: 'btc', l: 'Abstand rechts', css: '.ticker .price>.b', p: ['padding-right'], min: 0, max: 80 },
+    { k: 'a_lbl', g: 'arr', l: 'Schrift „TICK“ / „24 H“', css: '.ticker .arr.tick small:first-child,.ticker .arr.day small:first-child', p: ['font-size'], min: 6, max: 40, st: 0.5 },
+    { k: 'a_lt', g: 'arr', l: 'Abstand oben', css: '.ticker .arr.tick small:first-child,.ticker .arr.day small:first-child', p: ['margin-top'], min: 0, max: 60 },
+    { k: 'a_arr', g: 'arr', l: 'Pfeil-Größe (beide gleich)', css: '.ticker .arr.tick b,.ticker .arr.day b', p: ['font-size'], min: 10, max: 160 },
+    { k: 'a_pct', g: 'arr', l: 'Schrift 24h-Prozent', css: '.ticker .arr .pct', p: ['font-size'], min: 6, max: 40, st: 0.5 },
+    { k: 'a_pb', g: 'arr', l: 'Abstand unten', css: '.ticker .arr.tick,.ticker .arr.day', p: ['padding-bottom'], min: 0, max: 60 },
+    { k: 'a_px', g: 'arr', l: 'Innenabstand links/rechts', css: '.ticker .arr.tick,.ticker .arr.day', p: ['padding-left', 'padding-right'], min: 0, max: 60 },
+    { k: 'p_usd', g: 'preis', l: 'Schrift $-Preis', css: '#tPrice', p: ['font-size'], min: 10, max: 100, st: 0.5 },
+    { k: 'p_eur', g: 'preis', l: 'Schrift €-Preis', css: '#tEur', p: ['font-size'], min: 10, max: 100, st: 0.5 },
+    { k: 'p_dyu', g: 'preis', l: '$-Zeile hoch/runter', i: '– = höher', js: 1, def: 0, min: -60, max: 60 },
+    { k: 'p_dye', g: 'preis', l: '€-Zeile hoch/runter', i: '+ = tiefer', js: 1, def: 0, min: -60, max: 60 },
+    { k: 'p_pl', g: 'preis', l: 'Abstand links', css: '.ticker .price>.pp', p: ['padding-left'], min: 0, max: 80 },
+    { k: 'p_pr', g: 'preis', l: 'Abstand rechts', css: '.ticker .price>.pp', p: ['padding-right'], min: 0, max: 80 },
+    { k: 't_fs', g: 'tf', l: 'Schriftgröße', css: '.ticker .tfl', p: ['font-size'], min: 6, max: 40, st: 0.5 },
+    { k: 't_px', g: 'tf', l: 'Spaltenabstand', css: '.ticker .tfl>*', p: ['padding-left', 'padding-right'], min: 0, max: 40 },
+    { k: 't_pl', g: 'tf', l: 'Abstand zur Trennlinie links', css: '.ticker .tfl', p: ['padding-left'], min: 0, max: 40 },
+    { k: 'l_title', g: 'liq', l: 'Schrift „LIQUIDATIONEN“', css: '.liqtitle>span:first-child', p: ['font-size'], min: 8, max: 50, st: 0.5 },
+    { k: 'l_fs', g: 'liq', l: 'Schrift der Zeilen', i: 'größte Schrift', js: 1, def: 0, min: 6, max: 40, st: 0.25 },
+    { k: 'l_auto', g: 'liq', l: 'Automatisch verkleinern, wenn eine Zeile zu lang ist', js: 1, check: 1, def: 1 },
+    { k: 'l_lh', g: 'liq', l: 'Zeilenhöhe', i: '× Schriftgröße', css: '#heatTick4', p: ['line-height'], min: 0.8, max: 2.6, st: 0.05, u: '' },
+    { k: 'l_mt', g: 'liq', l: 'Abstand Titel → Zeilen', css: '#heatTick4', p: ['margin-top'], min: 0, max: 40 },
+    { k: 'l_px', g: 'liq', l: 'Innenabstand links/rechts', css: '.ticker>div.liqtitle', p: ['padding-left', 'padding-right'], min: 0, max: 60 },
+    { k: 'l_pt', g: 'liq', l: 'Innenabstand oben', css: '.ticker>div.liqtitle', p: ['padding-top'], min: 0, max: 40 },
+    { k: 'l_pb', g: 'liq', l: 'Innenabstand unten', css: '.ticker>div.liqtitle', p: ['padding-bottom'], min: 0, max: 40 },
+    { k: 'r_num', g: 'ls', l: 'Schrift Zahlen', css: '.liq .sd', p: ['font-size'], min: 8, max: 70, st: 0.5 },
+    { k: 'r_lbl', g: 'ls', l: 'Schrift „LONGS“ / „SHORTS“', css: '.liq .sd.l>small:first-of-type,.liq .sd.s>small:last-of-type', p: ['font-size'], min: 6, max: 40, st: 0.5 },
+    { k: 'r_usdt', g: 'ls', l: 'Schrift „USDT“', css: '.liq .sd.l>small:last-of-type,.liq .sd.s>small:first-of-type', p: ['font-size'], min: 6, max: 40, st: 0.5 },
+    { k: 'r_gap', g: 'ls', l: 'Abstand Zahl ↔ Beschriftung', css: '.liq .sd', p: ['gap'], min: 0, max: 30 },
+    { k: 'r_vs', g: 'ls', l: 'Größe „vs.“-Kreis', css: '.liq .vs', p: ['width', 'height', 'min-width'], min: 14, max: 90 },
+    { k: 'r_vsf', g: 'ls', l: 'Schrift „vs.“', css: '.liq .vs', p: ['font-size'], min: 6, max: 30, st: 0.5 },
+    { k: 'r_bar', g: 'ls', l: 'Balken-Höhe', css: '.segbar', p: ['height'], min: 2, max: 60 },
+    { k: 'r_pct', g: 'ls', l: 'Schrift Prozent', css: '.pcts', p: ['font-size'], min: 8, max: 60, st: 0.5 },
+    { k: 'r_rg', g: 'ls', l: 'Abstand Zahlen · Balken · Prozent', css: '.ticker>div.liq', p: ['row-gap'], min: 0, max: 40 },
+    { k: 'r_pt', g: 'ls', l: 'Abstand oben', css: '.ticker>div.liq', p: ['padding-top'], min: 0, max: 40 },
+    { k: 'r_pb', g: 'ls', l: 'Abstand unten', css: '.ticker>div.liq', p: ['padding-bottom'], min: 0, max: 40 },
+    { k: 'r_px', g: 'ls', l: 'Innenabstand links/rechts', css: '.ticker>div.liq', p: ['padding-left', 'padding-right'], min: 0, max: 60 }
+  ];
+  var FK = {}; F.forEach(function (f) { FK[f.k] = f; });
+  var SETS = (function () { try { return JSON.parse(get('tkf_sets', '{}')) || {}; } catch (e) { return {}; } })();
+  var klasse = function () { return innerWidth < 700 ? 'handy' : innerWidth < 1280 ? 'tablet' : 'computer'; };
+  var KLNAME = { handy: 'Handy (unter 700 px)', tablet: 'Tablet (700–1279 px)', computer: 'Computer (ab 1280 px)' };
+  var schluessel = function () { return stil + '|' + klasse(); };
+  var satz = function () { return SETS[schluessel()] || {}; };
+  var wert = function (k) { var v = satz()[k], f = FK[k]; return v == null ? f.def : v; };
+  var speichern = function () { set('tkf_sets', JSON.stringify(SETS)); };
+
+  function cssBauen() {
+    var s = satz(), out = [];
+    F.forEach(function (f) {
+      if (!f.css || s[f.k] == null) return;
+      var sel = f.css.split(',').map(function (x) { return 'html.tkf body ' + x.trim(); }).join(',');
+      out.push(sel + '{' + f.p.map(function (p) { return p + ':' + s[f.k] + (f.u == null ? 'px' : f.u) + '!important'; }).join(';') + '}');
+    });
+    var st = $('tkfCss'); if (!st) { st = document.createElement('style'); st.id = 'tkfCss'; document.body.appendChild(st); }
+    var txt = out.join('\n'); if (st.textContent !== txt) st.textContent = txt;
+    document.documentElement.classList.add('tkf');
+  }
+
   function classes() {
     // am <html>-Element, weil die Seite die Klassen am <body> selbst neu setzt
     var b = document.documentElement; STILE.forEach(function (s) { b.classList.toggle('tkv-' + s, s === stil); });
@@ -5551,25 +5680,33 @@ setInterval(() => { if (Date.now() - lastLoad > (window.FG_STANDALONE ? 600000 :
     var tp = $('tPos'); if (!tp) return;
     if (!$('tkvBtn')) {
       tp.insertAdjacentHTML('afterend', '<button class="tcol tkvb" id="tkvBtn" title="Ticker-Aussehen durchschalten: Original → B1 → B2 → B3"></button>' +
-        '<button class="tcol tknb" id="tknBtn" title="Longs/Shorts: Zahl ausgeschrieben oder in Mio."></button>');
-      $('tkvBtn').onclick = function () { stil = STILE[(STILE.indexOf(stil) + 1) % STILE.length]; set('tkv_stil', stil); neu(); };
+        '<button class="tcol tknb" id="tknBtn" title="Longs/Shorts: Zahl ausgeschrieben oder in Mio."></button>' +
+        '<button class="tcol tkfb" id="tkfBtn" title="Ticker anpassen: alle Größen und Abstände einstellen"></button>');
+      $('tkvBtn').onclick = function () { stil = STILE[(STILE.indexOf(stil) + 1) % STILE.length]; set('tkv_stil', stil); neu(); panelFuellen(); };
       $('tknBtn').onclick = function () { zahlen = zahlen === 'voll' ? 'kurz' : 'voll'; set('tkv_zahlen', zahlen); neu(); };
+      $('tkfBtn').onclick = function () { panelUmschalten(); };
     }
     // nur bei Änderung setzen – sonst stößt jede Beschriftung den Beobachter neu an (Endlosschleife)
-    var t1 = '🎨 ' + NAMEN[stil], t2 = zahlen === 'voll' ? '1.234' : 'Mio.';
+    var t1 = '🎨 ' + NAMEN[stil], t2 = zahlen === 'voll' ? '1.234' : 'Mio.', t3 = '🔧 Anpassen';
     if ($('tkvBtn').textContent !== t1) $('tkvBtn').textContent = t1;
     if ($('tknBtn').textContent !== t2) $('tknBtn').textContent = t2;
+    if ($('tkfBtn').textContent !== t3) $('tkfBtn').textContent = t3;
+    var auf = !!($('tkfPanel') && !$('tkfPanel').hidden);
+    if ($('tkfBtn').classList.contains('on') !== auf) $('tkfBtn').classList.toggle('on', auf);
   }
-  // alles zurück auf den Stand der Seite und neu zeichnen lassen
-  function neu() {
+  // Stand der Seite wiederherstellen (eigene Verschiebungen weg) und neu ausrichten
+  function zuruecksetzen() {
     var bt = document.querySelector('.ticker .price > .b'); if (bt) { bt.style.removeProperty('font-size'); bt.style.top = ''; }
-    ['tDir'].forEach(function (id) { var e = $(id); if (e) e.style.top = ''; });
+    var tD = $('tDir'); if (tD) tD.style.top = '';
     ['tPrice', 'tEur'].forEach(function (id) { var e = $(id); if (e) Array.prototype.forEach.call(e.parentElement.children, function (c) { c.style.transform = ''; }); });
     var t4 = $('heatTick4'); if (t4) t4.style.fontSize = '';
-    classes(); buttons();
-    try { if (typeof renderTicker === 'function') renderTicker(); if (typeof applyTicker === 'function') applyTicker(); } catch (e) { }
-    fix();
   }
+  function neu() {
+    zuruecksetzen(); classes(); cssBauen(); buttons();
+    try { if (typeof renderTicker === 'function') renderTicker(); if (typeof applyTicker === 'function') applyTicker(); } catch (e) { }
+    fix(); fix();
+  }
+  function nachziehen() { zuruecksetzen(); cssBauen(); fix(); fix(); fix(); }
   // Text-Änderungen: "-$" / "-€", "vs.", Zahlen in Mio.
   function texte() {
     if (stil === 'orig') return;
@@ -5593,44 +5730,61 @@ setInterval(() => { if (Date.now() - lastLoad > (window.FG_STANDALONE ? 600000 :
     var html = Array.prototype.map.call(c.querySelectorAll('button'), function (b) { return '<option value="' + b.dataset.v + '"' + (b.classList.contains('on') ? ' selected' : '') + '>' + b.textContent + ' ' + b.dataset.v.toUpperCase() + '</option>'; }).join('');
     if (s.dataset.h !== html) { s.innerHTML = html; s.dataset.h = html; }
   }
-  // Ausrichtung: TICK-Pfeil wie 24h, ₿ und $/€-Werte bündig mit "TICK" oben und der 24h-Prozentzeile unten
+  // liegt der Ticker in einer Reihe (Computer, Tablet quer)? Gestapelt (schmal) wird nicht ausgerichtet
+  function einreihig() {
+    var p = document.querySelector('.ticker>div.price'), l = document.querySelector('.ticker>div.liq');
+    return !!(p && l && Math.abs(p.getBoundingClientRect().top - l.getBoundingClientRect().top) < 4);
+  }
+  // Ausrichtung: TICK-Pfeil wie 24h, ₿ und $/€-Werte bündig mit "TICK" oben und der 24h-Prozentzeile unten (+ eigene Verschiebung)
   function ausrichten() {
-    if (stil === 'orig') return;
+    if (stil === 'orig' || !einreihig()) return;
     var at = $('arrTick'), dp = $('tDayPct'), lbl = at && at.querySelector('small'), tD = $('tDir'), dD = $('tDayDir');
     if (!at || !dp || !lbl) return;
     if (!at.querySelector('.tkvpct')) { var cl = dp.cloneNode(true); cl.removeAttribute('id'); cl.classList.add('tkvpct'); cl.style.visibility = 'hidden'; at.appendChild(cl); }
-    if (tD && dD) { var cur = parseFloat(tD.style.top) || 0, dy = dD.getBoundingClientRect().top - tD.getBoundingClientRect().top;
+    var sicht = dp.getBoundingClientRect().height > 0;  // in der Ansicht „SMC“ ist die 24h-Spalte ausgeblendet
+    if (tD && dD && sicht) { var cur = parseFloat(tD.style.top) || 0, dy = dD.getBoundingClientRect().top - tD.getBoundingClientRect().top;
       if (Math.abs(dy) > 0.5) { tD.style.position = 'relative'; tD.style.top = (cur + dy) + 'px'; } }
-    var top = lbl.getBoundingClientRect().top + 3, bot = dp.getBoundingClientRect().bottom - 3;
+    // unten bündig mit der 24h-Prozentzeile – ist sie ausgeblendet, mit ihrer unsichtbaren Kopie in der TICK-Spalte
+    var top = lbl.getBoundingClientRect().top + 3, bot = (sicht ? dp : at.querySelector('.tkvpct')).getBoundingClientRect().bottom - 3;
+    if (!(bot - top > 10)) return;
+    var z = parseFloat(getComputedStyle(document.querySelector('.ticker')).zoom) || 1;  // eigene Werte sind CSS-Pixel, Messungen Bildschirm-Pixel
     var b = document.querySelector('.ticker .price > .b');
     if (b) {
+      var hoehe = (bot - top) * wert('b_scale') / 100, ziel = top + ((bot - top) - hoehe) / 2 + wert('b_dy') * z;
       var cs = getComputedStyle(b), cv = document.createElement('canvas').getContext('2d'), fs = parseFloat(cs.fontSize);
       cv.font = cs.fontWeight + ' ' + fs + 'px ' + cs.fontFamily; var m = cv.measureText('₿');
-      var ink = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent, nfs = fs * (bot - top) / ink;
+      var ink = (m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) * z, nfs = fs * hoehe / ink;
       if (Math.abs(nfs - fs) > 0.5) b.style.setProperty('font-size', nfs + 'px', 'important');
-      else { var r = b.getBoundingClientRect(), fa = m.fontBoundingBoxAscent, fd = m.fontBoundingBoxDescent;
-        var inkTop = r.top + (r.height - (fa + fd)) / 2 + fa - m.actualBoundingBoxAscent, c0 = parseFloat(b.style.top) || 0, d0 = top - inkTop;
+      else { var r = b.getBoundingClientRect(), fa = m.fontBoundingBoxAscent * z, fd = m.fontBoundingBoxDescent * z;
+        var inkTop = r.top + (r.height - (fa + fd)) / 2 + fa - m.actualBoundingBoxAscent * z, c0 = parseFloat(b.style.top) || 0, d0 = (ziel - inkTop) / z;
         if (Math.abs(d0) > 0.5) { b.style.position = 'relative'; b.style.top = (c0 + d0) + 'px'; } }
     }
     // $-Zeile nach oben, €-Zeile nach unten (weniger Leerraum über und unter den Preisen)
     // (die Zeilen selbst sind display:contents – deshalb Flagge und Preis darin verschieben)
     var pu = $('tPrice'), pe = $('tEur');
+    var versatz = function (el) { return parseFloat((el.style.transform.match(/-?[\d.]+/) || [0])[0]); };
     var schiebe = function (el, d) { Array.prototype.forEach.call(el.parentElement.children, function (c) {
-      var t = parseFloat((c.style.transform.match(/-?[\d.]+/) || [0])[0]); c.style.transform = 'translateY(' + (t + d) + 'px)'; }); };
+      c.style.transform = 'translateY(' + (versatz(c) + d) + 'px)'; }); };
     if (pu && pe) {
-      var du = (top - 4) - pu.getBoundingClientRect().top, de = (bot + 4) - pe.getBoundingClientRect().bottom;
+      // automatisch nur auseinander schieben ($ höher, € tiefer) – ist der Ticker zu niedrig, bleiben die Zeilen, wo sie sind
+      var ru = pu.getBoundingClientRect(), re = pe.getBoundingClientRect();
+      var natU = ru.top - versatz(pu) * z, natE = re.bottom - versatz(pe) * z;
+      var du = (Math.min(natU, top - 4) + wert('p_dyu') * z - ru.top) / z, de = (Math.max(natE, bot + 4) + wert('p_dye') * z - re.bottom) / z;
       if (Math.abs(du) > 0.5) schiebe(pu, du);
       if (Math.abs(de) > 0.5) schiebe(pe, de);
     }
   }
-  // Liquidations-Schrift so groß wie möglich, aber nie abgeschnitten
+  // Liquidations-Schrift so groß wie eingestellt, aber (wenn gewünscht) nie abgeschnitten
   function passend() {
     if (stil === 'orig') return;
     var t4 = $('heatTick4'); if (!t4 || !t4.children.length) return;
-    var ziel = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tkv-liq')) || 14, fs = ziel;
+    var std = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tkv-liq')) || 14;
+    var fs = wert('l_fs') || std;
+    if (!einreihig()) fs = Math.min(fs, 13);
     t4.style.fontSize = fs + 'px';
+    if (!wert('l_auto')) return;
     var zu = function () { return Array.prototype.some.call(t4.children, function (d) { return d.scrollWidth > d.clientWidth + 1; }); };
-    while (zu() && fs > 10) { fs -= 0.25; t4.style.fontSize = fs + 'px'; }
+    while (zu() && fs > 8) { fs -= 0.25; t4.style.fontSize = fs + 'px'; }
   }
   function fix() {
     if (busy || !document.querySelector('.ticker')) return;
@@ -5638,6 +5792,106 @@ setInterval(() => { if (Date.now() - lastLoad > (window.FG_STANDALONE ? 600000 :
     try { buttons(); waehrung(); texte(); passend(); ausrichten(); } catch (e) { }
     busy = false;
   }
+
+  /* ===== Panel ===== */
+  var SEITE = get('tkf_seite', 'rechts');
+  function zahl(v, f) { var st = f.st || 1; return Math.round(v / st) * st; }
+  function aktuell(f) {
+    // Wert, den die Seite gerade benutzt (für Regler im Automatik-Zustand)
+    if (f.js) return f.k === 'l_fs' ? (parseFloat(($('heatTick4') || {}).style && $('heatTick4').style.fontSize) || f.def) : f.def;
+    var el = document.querySelector(f.css.split(',')[0]); if (!el) return f.min;
+    var cs = getComputedStyle(el), v = parseFloat(cs.getPropertyValue(f.p[0]));
+    if (f.u === '') v = (parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2) / parseFloat(cs.fontSize);
+    return isFinite(v) ? v : f.min;
+  }
+  function panelBauen() {
+    if ($('tkfPanel')) return;
+    var html = '<div class="hd"><b>🔧 Ticker anpassen</b><button id="tkfSeite" title="Fenster auf die andere Seite schieben">⇄</button><button id="tkfZu" title="Schließen">✕</button></div>' +
+      '<p class="info" id="tkfInfo"></p>' +
+      GRUPPEN.map(function (g, gi) {
+        return '<details' + (gi === 0 ? ' open' : '') + '><summary>' + g[1] + ' <small>· ' + g[2] + '</small></summary>' +
+          F.filter(function (f) { return f.g === g[0]; }).map(function (f) {
+            if (f.check) return '<label class="ck" data-k="' + f.k + '"><input type="checkbox"> ' + f.l + '</label>';
+            return '<div class="rw" data-k="' + f.k + '"><label>' + f.l + (f.i ? ' <i>(' + f.i + ')</i>' : '') + '</label>' +
+              '<input type="range" min="' + f.min + '" max="' + f.max + '" step="' + (f.st || 1) + '"><input type="number" min="' + f.min + '" max="' + f.max + '" step="' + (f.st || 1) + '">' +
+              '<button title="Zurück auf automatisch">↺</button></div>';
+          }).join('') + '</details>';
+      }).join('') +
+      '<div class="ft"><button id="tkfKopie" title="Alle deine Einstellungen als Code kopieren – zum Schicken oder Sichern">📋 Code kopieren</button>' +
+      '<button id="tkfLink" title="Link kopieren, der deine Einstellungen mitnimmt (z. B. aufs iPad)">🔗 Link kopieren</button>' +
+      '<button id="tkfRein" title="Einen kopierten Code wieder einsetzen">📥 Code einfügen</button>' +
+      '<button id="tkfAlles" class="rot" title="Alle Regler dieses Stils und dieser Bildschirmgröße auf automatisch">↺ Alles zurück</button></div>' +
+      '<div class="msg" id="tkfMsg"></div>';
+    var p = document.createElement('div'); p.id = 'tkfPanel'; p.hidden = true; p.innerHTML = html; document.body.appendChild(p);
+    p.addEventListener('input', function (e) {
+      var row = e.target.closest('[data-k]'); if (!row) return;
+      var f = FK[row.dataset.k], s = SETS[schluessel()] = SETS[schluessel()] || {};
+      if (f.check) s[f.k] = e.target.checked ? 1 : 0;
+      else { var v = parseFloat(e.target.value); if (!isFinite(v)) return; s[f.k] = Math.max(f.min, Math.min(f.max, v)); }
+      speichern(); nachziehen(); zeileFuellen(row, true);
+    });
+    p.addEventListener('click', function (e) {
+      var row = e.target.closest('.rw');
+      if (row && e.target.tagName === 'BUTTON') { var s = SETS[schluessel()]; if (s) { delete s[row.dataset.k]; speichern(); } nachziehen(); panelFuellen(); }
+    });
+    $('tkfZu').onclick = function () { panelUmschalten(false); };
+    $('tkfSeite').onclick = function () { SEITE = SEITE === 'rechts' ? 'links' : 'rechts'; set('tkf_seite', SEITE); platzieren(); };
+    $('tkfAlles').onclick = function () { if (!confirm('Alle Regler für ' + NAMEN[stil] + ' · ' + KLNAME[klasse()] + ' zurück auf automatisch?')) return; delete SETS[schluessel()]; speichern(); nachziehen(); panelFuellen(); meldung('Zurückgesetzt.'); };
+    $('tkfKopie').onclick = function () { kopieren(code(), 'Code kopiert – du kannst ihn mir einfach schicken.'); };
+    $('tkfLink').onclick = function () { kopieren(location.origin + location.pathname + '?tkcode=' + encodeURIComponent(code()), 'Link kopiert – auf einem anderen Gerät öffnen, dann sind deine Einstellungen dort.'); };
+    $('tkfRein').onclick = function () { var c = prompt('Code hier einfügen:'); if (c) einlesen(c.trim()); };
+    addEventListener('resize', function () { if (!p.hidden) { platzieren(); panelFuellen(); } });
+  }
+  function zeileFuellen(row, nurZahl) {
+    var f = FK[row.dataset.k], s = satz(), gesetzt = s[f.k] != null;
+    if (f.check) { row.querySelector('input').checked = !!wert(f.k); row.classList.toggle('off', stil === 'orig'); return; }
+    var v = gesetzt ? s[f.k] : aktuell(f), r = row.querySelector('input[type=range]'), n = row.querySelector('input[type=number]');
+    row.classList.toggle('auto', !gesetzt); row.classList.toggle('off', !!f.js && stil === 'orig');
+    if (document.activeElement !== n) n.value = zahl(v, f);
+    if (!nurZahl || document.activeElement !== r) r.value = v;
+  }
+  function panelFuellen() {
+    var p = $('tkfPanel'); if (!p || p.hidden) return;
+    $('tkfInfo').innerHTML = 'Gilt für <b>' + NAMEN[stil] + '</b> auf <b>' + KLNAME[klasse()] + '</b>. Graue Werte = automatisch; ' +
+      'sobald du einen Regler bewegst, gilt dein Wert (↺ = wieder automatisch).' + (stil === 'orig' ? ' <b>Im Stil „Original“ wirken die ₿-, Preis- und Zeilen-Regler nicht – dafür mit 🎨 auf B1–B3 schalten.</b>' : '');
+    p.querySelectorAll('[data-k]').forEach(function (row) { zeileFuellen(row); });
+  }
+  function platzieren() {
+    var p = $('tkfPanel'), tk = document.querySelector('.ticker'); if (!p || !tk) return;
+    var r = tk.getBoundingClientRect(), oben = tk.classList.contains('attop');
+    p.style.left = SEITE === 'links' ? '8px' : ''; p.style.right = SEITE === 'rechts' ? '8px' : '';
+    if (oben) { p.style.top = (r.bottom + 34) + 'px'; p.style.bottom = ''; p.style.maxHeight = (innerHeight - r.bottom - 46) + 'px'; }
+    else { p.style.bottom = (innerHeight - r.top + 34) + 'px'; p.style.top = ''; p.style.maxHeight = Math.max(220, r.top - 46) + 'px'; }
+  }
+  function panelUmschalten(an) {
+    panelBauen(); var p = $('tkfPanel');
+    p.hidden = an == null ? !p.hidden : !an;
+    if (!p.hidden) { platzieren(); panelFuellen(); }
+    buttons();
+  }
+  function meldung(t) { var m = $('tkfMsg'); if (m) { m.textContent = t; clearTimeout(meldung.t); meldung.t = setTimeout(function () { m.textContent = ''; }, 6000); } }
+  function code() {
+    var d = { v: 1, stil: stil, zahlen: zahlen, sets: SETS };
+    return 'TK1:' + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  }
+  function einlesen(c) {
+    try {
+      var d = JSON.parse(decodeURIComponent(escape(atob(c.replace(/^TK1:/, '')))));
+      if (!d || typeof d.sets !== 'object') throw 0;
+      SETS = d.sets; speichern();
+      if (STILE.indexOf(d.stil) >= 0) { stil = d.stil; set('tkv_stil', stil); }
+      if (/^(voll|kurz)$/.test(d.zahlen)) { zahlen = d.zahlen; set('tkv_zahlen', zahlen); }
+      neu(); panelFuellen(); meldung('Einstellungen übernommen.');
+      return true;
+    } catch (e) { meldung('Der Code ist nicht lesbar.'); alert('Der Code ist nicht lesbar.'); return false; }
+  }
+  function kopieren(txt, ok) {
+    var fallback = function () { panelUmschalten(true); var ta = $('tkfTa'); if (!ta) { ta = document.createElement('textarea'); ta.id = 'tkfTa'; $('tkfMsg').before(ta); }
+      ta.value = txt; ta.select(); meldung('Bitte markierten Text kopieren (Strg+C).'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { meldung(ok); }, fallback);
+    else fallback();
+  }
+
   // sofort nach jeder Änderung nachziehen (kein Flackern); Schutzbremse: mehr als 60 Läufe pro Sekunde -> 2 s Pause
   var laeufe = 0, seit = 0, pause = false;
   function bald() {
@@ -5647,10 +5901,14 @@ setInterval(() => { if (Date.now() - lastLoad > (window.FG_STANDALONE ? 600000 :
     fix();
   }
   function start() {
-    classes(); fix();
+    classes(); cssBauen(); fix();
+    var c = Q.get('tkcode');
+    if (c && einlesen(c)) { Q.delete('tkcode'); history.replaceState(null, '', location.pathname + (Q.toString() ? '?' + Q : '') + location.hash); }
     var tk = document.querySelector('.ticker');
     if (tk) new MutationObserver(bald).observe(tk, { childList: true, subtree: true, characterData: true });
-    addEventListener('resize', fix); setInterval(fix, 1500);
+    var kl = klasse();
+    addEventListener('resize', function () { if (klasse() !== kl) { kl = klasse(); nachziehen(); } else fix(); });
+    setInterval(fix, 1500);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
