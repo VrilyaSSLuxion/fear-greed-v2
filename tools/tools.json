@@ -38,14 +38,18 @@
         { "src": "img/fib-overlay/designs.png", "caption": "Einige der 50 Designs" }
       ],
       "downloads": [
-        { "label": "Fib Overlay V3 (Windows, ZIP)", "url": "https://github.com/VrilyaSSLuxion/fear-greed-v2/releases/download/fib-overlay-v3/FibOverlay_V3.zip", "size": "37 MB" }
+        { "label": "Fib Overlay V3 (Windows, ZIP)", "url": "https://github.com/VrilyaSSLuxion/fear-greed-v2/releases/download/fib-overlay-v3/FibOverlay_V3.zip", "size": "37 MB" },
+        { "label": "Quellcode V3 (Python, ZIP)", "url": "https://github.com/VrilyaSSLuxion/fear-greed-v2/releases/download/fib-overlay-v3/FibOverlay_V3_Quellcode.zip", "size": "53 KB" }
       ],
-      "links": [],
+      "links": [
+        { "label": "Quellcode ansehen", "url": "https://github.com/VrilyaSSLuxion/fear-greed-v2/blob/main/quellcode/fib-overlay/fib_overlay.py", "note": "GitHub" }
+      ],
       "hints": [
         "ZIP entpacken und FibOverlay.exe starten – keine Installation nötig. Die Einstellungen liegen unter %APPDATA%\\FibOverlay.",
         "Das Programm ist nicht signiert. Zeigt Windows „Der Computer wurde durch Windows geschützt“, auf „Weitere Informationen“ und dann „Trotzdem ausführen“ klicken.",
         "Das Overlay liegt als Bild über dem Chart. Wird der Chart verschoben oder gezoomt (z. B. Autoscroll bei Pocket Option), bleibt die Fib am Bildschirm stehen und muss neu gesetzt werden.",
-        "Alarm, Automatikmodus und Magnet lesen die Kerzen vom Bildschirm ab und sind Test-Funktionen."
+        "Alarm, Automatikmodus und Magnet lesen die Kerzen vom Bildschirm ab und sind Test-Funktionen.",
+        "Der Quellcode ist eine einzige Python-Datei (PyQt5). Im Quellcode-ZIP steht, wie man das Programm ohne EXE startet oder die EXE selbst baut."
       ],
       "versions": [
         { "v": "3", "date": "2026-10-23", "notes": [

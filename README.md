@@ -8,3 +8,4 @@ Testkopie der Seite https://vrilyassluxion.github.io/fear-greed/ mit dem neuen B
 - Browser-Einstellungen der Kopie sind getrennt von der Live-Seite (Präfix `v2~`); beim ersten Öffnen werden die
   Live-Einstellungen einmal übernommen.
 - `tools/tools.json` enthält alle Einträge (MetaTrader, TradingView, Desktop-Tools). Downloads liegen unter *Releases*.
+- `quellcode/` enthält den Quellcode der Desktop-Tools (z. B. Fib Overlay), damit andere daran weiterarbeiten können.
